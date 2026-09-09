@@ -1,59 +1,16 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final stateMatrix = <Set<WidgetState>>[
-    {},
-    {WidgetState.selected},
-    {WidgetState.hovered, WidgetState.selected},
-    {WidgetState.focused, WidgetState.selected},
-    {WidgetState.pressed, WidgetState.focused, WidgetState.selected},
-    {
-      WidgetState.disabled,
-      WidgetState.pressed,
-      WidgetState.focused,
-      WidgetState.selected,
-    },
-  ];
-
   for (final theme in <ThemeData>[BirbTheme.light, BirbTheme.dark]) {
     group('${theme.brightness.name} selection themes', () {
       final colors = theme.colorScheme;
       final semantics = theme.extension<BirbSemanticColors>()!;
-      final expectedFill = <Color>[
-        colors.surface,
-        colors.primary,
-        colors.surfaceContainerHigh,
-        colors.primary,
-        colors.primaryContainer,
-        colors.surface,
-      ];
-      final expectedForeground = <Color>[
-        colors.onSurface,
-        colors.onPrimary,
-        colors.onSurface,
-        colors.onPrimary,
-        colors.onPrimaryContainer,
-        semantics.disabled,
-      ];
-      final expectedSide = <BorderSide>[
-        BorderSide(color: colors.outline, width: BirbBorders.thin),
-        BorderSide(color: colors.primary, width: BirbBorders.thin),
-        BorderSide(color: colors.primary, width: BirbBorders.thin),
-        BorderSide(color: semantics.focus, width: BirbBorders.strong),
-        BorderSide(color: semantics.focus, width: BirbBorders.strong),
-        BorderSide(color: semantics.disabled, width: BirbBorders.thin),
-      ];
-      final expectedOverlay = <Color>[
-        WidgetStateColor.transparent,
-        WidgetStateColor.transparent,
-        colors.surfaceContainerHigh,
-        semantics.focus,
-        colors.primaryContainer,
-        WidgetStateColor.transparent,
-      ];
+      final cases = _stateCases(colors, semantics);
 
       test('resolves checkbox matrix and error precedence', () {
         final checkbox = theme.checkboxTheme;
@@ -62,20 +19,29 @@ void main() {
         final shape = checkbox.shape! as RoundedRectangleBorder;
         expect(shape.borderRadius, BirbRadii.none);
 
-        for (var index = 0; index < stateMatrix.length; index++) {
-          final states = stateMatrix[index];
-          expect(checkbox.fillColor?.resolve(states), expectedFill[index]);
+        for (final stateCase in cases) {
           expect(
-            checkbox.checkColor?.resolve(states),
-            expectedForeground[index],
+            checkbox.fillColor?.resolve(stateCase.states),
+            stateCase.fill,
+            reason: stateCase.name,
           );
           expect(
-            WidgetStateProperty.resolveAs<BorderSide?>(checkbox.side, states),
-            expectedSide[index],
+            checkbox.checkColor?.resolve(stateCase.states),
+            stateCase.foreground,
+            reason: stateCase.name,
           );
           expect(
-            checkbox.overlayColor?.resolve(states),
-            expectedOverlay[index],
+            WidgetStateProperty.resolveAs<BorderSide?>(
+              checkbox.side,
+              stateCase.states,
+            ),
+            stateCase.side,
+            reason: stateCase.name,
+          );
+          expect(
+            checkbox.overlayColor?.resolve(stateCase.states),
+            stateCase.overlay,
+            reason: stateCase.name,
           );
         }
 
@@ -112,68 +78,61 @@ void main() {
         final radio = theme.radioTheme;
         expect(radio.materialTapTargetSize, MaterialTapTargetSize.padded);
         expect(radio.visualDensity, VisualDensity.standard);
-        final expectedBackground = <Color>[
-          colors.surface,
-          colors.surface,
-          colors.surfaceContainerHigh,
-          colors.surface,
-          colors.primaryContainer,
-          colors.surface,
-        ];
-        final expectedRadioFill = <Color>[
-          colors.outline,
-          colors.primary,
-          colors.onSurface,
-          colors.primary,
-          colors.onPrimaryContainer,
-          semantics.disabled,
-        ];
-        for (var index = 0; index < stateMatrix.length; index++) {
-          final states = stateMatrix[index];
+        for (final stateCase in cases) {
           expect(
-            radio.backgroundColor?.resolve(states),
-            expectedBackground[index],
+            radio.backgroundColor?.resolve(stateCase.states),
+            stateCase.radioBackground,
+            reason: stateCase.name,
           );
-          expect(radio.fillColor?.resolve(states), expectedRadioFill[index]);
           expect(
-            WidgetStateProperty.resolveAs<BorderSide?>(radio.side, states),
-            expectedSide[index],
+            radio.fillColor?.resolve(stateCase.states),
+            stateCase.radioFill,
+            reason: stateCase.name,
           );
-          expect(radio.overlayColor?.resolve(states), expectedOverlay[index]);
+          expect(
+            WidgetStateProperty.resolveAs<BorderSide?>(
+              radio.side,
+              stateCase.states,
+            ),
+            stateCase.side,
+            reason: stateCase.name,
+          );
+          expect(
+            radio.overlayColor?.resolve(stateCase.states),
+            stateCase.overlay,
+            reason: stateCase.name,
+          );
         }
       });
 
       test('resolves switch matrix', () {
         final toggle = theme.switchTheme;
         expect(toggle.materialTapTargetSize, MaterialTapTargetSize.padded);
-        final expectedOutline = <Color>[
-          colors.outline,
-          colors.primary,
-          colors.primary,
-          semantics.focus,
-          semantics.focus,
-          semantics.disabled,
-        ];
-        final expectedOutlineWidth = <double>[
-          BirbBorders.thin,
-          BirbBorders.thin,
-          BirbBorders.thin,
-          BirbBorders.strong,
-          BirbBorders.strong,
-          BirbBorders.thin,
-        ];
-        for (var index = 0; index < stateMatrix.length; index++) {
-          final states = stateMatrix[index];
-          expect(toggle.trackColor?.resolve(states), expectedFill[index]);
-          expect(toggle.thumbColor?.resolve(states), expectedForeground[index]);
-          expect(toggle.overlayColor?.resolve(states), expectedOverlay[index]);
+        for (final stateCase in cases) {
           expect(
-            toggle.trackOutlineColor?.resolve(states),
-            expectedOutline[index],
+            toggle.trackColor?.resolve(stateCase.states),
+            stateCase.fill,
+            reason: stateCase.name,
           );
           expect(
-            toggle.trackOutlineWidth?.resolve(states),
-            expectedOutlineWidth[index],
+            toggle.thumbColor?.resolve(stateCase.states),
+            stateCase.foreground,
+            reason: stateCase.name,
+          );
+          expect(
+            toggle.overlayColor?.resolve(stateCase.states),
+            stateCase.overlay,
+            reason: stateCase.name,
+          );
+          expect(
+            toggle.trackOutlineColor?.resolve(stateCase.states),
+            stateCase.switchOutline,
+            reason: stateCase.name,
+          );
+          expect(
+            toggle.trackOutlineWidth?.resolve(stateCase.states),
+            stateCase.switchOutlineWidth,
+            reason: stateCase.name,
           );
         }
       });
@@ -207,23 +166,40 @@ void main() {
       test('resolves chip matrix and geometry', () {
         final chip = theme.chipTheme;
         final labelColor = chip.labelStyle!.color! as WidgetStateColor;
-        for (var index = 0; index < stateMatrix.length; index++) {
-          final states = stateMatrix[index];
-          expect(chip.color?.resolve(states), expectedFill[index]);
-          expect(labelColor.resolve(states), expectedForeground[index]);
+        for (final stateCase in cases) {
           expect(
-            WidgetStateProperty.resolveAs<Color?>(chip.deleteIconColor, states),
-            expectedForeground[index],
+            chip.color?.resolve(stateCase.states),
+            stateCase.fill,
+            reason: stateCase.name,
           );
           expect(
-            WidgetStateProperty.resolveAs<BorderSide?>(chip.side, states),
-            expectedSide[index],
+            labelColor.resolve(stateCase.states),
+            stateCase.foreground,
+            reason: stateCase.name,
           );
           expect(
-            WidgetStateProperty.resolveAs<Color?>(chip.checkmarkColor, states),
-            index == stateMatrix.length - 1
-                ? semantics.disabled
-                : colors.onPrimary,
+            WidgetStateProperty.resolveAs<Color?>(
+              chip.deleteIconColor,
+              stateCase.states,
+            ),
+            stateCase.foreground,
+            reason: stateCase.name,
+          );
+          expect(
+            WidgetStateProperty.resolveAs<BorderSide?>(
+              chip.side,
+              stateCase.states,
+            ),
+            stateCase.side,
+            reason: stateCase.name,
+          );
+          expect(
+            WidgetStateProperty.resolveAs<Color?>(
+              chip.checkmarkColor,
+              stateCase.states,
+            ),
+            colors.onPrimary,
+            reason: stateCase.name,
           );
         }
         expect(chip.disabledColor, colors.surface);
@@ -245,12 +221,15 @@ void main() {
   ) async {
     final semanticsHandle = tester.ensureSemantics();
     final checkboxFocus = FocusNode(debugLabel: 'consent checkbox');
+    final chipFocus = FocusNode(debugLabel: 'mode chip');
     final sliderFocus = FocusNode(debugLabel: 'volume slider');
     addTearDown(checkboxFocus.dispose);
+    addTearDown(chipFocus.dispose);
     addTearDown(sliderFocus.dispose);
     var checked = true;
     var chipSelected = true;
     var sliderValue = 0.25;
+    var switchValue = false;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -273,10 +252,21 @@ void main() {
                   onChanged: (value) => setState(() => sliderValue = value),
                   semanticFormatterCallback: (value) => 'Volume $value',
                 ),
-                ChoiceChip(
+                BirbFilterChip(
+                  focusNode: chipFocus,
                   label: const Text('Mode'),
                   selected: chipSelected,
                   onSelected: (value) => setState(() => chipSelected = value),
+                ),
+                const Radio<bool>(value: true),
+                Switch(
+                  value: switchValue,
+                  onChanged: (value) => setState(() => switchValue = value),
+                ),
+                const BirbFilterChip(
+                  label: Text('Disabled mode'),
+                  selected: true,
+                  onSelected: null,
                 ),
               ],
             ),
@@ -301,6 +291,9 @@ void main() {
       checkboxSize.height,
       greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
     );
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(checked, isFalse);
 
     sliderFocus.requestFocus();
     await tester.pump();
@@ -308,15 +301,231 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     expect(sliderValue, greaterThan(0.25));
+    final activeChip = find.widgetWithText(FilterChip, 'Mode');
     expect(
-      tester.getSemantics(find.byType(ChoiceChip)),
+      tester.getSemantics(activeChip),
       isSemantics(hasSelectedState: true, isSelected: true),
     );
-    final chipSize = tester.getSize(find.byType(ChoiceChip));
+    final chipSize = tester.getSize(activeChip);
     expect(
       chipSize.height,
       greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
     );
+    chipFocus.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(chipSelected, isFalse);
+    expect(find.byType(Radio<bool>), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.widgetWithText(FilterChip, 'Disabled mode'))
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isFalse,
+    );
     semanticsHandle.dispose();
   });
+
+  for (final theme in <ThemeData>[BirbTheme.light, BirbTheme.dark]) {
+    testWidgets(
+      '${theme.brightness.name} selected chip paints an enabled and disabled checkmark',
+      (tester) async {
+        for (final enabled in <bool>[true, false]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Material(
+                child: Center(
+                  child: BirbFilterChip(
+                    label: const Text('Mode'),
+                    selected: true,
+                    onSelected: enabled ? (_) {} : null,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final paint = tester.firstRenderObject<RenderBox>(
+            find.descendant(
+              of: find.byType(FilterChip),
+              matching: find.byType(CustomPaint),
+            ),
+          );
+          expect(
+            paint,
+            paints..path(
+              color: enabled
+                  ? theme.colorScheme.onPrimary
+                  : theme.disabledColor,
+            ),
+          );
+        }
+      },
+    );
+  }
+}
+
+List<_SelectionThemeCase> _stateCases(
+  ColorScheme colors,
+  BirbSemanticColors semantics,
+) => <_SelectionThemeCase>[
+  _SelectionThemeCase(
+    name: 'enabled',
+    states: const {},
+    fill: colors.surface,
+    foreground: colors.onSurface,
+    side: BorderSide(color: colors.outline, width: BirbBorders.thin),
+    overlay: WidgetStateColor.transparent,
+    radioBackground: colors.surface,
+    radioFill: colors.outline,
+    switchOutline: colors.outline,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'selected',
+    states: const {WidgetState.selected},
+    fill: colors.primary,
+    foreground: colors.onPrimary,
+    side: BorderSide(color: colors.primary, width: BirbBorders.thin),
+    overlay: WidgetStateColor.transparent,
+    radioBackground: colors.surface,
+    radioFill: colors.primary,
+    switchOutline: colors.primary,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'hovered',
+    states: const {WidgetState.hovered},
+    fill: colors.surfaceContainerHigh,
+    foreground: colors.onSurface,
+    side: BorderSide(color: colors.outline, width: BirbBorders.thin),
+    overlay: colors.surfaceContainerHigh,
+    radioBackground: colors.surfaceContainerHigh,
+    radioFill: colors.onSurface,
+    switchOutline: colors.outline,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'hovered selected',
+    states: const {WidgetState.hovered, WidgetState.selected},
+    fill: colors.surfaceContainerHigh,
+    foreground: colors.onSurface,
+    side: BorderSide(color: colors.primary, width: BirbBorders.thin),
+    overlay: colors.surfaceContainerHigh,
+    radioBackground: colors.surfaceContainerHigh,
+    radioFill: colors.onSurface,
+    switchOutline: colors.primary,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'focused',
+    states: const {WidgetState.focused},
+    fill: colors.surface,
+    foreground: colors.onSurface,
+    side: BorderSide(color: semantics.focus, width: BirbBorders.strong),
+    overlay: semantics.focus,
+    radioBackground: colors.surface,
+    radioFill: colors.outline,
+    switchOutline: semantics.focus,
+    switchOutlineWidth: BirbBorders.strong,
+  ),
+  _SelectionThemeCase(
+    name: 'focused selected',
+    states: const {WidgetState.focused, WidgetState.selected},
+    fill: colors.primary,
+    foreground: colors.onPrimary,
+    side: BorderSide(color: semantics.focus, width: BirbBorders.strong),
+    overlay: semantics.focus,
+    radioBackground: colors.surface,
+    radioFill: colors.primary,
+    switchOutline: semantics.focus,
+    switchOutlineWidth: BirbBorders.strong,
+  ),
+  _SelectionThemeCase(
+    name: 'pressed',
+    states: const {WidgetState.pressed},
+    fill: colors.primaryContainer,
+    foreground: colors.onPrimaryContainer,
+    side: BorderSide(color: colors.outline, width: BirbBorders.thin),
+    overlay: colors.primaryContainer,
+    radioBackground: colors.primaryContainer,
+    radioFill: colors.onPrimaryContainer,
+    switchOutline: colors.onPrimaryContainer,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'pressed selected',
+    states: const {WidgetState.pressed, WidgetState.selected},
+    fill: colors.primaryContainer,
+    foreground: colors.onPrimaryContainer,
+    side: BorderSide(color: colors.primary, width: BirbBorders.thin),
+    overlay: colors.primaryContainer,
+    radioBackground: colors.primaryContainer,
+    radioFill: colors.onPrimaryContainer,
+    switchOutline: colors.onPrimaryContainer,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+  _SelectionThemeCase(
+    name: 'pressed focused selected',
+    states: const {
+      WidgetState.pressed,
+      WidgetState.focused,
+      WidgetState.selected,
+    },
+    fill: colors.primaryContainer,
+    foreground: colors.onPrimaryContainer,
+    side: BorderSide(color: semantics.focus, width: BirbBorders.strong),
+    overlay: colors.primaryContainer,
+    radioBackground: colors.primaryContainer,
+    radioFill: colors.onPrimaryContainer,
+    switchOutline: semantics.focus,
+    switchOutlineWidth: BirbBorders.strong,
+  ),
+  _SelectionThemeCase(
+    name: 'disabled error focused selected',
+    states: const {
+      WidgetState.disabled,
+      WidgetState.error,
+      WidgetState.focused,
+      WidgetState.selected,
+    },
+    fill: colors.surface,
+    foreground: semantics.disabled,
+    side: BorderSide(color: semantics.disabled, width: BirbBorders.thin),
+    overlay: WidgetStateColor.transparent,
+    radioBackground: colors.surface,
+    radioFill: semantics.disabled,
+    switchOutline: semantics.disabled,
+    switchOutlineWidth: BirbBorders.thin,
+  ),
+];
+
+final class _SelectionThemeCase {
+  const _SelectionThemeCase({
+    required this.name,
+    required this.states,
+    required this.fill,
+    required this.foreground,
+    required this.side,
+    required this.overlay,
+    required this.radioBackground,
+    required this.radioFill,
+    required this.switchOutline,
+    required this.switchOutlineWidth,
+  });
+
+  final String name;
+  final Set<WidgetState> states;
+  final Color fill;
+  final Color foreground;
+  final BorderSide side;
+  final Color overlay;
+  final Color radioBackground;
+  final Color radioFill;
+  final Color switchOutline;
+  final double switchOutlineWidth;
 }

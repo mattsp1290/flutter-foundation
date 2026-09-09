@@ -10,20 +10,21 @@ abstract final class BirbSelectionThemes {
     BirbSemanticColors semantics,
   ) => CheckboxThemeData(
     checkColor: WidgetStateColor.resolveWith(
-      (states) => _checkboxForeground(states, colors, semantics),
+      (states) =>
+          _checkboxForeground(_SelectionState.from(states), colors, semantics),
     ),
-    fillColor: WidgetStateColor.resolveWith(
-      (states) => states.contains(WidgetState.error)
-          ? colors.surface
-          : _fill(states, colors),
-    ),
+    fillColor: WidgetStateColor.resolveWith((states) {
+      final state = _SelectionState.from(states);
+      return state.error ? colors.surface : _fill(state, colors);
+    }),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(states, colors, semantics),
+      (states) => _overlay(_SelectionState.from(states), colors, semantics),
     ),
     shape: const RoundedRectangleBorder(borderRadius: BirbRadii.none),
     side: WidgetStateBorderSide.resolveWith(
-      (states) => _checkboxSide(states, colors, semantics),
+      (states) =>
+          _checkboxSide(_SelectionState.from(states), colors, semantics),
     ),
     visualDensity: VisualDensity.standard,
   );
@@ -33,32 +34,26 @@ abstract final class BirbSelectionThemes {
     BirbSemanticColors semantics,
   ) => RadioThemeData(
     backgroundColor: WidgetStateColor.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) return colors.surface;
-      if (states.contains(WidgetState.pressed)) {
-        return colors.primaryContainer;
-      }
-      if (states.contains(WidgetState.focused)) return colors.surface;
-      if (states.contains(WidgetState.hovered)) {
-        return colors.surfaceContainerHigh;
-      }
+      final state = _SelectionState.from(states);
+      if (state.disabled) return colors.surface;
+      if (state.pressed) return colors.primaryContainer;
+      if (state.focused) return colors.surface;
+      if (state.hovered) return colors.surfaceContainerHigh;
       return colors.surface;
     }),
     fillColor: WidgetStateColor.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) return semantics.disabled;
-      if (states.contains(WidgetState.pressed)) {
-        return colors.onPrimaryContainer;
-      }
-      if (states.contains(WidgetState.hovered)) return colors.onSurface;
-      return states.contains(WidgetState.selected)
-          ? colors.primary
-          : colors.outline;
+      final state = _SelectionState.from(states);
+      if (state.disabled) return semantics.disabled;
+      if (state.pressed) return colors.onPrimaryContainer;
+      if (state.hovered) return colors.onSurface;
+      return state.selected ? colors.primary : colors.outline;
     }),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(states, colors, semantics),
+      (states) => _overlay(_SelectionState.from(states), colors, semantics),
     ),
     side: WidgetStateBorderSide.resolveWith(
-      (states) => _side(states, colors, semantics),
+      (states) => _side(_SelectionState.from(states), colors, semantics),
     ),
     visualDensity: VisualDensity.standard,
   );
@@ -69,29 +64,27 @@ abstract final class BirbSelectionThemes {
   ) => SwitchThemeData(
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(states, colors, semantics),
+      (states) => _overlay(_SelectionState.from(states), colors, semantics),
     ),
     thumbColor: WidgetStateColor.resolveWith(
-      (states) => _foreground(states, colors, semantics),
+      (states) => _foreground(_SelectionState.from(states), colors, semantics),
     ),
-    trackColor: WidgetStateColor.resolveWith((states) => _fill(states, colors)),
+    trackColor: WidgetStateColor.resolveWith(
+      (states) => _fill(_SelectionState.from(states), colors),
+    ),
     trackOutlineColor: WidgetStateColor.resolveWith((states) {
-      if (states.contains(WidgetState.disabled)) return semantics.disabled;
-      if (states.contains(WidgetState.focused)) return semantics.focus;
-      if (states.contains(WidgetState.pressed)) {
-        return colors.onPrimaryContainer;
-      }
-      return states.contains(WidgetState.selected)
-          ? colors.primary
-          : colors.outline;
+      final state = _SelectionState.from(states);
+      if (state.disabled) return semantics.disabled;
+      if (state.focused) return semantics.focus;
+      if (state.pressed) return colors.onPrimaryContainer;
+      return state.selected ? colors.primary : colors.outline;
     }),
-    trackOutlineWidth: WidgetStateProperty.resolveWith(
-      (states) =>
-          states.contains(WidgetState.focused) &&
-              !states.contains(WidgetState.disabled)
+    trackOutlineWidth: WidgetStateProperty.resolveWith((states) {
+      final state = _SelectionState.from(states);
+      return state.focused && !state.disabled
           ? BirbBorders.strong
-          : BirbBorders.thin,
-    ),
+          : BirbBorders.thin;
+    }),
   );
 
   static SliderThemeData slider(
@@ -123,15 +116,15 @@ abstract final class BirbSelectionThemes {
 
   static ChipThemeData chip(ColorScheme colors, BirbSemanticColors semantics) {
     final foreground = WidgetStateColor.resolveWith(
-      (states) => _foreground(states, colors, semantics),
+      (states) => _foreground(_SelectionState.from(states), colors, semantics),
     );
     return ChipThemeData(
-      checkmarkColor: WidgetStateColor.resolveWith(
-        (states) => states.contains(WidgetState.disabled)
-            ? semantics.disabled
-            : colors.onPrimary,
+      // ChipThemeData does not resolve this color by widget state. Disabled
+      // selected chips use `BirbFilterChip`'s concrete per-instance override.
+      checkmarkColor: colors.onPrimary,
+      color: WidgetStateColor.resolveWith(
+        (states) => _fill(_SelectionState.from(states), colors),
       ),
-      color: WidgetStateColor.resolveWith((states) => _fill(states, colors)),
       deleteIconColor: foreground,
       disabledColor: colors.surface,
       elevation: 0,
@@ -145,107 +138,116 @@ abstract final class BirbSelectionThemes {
       shape: const RoundedRectangleBorder(borderRadius: BirbRadii.pixel),
       showCheckmark: true,
       side: WidgetStateBorderSide.resolveWith(
-        (states) => _side(states, colors, semantics),
+        (states) => _side(_SelectionState.from(states), colors, semantics),
       ),
       surfaceTintColor: WidgetStateColor.transparent,
     );
   }
 }
 
-Color _fill(Set<WidgetState> states, ColorScheme colors) {
-  if (states.contains(WidgetState.disabled)) return colors.surface;
-  if (states.contains(WidgetState.pressed)) return colors.primaryContainer;
-  if (states.contains(WidgetState.focused)) {
-    return states.contains(WidgetState.selected)
-        ? colors.primary
-        : colors.surface;
+Color _fill(_SelectionState state, ColorScheme colors) {
+  if (state.disabled) return colors.surface;
+  if (state.pressed) return colors.primaryContainer;
+  if (state.focused) {
+    return state.selected ? colors.primary : colors.surface;
   }
-  if (states.contains(WidgetState.hovered)) {
-    return colors.surfaceContainerHigh;
-  }
-  return states.contains(WidgetState.selected)
-      ? colors.primary
-      : colors.surface;
+  if (state.hovered) return colors.surfaceContainerHigh;
+  return state.selected ? colors.primary : colors.surface;
 }
 
 Color _foreground(
-  Set<WidgetState> states,
+  _SelectionState state,
   ColorScheme colors,
   BirbSemanticColors semantics,
 ) {
-  if (states.contains(WidgetState.disabled)) return semantics.disabled;
-  if (states.contains(WidgetState.pressed)) return colors.onPrimaryContainer;
-  if (states.contains(WidgetState.focused)) {
-    return states.contains(WidgetState.selected)
-        ? colors.onPrimary
-        : colors.onSurface;
+  if (state.disabled) return semantics.disabled;
+  if (state.pressed) return colors.onPrimaryContainer;
+  if (state.focused) {
+    return state.selected ? colors.onPrimary : colors.onSurface;
   }
-  if (states.contains(WidgetState.hovered)) return colors.onSurface;
-  return states.contains(WidgetState.selected)
-      ? colors.onPrimary
-      : colors.onSurface;
+  if (state.hovered) return colors.onSurface;
+  return state.selected ? colors.onPrimary : colors.onSurface;
 }
 
 BorderSide _side(
-  Set<WidgetState> states,
+  _SelectionState state,
   ColorScheme colors,
   BirbSemanticColors semantics,
 ) {
-  if (states.contains(WidgetState.disabled)) {
+  if (state.disabled) {
     return BorderSide(color: semantics.disabled, width: BirbBorders.thin);
   }
-  if (states.contains(WidgetState.focused)) {
+  if (state.focused) {
     return BorderSide(color: semantics.focus, width: BirbBorders.strong);
   }
   return BorderSide(
-    color: states.contains(WidgetState.selected)
-        ? colors.primary
-        : colors.outline,
+    color: state.selected ? colors.primary : colors.outline,
     width: BirbBorders.thin,
   );
 }
 
 Color _overlay(
-  Set<WidgetState> states,
+  _SelectionState state,
   ColorScheme colors,
   BirbSemanticColors semantics,
 ) {
-  if (states.contains(WidgetState.disabled)) {
-    return WidgetStateColor.transparent;
-  }
-  if (states.contains(WidgetState.pressed)) return colors.primaryContainer;
-  if (states.contains(WidgetState.focused)) return semantics.focus;
-  if (states.contains(WidgetState.hovered)) {
-    return colors.surfaceContainerHigh;
-  }
+  if (state.disabled) return WidgetStateColor.transparent;
+  if (state.pressed) return colors.primaryContainer;
+  if (state.focused) return semantics.focus;
+  if (state.hovered) return colors.surfaceContainerHigh;
   return WidgetStateColor.transparent;
 }
 
 Color _checkboxForeground(
-  Set<WidgetState> states,
+  _SelectionState state,
   ColorScheme colors,
   BirbSemanticColors semantics,
 ) {
-  if (states.contains(WidgetState.disabled)) return semantics.disabled;
-  if (states.contains(WidgetState.error)) return semantics.errorIndicator;
-  return _foreground(states, colors, semantics);
+  if (state.disabled) return semantics.disabled;
+  if (state.error) return semantics.errorIndicator;
+  return _foreground(state, colors, semantics);
 }
 
 BorderSide _checkboxSide(
-  Set<WidgetState> states,
+  _SelectionState state,
   ColorScheme colors,
   BirbSemanticColors semantics,
 ) {
-  if (states.contains(WidgetState.disabled)) {
+  if (state.disabled) {
     return BorderSide(color: semantics.disabled, width: BirbBorders.thin);
   }
-  if (states.contains(WidgetState.error)) {
+  if (state.error) {
     return BorderSide(
       color: semantics.errorIndicator,
-      width: states.contains(WidgetState.focused)
-          ? BirbBorders.strong
-          : BirbBorders.thin,
+      width: state.focused ? BirbBorders.strong : BirbBorders.thin,
     );
   }
-  return _side(states, colors, semantics);
+  return _side(state, colors, semantics);
+}
+
+final class _SelectionState {
+  const _SelectionState({
+    required this.disabled,
+    required this.error,
+    required this.focused,
+    required this.hovered,
+    required this.pressed,
+    required this.selected,
+  });
+
+  factory _SelectionState.from(Set<WidgetState> states) => _SelectionState(
+    disabled: states.contains(WidgetState.disabled),
+    error: states.contains(WidgetState.error),
+    focused: states.contains(WidgetState.focused),
+    hovered: states.contains(WidgetState.hovered),
+    pressed: states.contains(WidgetState.pressed),
+    selected: states.contains(WidgetState.selected),
+  );
+
+  final bool disabled;
+  final bool error;
+  final bool focused;
+  final bool hovered;
+  final bool pressed;
+  final bool selected;
 }
