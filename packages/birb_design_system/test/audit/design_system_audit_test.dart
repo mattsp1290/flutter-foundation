@@ -60,6 +60,12 @@ void main() {
       'color.withOpacity(0.5)': 'authored color transformation',
       'color.withOpacity': 'authored color transformation',
       'color.withValues(alpha: 0.5)': 'authored color transformation',
+      'color.withRed(128)': 'authored color transformation',
+      'color.withRed': 'authored color transformation',
+      'color.withGreen(128)': 'authored color transformation',
+      'color.withGreen': 'authored color transformation',
+      'color.withBlue(128)': 'authored color transformation',
+      'color.withBlue': 'authored color transformation',
       'ColorScheme.fromSeed(seedColor: color)': 'generated ColorScheme usage',
       'ColorScheme.fromSeed': 'generated ColorScheme usage',
       'LinearGradient(colors: colors)': 'LinearGradient usage',
@@ -161,7 +167,80 @@ const inert = '''BackdropFilter(filter: filter)''';
       );
     });
 
-    test('keeps file-system audit APIs out of the runtime barrel', () {
+    test('does not grant standalone consumers design-system exemptions', () {
+      final root = _fixtureRoot();
+      _write(root, 'pubspec.yaml', 'name: consumer_app\n');
+      _write(
+        root,
+        'lib/src/feature.dart',
+        "import 'package:birb_design_system/src/foundation/"
+            "birb_palette.dart';\nfinal value = BirbPalette.blue;\n",
+      );
+      _write(
+        root,
+        'lib/src/foundation/birb_palette.dart',
+        'final value = Color(0xFF000000);\n',
+      );
+
+      expect(
+        _violations(root),
+        containsAll(<String>[
+          'lib/src/feature.dart:1:private BirbPalette boundary violation',
+          'lib/src/feature.dart:2:private BirbPalette boundary violation',
+          'lib/src/foundation/birb_palette.dart:1:direct Color construction',
+        ]),
+      );
+    });
+
+    test('recognizes a standalone birb_design_system package', () {
+      final root = _fixtureRoot();
+      _write(root, 'pubspec.yaml', 'name: birb_design_system\n');
+      _write(
+        root,
+        'lib/src/foundation/birb_palette.dart',
+        'final value = Color(0xFF000000);\n',
+      );
+      _write(root, 'lib/src/tokens.dart', 'final value = BirbPalette.blue;\n');
+
+      expect(_violations(root), isEmpty);
+    });
+
+    test('rejects encoded and escaped directive boundary bypasses', () {
+      final root = _fixtureRoot();
+      _write(
+        root,
+        'packages/app/lib/palette.dart',
+        "export 'package:birb_design_system/src/foundation/"
+            "birb_%70alette.dart';\n",
+      );
+      _write(
+        root,
+        'packages/birb_design_system/lib/encoded_barrel.dart',
+        "export 'design_system_%61udit.dart';\n"
+            "export 'src/%61udit/design_system_audit.dart';\n",
+      );
+      _write(
+        root,
+        'packages/app/lib/escaped.dart',
+        r"export 'birb_\x70alette.dart';"
+            '\n',
+      );
+
+      expect(
+        _violations(root),
+        containsAll(<String>[
+          'packages/app/lib/palette.dart:1:private palette export is forbidden',
+          'packages/birb_design_system/lib/encoded_barrel.dart:1:'
+              'audit APIs may only be exported by design_system_audit.dart',
+          'packages/birb_design_system/lib/encoded_barrel.dart:2:'
+              'audit APIs may only be exported by design_system_audit.dart',
+          'packages/app/lib/escaped.dart:1:'
+              'escaped directive URIs are forbidden',
+        ]),
+      );
+    });
+
+    test('keeps file-system audit APIs behind the dedicated barrel', () {
       final root = _fixtureRoot();
       _write(
         root,
@@ -171,7 +250,31 @@ const inert = '''BackdropFilter(filter: filter)''';
 
       expect(_violations(root), <String>[
         'packages/birb_design_system/lib/birb_design_system.dart:1:'
-            'runtime barrel must not export audit APIs',
+            'audit APIs may only be exported by design_system_audit.dart',
+      ]);
+    });
+
+    test('rejects audit exports from an intermediate runtime barrel', () {
+      final root = _fixtureRoot();
+      _write(
+        root,
+        'packages/birb_design_system/lib/birb_design_system.dart',
+        "export 'tooling.dart';\n",
+      );
+      _write(
+        root,
+        'packages/birb_design_system/lib/tooling.dart',
+        "export 'design_system_audit.dart';\n",
+      );
+      _write(
+        root,
+        'packages/birb_design_system/lib/design_system_audit.dart',
+        "export 'src/audit/design_system_audit.dart';\n",
+      );
+
+      expect(_violations(root), <String>[
+        'packages/birb_design_system/lib/tooling.dart:1:'
+            'audit APIs may only be exported by design_system_audit.dart',
       ]);
     });
 

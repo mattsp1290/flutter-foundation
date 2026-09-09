@@ -3,9 +3,17 @@ import 'dart:io';
 const _standalonePalettePath = 'lib/src/foundation/birb_palette.dart';
 const _workspacePalettePath =
     'packages/birb_design_system/lib/src/foundation/birb_palette.dart';
-const _standaloneRuntimeBarrel = 'lib/birb_design_system.dart';
-const _workspaceRuntimeBarrel =
-    'packages/birb_design_system/lib/birb_design_system.dart';
+const _standaloneAuditBarrel = 'lib/design_system_audit.dart';
+const _workspaceAuditBarrel =
+    'packages/birb_design_system/lib/design_system_audit.dart';
+const _forbiddenColorMembers = {
+  'withAlpha',
+  'withOpacity',
+  'withValues',
+  'withRed',
+  'withGreen',
+  'withBlue',
+};
 
 const _forbiddenIdentifiers = {
   'HSLColor': 'HSLColor usage',
@@ -65,12 +73,19 @@ DesignSystemAuditResult auditDesignSystemSources(Directory requestedRoot) {
 
   final surface = _auditSurface(root);
   final violations = [...surface.violations];
+  final standaloneDesignSystem = _isStandaloneDesignSystem(root);
 
   for (final file in surface.files) {
     final relativePath = _relativePath(root, file);
     try {
       final tokens = _DartTokenScanner(file.readAsStringSync()).scan();
-      violations.addAll(_tokenViolations(relativePath, tokens));
+      violations.addAll(
+        _tokenViolations(
+          relativePath,
+          tokens,
+          standaloneDesignSystem: standaloneDesignSystem,
+        ),
+      );
     } on FileSystemException catch (error) {
       violations.add(
         DesignSystemViolation(
@@ -132,12 +147,12 @@ DesignSystemAuditResult _failedSurface(String path, String message) {
 
 List<DesignSystemViolation> _tokenViolations(
   String relativePath,
-  List<_Token> tokens,
-) {
+  List<_Token> tokens, {
+  required bool standaloneDesignSystem,
+}) {
   final violations = <DesignSystemViolation>[];
   final insideDesignSystem =
-      relativePath == _standalonePalettePath ||
-      relativePath.startsWith('lib/src/') ||
+      (standaloneDesignSystem && relativePath.startsWith('lib/src/')) ||
       relativePath.startsWith('packages/birb_design_system/lib/src/');
 
   void add(_Token token, String message) {
@@ -165,7 +180,8 @@ List<DesignSystemViolation> _tokenViolations(
     final forbiddenMessage = _forbiddenIdentifiers[token.lexeme];
     if (forbiddenMessage != null) add(token, forbiddenMessage);
 
-    if (token.lexeme == 'Color' && !_isPalettePath(relativePath)) {
+    if (token.lexeme == 'Color' &&
+        !_isPalettePath(relativePath, standaloneDesignSystem)) {
       final directConstructor = sequence(index + 1, ['(']);
       final namedConstructor =
           index + 2 < tokens.length &&
@@ -189,7 +205,7 @@ List<DesignSystemViolation> _tokenViolations(
     if (token.lexeme == 'CupertinoColors' && sequence(index + 1, ['.'])) {
       add(token, 'CupertinoColors palette usage');
     }
-    if ({'withAlpha', 'withOpacity', 'withValues'}.contains(token.lexeme) &&
+    if (_forbiddenColorMembers.contains(token.lexeme) &&
         index > 0 &&
         tokens[index - 1].lexeme == '.') {
       add(token, 'authored color transformation');
@@ -208,36 +224,63 @@ List<DesignSystemViolation> _tokenViolations(
       index + 1,
     );
     final end = directiveEnd == -1 ? tokens.length : directiveEnd;
-    final exposesPalette = tokens
+    final directiveStrings = tokens
         .sublist(index + 1, end)
         .where((candidate) => candidate.kind == _TokenKind.string)
-        .any((candidate) => candidate.lexeme.endsWith('birb_palette.dart'));
+        .toList();
+    final directivePaths = <String>[];
+    for (final candidate in directiveStrings) {
+      if (candidate.lexeme.contains(r'\')) {
+        add(candidate, 'escaped directive URIs are forbidden');
+        continue;
+      }
+      try {
+        directivePaths.add(
+          Uri.parse(candidate.lexeme).path.replaceAll(r'\', '/'),
+        );
+      } on FormatException {
+        add(candidate, 'malformed directive URI');
+      }
+    }
+    final exposesPalette = directivePaths.any(
+      (path) => path.endsWith('birb_palette.dart'),
+    );
     if (exposesPalette && token.lexeme == 'export') {
       add(token, 'private palette export is forbidden');
     } else if (exposesPalette && !insideDesignSystem) {
       add(token, 'private BirbPalette boundary violation');
     }
-    final runtimeBarrel =
-        relativePath == _standaloneRuntimeBarrel ||
-        relativePath == _workspaceRuntimeBarrel;
-    final exposesAudit = tokens
-        .sublist(index + 1, end)
-        .where((candidate) => candidate.kind == _TokenKind.string)
-        .any(
-          (candidate) =>
-              candidate.lexeme.endsWith('design_system_audit.dart') ||
-              candidate.lexeme.contains('/audit/'),
-        );
-    if (runtimeBarrel && token.lexeme == 'export' && exposesAudit) {
-      add(token, 'runtime barrel must not export audit APIs');
+    final exposesAudit = directivePaths.any(
+      (path) =>
+          path.endsWith('design_system_audit.dart') || path.contains('/audit/'),
+    );
+    final isAuditBarrel =
+        relativePath == _workspaceAuditBarrel ||
+        (standaloneDesignSystem && relativePath == _standaloneAuditBarrel);
+    if (!isAuditBarrel && token.lexeme == 'export' && exposesAudit) {
+      add(token, 'audit APIs may only be exported by design_system_audit.dart');
     }
   }
 
   return violations;
 }
 
-bool _isPalettePath(String path) =>
-    path == _standalonePalettePath || path == _workspacePalettePath;
+bool _isPalettePath(String path, bool standaloneDesignSystem) =>
+    path == _workspacePalettePath ||
+    (standaloneDesignSystem && path == _standalonePalettePath);
+
+bool _isStandaloneDesignSystem(Directory root) {
+  final pubspec = File.fromUri(root.uri.resolve('pubspec.yaml'));
+  if (!pubspec.existsSync()) return false;
+  try {
+    return RegExp(
+      r'^name:\s*birb_design_system\s*(?:#.*)?$',
+      multiLine: true,
+    ).hasMatch(pubspec.readAsStringSync());
+  } on FileSystemException {
+    return false;
+  }
+}
 
 _AuditSurface _auditSurface(Directory root) {
   final files = <File>[];
