@@ -5,12 +5,13 @@ import '../tokens/birb_tokens.dart';
 import 'birb_color_schemes.dart';
 import 'birb_typography.dart';
 import 'components/birb_button_themes.dart';
+import 'components/birb_selection_themes.dart';
 
 /// Complete light and dark foundations for Birb Party applications.
 ///
-/// Material button recipes provide the documented state, square geometry, and
-/// duration contracts. Other component families remain at Flutter defaults
-/// until their W2 theme modules install the remaining recipes.
+/// Material button and selection-control recipes provide the documented state,
+/// geometry, and duration contracts. Other component families remain at
+/// Flutter defaults until their W2 theme modules install the remaining recipes.
 abstract final class BirbTheme {
   static final ThemeData light = _buildTheme(
     colorScheme: BirbColorSchemes.light,
@@ -61,6 +62,8 @@ ThemeData _buildTheme({
     cardTheme: const CardThemeData(
       shape: RoundedRectangleBorder(borderRadius: BirbRadii.none),
     ),
+    checkboxTheme: BirbSelectionThemes.checkbox(colorScheme, semanticColors),
+    chipTheme: BirbSelectionThemes.chip(colorScheme, semanticColors),
     disabledColor: semanticColors.disabled,
     elevatedButtonTheme: ElevatedButtonThemeData(style: filledButtonStyle),
     filledButtonTheme: FilledButtonThemeData(style: filledButtonStyle),
@@ -75,8 +78,11 @@ ThemeData _buildTheme({
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: BirbButtonThemes.outlined(colorScheme, semanticColors),
     ),
+    radioTheme: BirbSelectionThemes.radio(colorScheme, semanticColors),
     scaffoldBackgroundColor: colorScheme.surface,
+    sliderTheme: BirbSelectionThemes.slider(colorScheme, semanticColors),
     splashColor: colorScheme.primaryContainer,
+    switchTheme: BirbSelectionThemes.toggle(colorScheme, semanticColors),
     textButtonTheme: TextButtonThemeData(style: borderlessButtonStyle),
     textTheme: textTheme,
     textSelectionTheme: TextSelectionThemeData(
