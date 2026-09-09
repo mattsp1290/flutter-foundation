@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../color/birb_semantic_colors.dart';
-import '../foundation/birb_palette.dart';
 import '../tokens/birb_tokens.dart';
 import 'birb_color_schemes.dart';
 import 'birb_typography.dart';
@@ -28,11 +27,10 @@ abstract final class BirbTheme {
   /// Flutter otherwise synthesizes disabled Material 3 text with opacity.
   static WidgetStateTextStyle inputTextStyle(BuildContext context) {
     final theme = Theme.of(context);
-    final semantics = theme.extension<BirbSemanticColors>()!;
     return WidgetStateTextStyle.resolveWith((states) {
       return TextStyle(
         color: states.contains(WidgetState.disabled)
-            ? semantics.disabled
+            ? theme.disabledColor
             : theme.colorScheme.onSurface,
       );
     });
@@ -65,9 +63,7 @@ ThemeData _buildTheme({
     textTheme: textTheme,
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colorScheme.primary,
-      selectionColor: colorScheme.brightness == Brightness.light
-          ? BirbPalette.lightBlue
-          : BirbPalette.blue,
+      selectionColor: colorScheme.inversePrimary,
       selectionHandleColor: colorScheme.primary,
     ),
     visualDensity: VisualDensity.standard,

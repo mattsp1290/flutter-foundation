@@ -105,4 +105,29 @@ void main() {
       BirbSemanticColors.light.disabled,
     );
   });
+
+  testWidgets('input style supports a theme without semantic extensions', (
+    tester,
+  ) async {
+    late BuildContext context;
+    final theme = ThemeData(disabledColor: BirbSemanticColors.light.disabled);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Builder(
+          builder: (value) {
+            context = value;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    final style = BirbTheme.inputTextStyle(context);
+    expect(
+      style.resolve({WidgetState.disabled}).color,
+      BirbSemanticColors.light.disabled,
+    );
+    expect(style.resolve({}).color, Theme.of(context).colorScheme.onSurface);
+  });
 }

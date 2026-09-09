@@ -7,34 +7,92 @@ import 'birbparty_foundation_oracle.dart';
 
 void main() {
   test('foundation matches Birbparty $birbpartySourceCommit', () {
-    for (final item in <(ThemeData, Map<String, String>, Map<String, String>)>[
-      (BirbTheme.light, sourceLightScheme, sourceLightSemantics),
-      (BirbTheme.dark, sourceDarkScheme, sourceDarkSemantics),
+    for (final item in <_ThemeCase>[
+      (
+        theme: BirbTheme.light,
+        scheme: sourceLightScheme,
+        semantics: sourceLightSemantics,
+        brightness: sourceLightBaseTheme.brightness,
+        selectionColor: sourceLightBaseTheme.selectionColor,
+        textColor: sourceLightBaseTheme.textColor,
+      ),
+      (
+        theme: BirbTheme.dark,
+        scheme: sourceDarkScheme,
+        semantics: sourceDarkSemantics,
+        brightness: sourceDarkBaseTheme.brightness,
+        selectionColor: sourceDarkBaseTheme.selectionColor,
+        textColor: sourceDarkBaseTheme.textColor,
+      ),
     ]) {
       expect(
-        schemeColors(item.$1.colorScheme)
+        schemeColors(item.theme.colorScheme)
             .map((name, color) => MapEntry(name, color.toARGB32())),
-        item.$2.map(
+        item.scheme.map(
           (name, paletteName) => MapEntry(name, sourcePalette[paletteName]),
         ),
       );
       expect(
-        semanticColors(item.$1.extension<BirbSemanticColors>()!)
+        semanticColors(item.theme.extension<BirbSemanticColors>()!)
             .map((name, color) => MapEntry(name, color.toARGB32())),
-        item.$3.map(
+        item.semantics.map(
           (name, paletteName) => MapEntry(name, sourcePalette[paletteName]),
         ),
       );
-      expect(item.$1.scaffoldBackgroundColor, item.$1.colorScheme.surface);
-      expect(item.$1.applyElevationOverlayColor, isFalse);
-      final semantics = item.$1.extension<BirbSemanticColors>()!;
-      expect(item.$1.disabledColor, semantics.disabled);
-      expect(item.$1.focusColor, semantics.focus);
-      expect(item.$1.hoverColor, item.$1.colorScheme.surfaceContainerHigh);
-      expect(item.$1.highlightColor, item.$1.colorScheme.primaryContainer);
-      expect(item.$1.splashColor, item.$1.colorScheme.primaryContainer);
       expect(
-        textStyles(item.$1.textTheme).map(
+        item.theme.scaffoldBackgroundColor,
+        item.theme.colorScheme.surface,
+      );
+      expect(item.theme.useMaterial3, sourceBaseTheme.useMaterial3);
+      expect(item.theme.brightness.name, item.brightness);
+      expect(item.theme.colorScheme.brightness.name, item.brightness);
+      expect(
+        item.theme.applyElevationOverlayColor,
+        sourceBaseTheme.applyElevationOverlayColor,
+      );
+      expect(
+        item.theme.materialTapTargetSize.name,
+        sourceBaseTheme.materialTapTargetSize,
+      );
+      expect(
+        item.theme.visualDensity.horizontal,
+        sourceBaseTheme.visualDensityHorizontal,
+      );
+      expect(
+        item.theme.visualDensity.vertical,
+        sourceBaseTheme.visualDensityVertical,
+      );
+      final cardShape = item.theme.cardTheme.shape! as RoundedRectangleBorder;
+      expect(
+        (cardShape.borderRadius as BorderRadius).topLeft.x,
+        sourceBaseTheme.cardRadius,
+      );
+      final semantics = item.theme.extension<BirbSemanticColors>()!;
+      expect(item.theme.disabledColor, semantics.disabled);
+      expect(item.theme.focusColor, semantics.focus);
+      expect(
+        item.theme.hoverColor,
+        item.theme.colorScheme.surfaceContainerHigh,
+      );
+      expect(
+        item.theme.highlightColor,
+        item.theme.colorScheme.primaryContainer,
+      );
+      expect(item.theme.splashColor, item.theme.colorScheme.primaryContainer);
+      expect(
+        item.theme.textSelectionTheme.cursorColor?.toARGB32(),
+        sourcePalette[item.scheme['primary']],
+      );
+      expect(
+        item.theme.textSelectionTheme.selectionColor?.toARGB32(),
+        sourcePalette[item.selectionColor],
+      );
+      expect(
+        item.theme.textSelectionTheme.selectionHandleColor?.toARGB32(),
+        sourcePalette[item.scheme['primary']],
+      );
+      expect(
+        textStyles(item.theme.textTheme).map(
           (name, style) => MapEntry(name, (
             style!.fontSize!,
             style.fontWeight!.value,
@@ -43,6 +101,9 @@ void main() {
         ),
         sourceTypography,
       );
+      for (final style in textStyles(item.theme.textTheme).values) {
+        expect(style!.color?.toARGB32(), sourcePalette[item.textColor]);
+      }
     }
 
     expect(<double>[
@@ -100,3 +161,12 @@ void main() {
     }
   });
 }
+
+typedef _ThemeCase = ({
+  ThemeData theme,
+  Map<String, String> scheme,
+  Map<String, String> semantics,
+  String brightness,
+  String selectionColor,
+  String textColor,
+});

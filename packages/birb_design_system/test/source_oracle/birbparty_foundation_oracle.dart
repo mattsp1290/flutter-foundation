@@ -172,6 +172,27 @@ const sourceTypography = <String, (double, int, double)>{
   'labelSmall': (11, 700, 1.3),
 };
 
+const sourceBaseTheme = (
+  useMaterial3: true,
+  applyElevationOverlayColor: false,
+  materialTapTargetSize: 'padded',
+  visualDensityHorizontal: 0.0,
+  visualDensityVertical: 0.0,
+  cardRadius: 0.0,
+);
+
+const sourceLightBaseTheme = (
+  brightness: 'light',
+  textColor: 'black',
+  selectionColor: 'lightBlue',
+);
+
+const sourceDarkBaseTheme = (
+  brightness: 'dark',
+  textColor: 'white',
+  selectionColor: 'blue',
+);
+
 const sourceSpacing = <double>[4, 8, 12, 16, 24, 32, 48];
 const sourceBorders = <double>[1, 2];
 const sourceRadii = <double>[0, 2];
