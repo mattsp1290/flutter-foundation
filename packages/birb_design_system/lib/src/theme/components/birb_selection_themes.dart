@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../color/birb_semantic_colors.dart';
 import '../../tokens/birb_tokens.dart';
+import 'interaction_overlay.dart';
 
 /// Internal builders for selection-control state recipes.
 abstract final class BirbSelectionThemes {
@@ -19,7 +20,7 @@ abstract final class BirbSelectionThemes {
     }),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(_SelectionState.from(states), colors, semantics),
+      (states) => BirbInteractionOverlay.resolve(states, colors, semantics),
     ),
     shape: const RoundedRectangleBorder(borderRadius: BirbRadii.none),
     side: WidgetStateBorderSide.resolveWith(
@@ -50,7 +51,7 @@ abstract final class BirbSelectionThemes {
     }),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(_SelectionState.from(states), colors, semantics),
+      (states) => BirbInteractionOverlay.resolve(states, colors, semantics),
     ),
     side: WidgetStateBorderSide.resolveWith(
       (states) => _side(_SelectionState.from(states), colors, semantics),
@@ -64,7 +65,7 @@ abstract final class BirbSelectionThemes {
   ) => SwitchThemeData(
     materialTapTargetSize: MaterialTapTargetSize.padded,
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _overlay(_SelectionState.from(states), colors, semantics),
+      (states) => BirbInteractionOverlay.resolve(states, colors, semantics),
     ),
     thumbColor: WidgetStateColor.resolveWith(
       (states) => _foreground(_SelectionState.from(states), colors, semantics),
@@ -184,18 +185,6 @@ BorderSide _side(
     color: state.selected ? colors.primary : colors.outline,
     width: BirbBorders.thin,
   );
-}
-
-Color _overlay(
-  _SelectionState state,
-  ColorScheme colors,
-  BirbSemanticColors semantics,
-) {
-  if (state.disabled) return WidgetStateColor.transparent;
-  if (state.pressed) return colors.primaryContainer;
-  if (state.focused) return semantics.focus;
-  if (state.hovered) return colors.surfaceContainerHigh;
-  return WidgetStateColor.transparent;
 }
 
 Color _checkboxForeground(

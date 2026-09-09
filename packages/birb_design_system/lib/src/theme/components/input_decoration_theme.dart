@@ -12,7 +12,7 @@ abstract final class BirbInputDecorationTheme {
     final border = WidgetStateInputBorder.resolveWith(
       (states) => OutlineInputBorder(
         borderRadius: BirbRadii.none,
-        borderSide: resolveBirbInputBorderSide(
+        borderSide: _resolveBirbInputBorderSide(
           colors: colors,
           semantics: semantics,
           enabled: !states.contains(WidgetState.disabled),
@@ -59,7 +59,7 @@ abstract final class BirbInputDecorationTheme {
   }
 }
 
-BorderSide resolveBirbInputBorderSide({
+BorderSide _resolveBirbInputBorderSide({
   required ColorScheme colors,
   required BirbSemanticColors semantics,
   required bool enabled,

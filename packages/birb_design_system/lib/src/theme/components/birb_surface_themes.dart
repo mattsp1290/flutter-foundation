@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../color/birb_semantic_colors.dart';
 import '../../tokens/birb_tokens.dart';
+import 'interaction_overlay.dart';
 
 /// Internal builders for surfaces, navigation, and route overlays.
 abstract final class BirbSurfaceThemes {
@@ -86,7 +87,7 @@ abstract final class BirbSurfaceThemes {
       ),
     ),
     overlayColor: WidgetStateColor.resolveWith(
-      (states) => _interactionOverlay(states, colors, semantics),
+      (states) => BirbInteractionOverlay.resolve(states, colors, semantics),
     ),
     shadowColor: colors.shadow,
     surfaceTintColor: WidgetStateColor.transparent,
@@ -152,20 +153,4 @@ Color _navigationForeground(
   return states.contains(WidgetState.selected)
       ? colors.onPrimaryContainer
       : colors.onSurfaceVariant;
-}
-
-Color _interactionOverlay(
-  Set<WidgetState> states,
-  ColorScheme colors,
-  BirbSemanticColors semantics,
-) {
-  if (states.contains(WidgetState.disabled)) {
-    return WidgetStateColor.transparent;
-  }
-  if (states.contains(WidgetState.pressed)) return colors.primaryContainer;
-  if (states.contains(WidgetState.focused)) return semantics.focus;
-  if (states.contains(WidgetState.hovered)) {
-    return colors.surfaceContainerHigh;
-  }
-  return WidgetStateColor.transparent;
 }
