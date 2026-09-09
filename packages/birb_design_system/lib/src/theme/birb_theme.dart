@@ -4,6 +4,7 @@ import '../color/birb_semantic_colors.dart';
 import '../tokens/birb_tokens.dart';
 import 'birb_color_schemes.dart';
 import 'birb_typography.dart';
+import 'components/birb_button_themes.dart';
 
 /// Complete light and dark foundations for Birb Party applications.
 ///
@@ -54,12 +55,30 @@ ThemeData _buildTheme({
       shape: RoundedRectangleBorder(borderRadius: BirbRadii.none),
     ),
     disabledColor: semanticColors.disabled,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: BirbButtonThemes.filled(colorScheme, semanticColors),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: BirbButtonThemes.filled(colorScheme, semanticColors),
+    ),
     focusColor: semanticColors.focus,
     highlightColor: colorScheme.primaryContainer,
     hoverColor: colorScheme.surfaceContainerHigh,
+    iconButtonTheme: IconButtonThemeData(
+      style: BirbButtonThemes.borderless(colorScheme, semanticColors),
+    ),
     materialTapTargetSize: MaterialTapTargetSize.padded,
+    menuButtonTheme: MenuButtonThemeData(
+      style: BirbButtonThemes.menu(colorScheme, semanticColors),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: BirbButtonThemes.outlined(colorScheme, semanticColors),
+    ),
     scaffoldBackgroundColor: colorScheme.surface,
     splashColor: colorScheme.primaryContainer,
+    textButtonTheme: TextButtonThemeData(
+      style: BirbButtonThemes.borderless(colorScheme, semanticColors),
+    ),
     textTheme: textTheme,
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colorScheme.primary,
