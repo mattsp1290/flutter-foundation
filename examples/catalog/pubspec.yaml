@@ -1,0 +1,25 @@
+name: flutter_foundation_catalog
+description: Integration and visual verification catalog for Flutter Foundation packages.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.47.1"
+
+resolution: workspace
+
+dependencies:
+  birb_appearance: ^0.1.0
+  birb_design_system: ^0.1.0
+  cupertino_icons: ^1.0.8
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
