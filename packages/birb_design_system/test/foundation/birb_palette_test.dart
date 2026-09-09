@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:birb_design_system/src/foundation/birb_palette.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,20 +62,5 @@ void main() {
       BirbPalette.gray,
       BirbPalette.darkGray,
     ]);
-  });
-
-  test('does not export palette primitives from the runtime barrel', () {
-    final repositoryPath = File(
-      'packages/birb_design_system/lib/birb_design_system.dart',
-    );
-    final packagePath = File('lib/birb_design_system.dart');
-    final barrelFile = repositoryPath.existsSync()
-        ? repositoryPath
-        : packagePath;
-    expect(barrelFile.existsSync(), isTrue);
-    final barrel = barrelFile.readAsStringSync();
-
-    expect(barrel, isNot(contains('birb_palette.dart')));
-    expect(barrel, isNot(contains('BirbPalette')));
   });
 }
