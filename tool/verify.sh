@@ -1,11 +1,15 @@
 #!/bin/sh
 set -eu
 
-repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repository_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
 
-flutter_root=$(flutter --version --machine | python3 -c \
-  'import json, sys; print(json.load(sys.stdin)["flutterRoot"])')
+flutter_root=$(flutter --version --machine | sed -n \
+  's/^[[:space:]]*"flutterRoot":[[:space:]]*"\([^"]*\)",*$/\1/p')
+if [ -z "$flutter_root" ]; then
+  printf '%s\n' 'Unable to locate the Flutter SDK root.' >&2
+  exit 1
+fi
 flutter_dart="$flutter_root/bin/cache/dart-sdk/bin/dart"
 
 run_step() {
