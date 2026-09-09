@@ -32,7 +32,7 @@ run_step 'Verify pinned Flutter toolchain' ./tool/verify_toolchain.sh
 run_step 'Check Dart formatting' \
   "$flutter_dart" format --output=none --set-exit-if-changed .
 run_step 'Audit design-system source' \
-  "$flutter_dart" run tool/check_design_system.dart
+  "$flutter_dart" run packages/birb_design_system/bin/check_design_system.dart .
 run_step 'Analyze workspace' flutter analyze
 run_step 'Test birb_design_system scaffold' \
   run_package_tests packages/birb_design_system
