@@ -1,4 +1,5 @@
 /// Shared design-system runtime API.
-///
-/// The public surface is populated by later, behavior-focused changes.
 library;
+
+export 'src/color/birb_semantic_colors.dart';
+export 'src/tokens/birb_tokens.dart';
