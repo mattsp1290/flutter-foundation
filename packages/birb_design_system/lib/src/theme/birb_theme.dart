@@ -8,10 +8,9 @@ import 'components/birb_button_themes.dart';
 
 /// Complete light and dark foundations for Birb Party applications.
 ///
-/// Component recipes intentionally remain at Flutter defaults until the W2
-/// theme modules add their documented state, square geometry, and duration
-/// contracts. Flutter has no global shape or animation-duration theme field;
-/// consumers use the exported duration tokens until those settings are added.
+/// Material button recipes provide the documented state, square geometry, and
+/// duration contracts. Other component families remain at Flutter defaults
+/// until their W2 theme modules install the remaining recipes.
 abstract final class BirbTheme {
   static final ThemeData light = _buildTheme(
     colorScheme: BirbColorSchemes.light,
@@ -48,6 +47,14 @@ ThemeData _buildTheme({
     colorScheme: colorScheme,
   );
   final textTheme = buildBirbTextTheme(base.textTheme, colorScheme.onSurface);
+  final filledButtonStyle = BirbButtonThemes.filled(
+    colorScheme,
+    semanticColors,
+  );
+  final borderlessButtonStyle = BirbButtonThemes.borderless(
+    colorScheme,
+    semanticColors,
+  );
 
   return base.copyWith(
     applyElevationOverlayColor: false,
@@ -55,18 +62,12 @@ ThemeData _buildTheme({
       shape: RoundedRectangleBorder(borderRadius: BirbRadii.none),
     ),
     disabledColor: semanticColors.disabled,
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: BirbButtonThemes.filled(colorScheme, semanticColors),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: BirbButtonThemes.filled(colorScheme, semanticColors),
-    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(style: filledButtonStyle),
+    filledButtonTheme: FilledButtonThemeData(style: filledButtonStyle),
     focusColor: semanticColors.focus,
     highlightColor: colorScheme.primaryContainer,
     hoverColor: colorScheme.surfaceContainerHigh,
-    iconButtonTheme: IconButtonThemeData(
-      style: BirbButtonThemes.borderless(colorScheme, semanticColors),
-    ),
+    iconButtonTheme: IconButtonThemeData(style: borderlessButtonStyle),
     materialTapTargetSize: MaterialTapTargetSize.padded,
     menuButtonTheme: MenuButtonThemeData(
       style: BirbButtonThemes.menu(colorScheme, semanticColors),
@@ -76,9 +77,7 @@ ThemeData _buildTheme({
     ),
     scaffoldBackgroundColor: colorScheme.surface,
     splashColor: colorScheme.primaryContainer,
-    textButtonTheme: TextButtonThemeData(
-      style: BirbButtonThemes.borderless(colorScheme, semanticColors),
-    ),
+    textButtonTheme: TextButtonThemeData(style: borderlessButtonStyle),
     textTheme: textTheme,
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: colorScheme.primary,

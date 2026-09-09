@@ -143,6 +143,11 @@ ButtonStyle _buttonStyle({
 
 enum _ButtonVisualState { disabled, pressed, focused, hovered, enabled }
 
+/// Resolves the interaction states authored by the source button contract.
+///
+/// Buttons do not define an error recipe. Selection only changes the menu
+/// foreground through [_componentForeground]; other button families retain
+/// their enabled recipe when Flutter supplies either state.
 _ButtonVisualState _visualState(Set<WidgetState> states) {
   if (states.contains(WidgetState.disabled)) return _ButtonVisualState.disabled;
   if (states.contains(WidgetState.pressed)) return _ButtonVisualState.pressed;

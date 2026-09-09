@@ -230,6 +230,73 @@ void main() {
           );
         }
       });
+
+      test('preserves deliberate selected and error fallbacks', () {
+        for (final style in filled) {
+          for (final state in [WidgetState.selected, WidgetState.error]) {
+            _expect(
+              style,
+              {state},
+              colors.primary,
+              colors.onPrimary,
+              BorderSide.none,
+            );
+          }
+          _expect(
+            style,
+            {WidgetState.disabled, WidgetState.error, WidgetState.selected},
+            colors.surface,
+            semantics.disabled,
+            BorderSide(color: semantics.disabled, width: BirbBorders.thin),
+          );
+        }
+
+        final outlined = theme.outlinedButtonTheme.style!;
+        for (final state in [WidgetState.selected, WidgetState.error]) {
+          _expect(
+            outlined,
+            {state},
+            colors.surface,
+            colors.onSurface,
+            BorderSide(color: colors.outline, width: BirbBorders.thin),
+          );
+        }
+
+        for (final style in borderless) {
+          for (final state in [WidgetState.selected, WidgetState.error]) {
+            _expect(
+              style,
+              {state},
+              WidgetStateColor.transparent,
+              colors.primary,
+              BorderSide.none,
+            );
+          }
+        }
+
+        final menu = theme.menuButtonTheme.style!;
+        _expect(
+          menu,
+          {WidgetState.selected},
+          WidgetStateColor.transparent,
+          colors.onPrimary,
+          BorderSide.none,
+        );
+        _expect(
+          menu,
+          {WidgetState.error},
+          WidgetStateColor.transparent,
+          colors.onSurface,
+          BorderSide.none,
+        );
+        _expect(
+          menu,
+          {WidgetState.disabled, WidgetState.error, WidgetState.selected},
+          colors.surface,
+          semantics.disabled,
+          BorderSide.none,
+        );
+      });
     });
   }
 
@@ -279,6 +346,90 @@ void main() {
       greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
     );
   });
+
+  for (final theme in <ThemeData>[BirbTheme.light, BirbTheme.dark]) {
+    testWidgets(
+      '${theme.brightness.name} icon and menu buttons consume theme styles',
+      (tester) async {
+        final iconFocus = FocusNode(debugLabel: 'icon button');
+        final iconStates = WidgetStatesController();
+        final menuFocus = FocusNode(debugLabel: 'menu button');
+        final menuStates = WidgetStatesController();
+        addTearDown(iconFocus.dispose);
+        addTearDown(iconStates.dispose);
+        addTearDown(menuFocus.dispose);
+        addTearDown(menuStates.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: Column(
+                children: [
+                  IconButton(
+                    focusNode: iconFocus,
+                    statesController: iconStates,
+                    isSelected: true,
+                    onPressed: () {},
+                    icon: const Icon(Icons.close),
+                    selectedIcon: const Icon(
+                      Icons.check,
+                      key: ValueKey('selected icon'),
+                    ),
+                  ),
+                  MenuItemButton(
+                    focusNode: menuFocus,
+                    statesController: menuStates,
+                    onPressed: () {},
+                    child: const Text('Enabled menu'),
+                  ),
+                  const MenuItemButton(
+                    onPressed: null,
+                    child: Text('Disabled menu'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        iconFocus.requestFocus();
+        await tester.pump();
+        expect(iconStates.value, contains(WidgetState.focused));
+        expect(
+          IconTheme.of(
+            tester.element(find.byKey(const ValueKey('selected icon'))),
+          ).color,
+          theme.colorScheme.primary,
+        );
+        final iconSize = tester.getSize(find.byType(IconButton));
+        expect(
+          iconSize.width,
+          greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
+        );
+        expect(
+          iconSize.height,
+          greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
+        );
+
+        menuFocus.requestFocus();
+        await tester.pump();
+        expect(menuStates.value, contains(WidgetState.focused));
+        expect(
+          DefaultTextStyle.of(tester.element(find.text('Enabled menu')))
+              .style
+              .color,
+          theme.colorScheme.onSurface,
+        );
+        expect(
+          DefaultTextStyle.of(tester.element(find.text('Disabled menu')))
+              .style
+              .color,
+          theme.extension<BirbSemanticColors>()!.disabled,
+        );
+      },
+    );
+  }
 }
 
 void _expect(
