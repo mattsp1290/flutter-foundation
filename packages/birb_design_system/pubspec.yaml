@@ -1,0 +1,24 @@
+name: birb_design_system
+description: Shared semantic tokens, themes, components, previews, and audits for Birb Flutter applications.
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/mattsp1290/flutter-foundation
+repository: https://github.com/mattsp1290/flutter-foundation
+issue_tracker: https://github.com/mattsp1290/flutter-foundation/issues
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.47.1"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
