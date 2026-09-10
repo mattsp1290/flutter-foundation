@@ -133,6 +133,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('preserves the ambient text scale until preview overrides it', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _pumpCatalog(tester, _CatalogStore());
+
+    final section = find.byKey(CatalogKeys.section(CatalogSection.components));
+    expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 15);
+
+    await tester.tap(find.byKey(CatalogKeys.largeTextToggle));
+    await tester.pump();
+    expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 20);
+  });
+
   testWidgets('forced preview does not rewrite the persisted preference', (
     tester,
   ) async {
@@ -165,12 +180,7 @@ Future<void> _pumpCatalog(
 }
 
 Future<void> _selectSection(WidgetTester tester, CatalogSection section) async {
-  final label = switch (section) {
-    CatalogSection.components => 'Components',
-    CatalogSection.appearance => 'Appearance',
-    CatalogSection.accessibility => 'Accessibility',
-  };
-  await tester.tap(find.text(label).first);
+  await tester.tap(find.byKey(CatalogKeys.destination(section)));
   await tester.pumpAndSettle();
 }
 

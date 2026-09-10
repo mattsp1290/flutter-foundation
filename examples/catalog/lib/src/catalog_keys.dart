@@ -13,7 +13,13 @@ abstract final class CatalogKeys {
     'catalog-appearance-selector',
   );
   static const forcedPreview = ValueKey<String>('catalog-forced-preview');
+  static const keyboardSample = ValueKey<String>('catalog-keyboard-sample');
+  static const errorSample = ValueKey<String>('catalog-error-sample');
+  static const disabledSample = ValueKey<String>('catalog-disabled-sample');
 
   static ValueKey<String> section(CatalogSection section) =>
       ValueKey<String>('catalog-section-${section.name}');
+
+  static ValueKey<String> destination(CatalogSection section) =>
+      ValueKey<String>('catalog-destination-${section.name}');
 }

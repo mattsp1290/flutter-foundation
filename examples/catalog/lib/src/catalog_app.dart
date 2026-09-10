@@ -116,7 +116,7 @@ class _CatalogHomeState extends State<CatalogHome> {
       final destinations = CatalogSection.values
           .map(
             (section) => NavigationDestination(
-              icon: Icon(_icon(section)),
+              icon: Icon(_icon(section), key: CatalogKeys.destination(section)),
               label: _label(section),
             ),
           )
@@ -175,11 +175,12 @@ class _CatalogHomeState extends State<CatalogHome> {
   }
 
   Widget _viewport() {
+    final mediaQuery = MediaQuery.of(context);
     final child = MediaQuery(
-      data: MediaQuery.of(context).copyWith(
+      data: mediaQuery.copyWith(
         textScaler: _largeText
             ? const TextScaler.linear(2)
-            : TextScaler.noScaling,
+            : mediaQuery.textScaler,
       ),
       child: KeyedSubtree(key: CatalogKeys.section(_section), child: _page()),
     );
@@ -308,16 +309,22 @@ class _AccessibilityPage extends StatelessWidget {
       ),
       const SizedBox(height: BirbSpacing.space4),
       const BirbTextFormField(
+        key: CatalogKeys.keyboardSample,
         label: 'Keyboard focus sample',
         hintText: 'Press Tab to focus',
       ),
       const SizedBox(height: BirbSpacing.space3),
       const BirbTextFormField(
+        key: CatalogKeys.errorSample,
         label: 'Error sample',
         errorText: 'Inspect the error state',
       ),
       const SizedBox(height: BirbSpacing.space3),
-      const BirbTextFormField(label: 'Disabled sample', enabled: false),
+      const BirbTextFormField(
+        key: CatalogKeys.disabledSample,
+        label: 'Disabled sample',
+        enabled: false,
+      ),
     ],
   );
 }

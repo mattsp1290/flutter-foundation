@@ -67,22 +67,45 @@ succeeds.
 ```dart
 import 'package:birb_appearance/birb_appearance.dart';
 import 'package:birb_design_system/birb_design_system.dart';
+import 'package:flutter/material.dart';
 
-final appearance = AppearanceController(
-  store: PreferencesAppearanceStore(applicationNamespace: 'my_application'),
-);
-await appearance.initialize();
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final appearance = AppearanceController(
+    store: PreferencesAppearanceStore(applicationNamespace: 'my_application'),
+  );
+  await appearance.initialize();
+  runApp(FoundationApp(appearance: appearance));
+}
 
-AnimatedBuilder(
-  animation: appearance,
-  builder: (context, child) => MaterialApp(
-    theme: BirbTheme.light,
-    darkTheme: BirbTheme.dark,
-    themeMode: appearance.themeMode,
-    themeAnimationDuration: BirbDurations.instant,
-    home: AppearanceSelector(controller: appearance),
-  ),
-);
+class FoundationApp extends StatefulWidget {
+  const FoundationApp({required this.appearance, super.key});
+
+  final AppearanceController appearance;
+
+  @override
+  State<FoundationApp> createState() => _FoundationAppState();
+}
+
+class _FoundationAppState extends State<FoundationApp> {
+  @override
+  void dispose() {
+    widget.appearance.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.appearance,
+    builder: (context, child) => MaterialApp(
+      theme: BirbTheme.light,
+      darkTheme: BirbTheme.dark,
+      themeMode: widget.appearance.themeMode,
+      themeAnimationDuration: BirbDurations.instant,
+      home: AppearanceSelector(controller: widget.appearance),
+    ),
+  );
+}
 ```
 
 The host owns the controller and calls `dispose`. The selector borrows it and
