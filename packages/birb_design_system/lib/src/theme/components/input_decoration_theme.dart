@@ -12,7 +12,7 @@ abstract final class BirbInputDecorationTheme {
     final border = WidgetStateInputBorder.resolveWith(
       (states) => OutlineInputBorder(
         borderRadius: BirbRadii.none,
-        borderSide: _resolveBirbInputBorderSide(
+        borderSide: borderSide(
           colors: colors,
           semantics: semantics,
           enabled: !states.contains(WidgetState.disabled),
@@ -57,25 +57,26 @@ abstract final class BirbInputDecorationTheme {
       visualDensity: VisualDensity.standard,
     );
   }
-}
 
-BorderSide _resolveBirbInputBorderSide({
-  required ColorScheme colors,
-  required BirbSemanticColors semantics,
-  required bool enabled,
-  required bool hasError,
-  required bool focused,
-}) {
-  if (!enabled) {
-    return BorderSide(color: semantics.disabled, width: BirbBorders.thin);
+  /// Resolves the shared field boundary for the current interaction state.
+  static BorderSide borderSide({
+    required ColorScheme colors,
+    required BirbSemanticColors semantics,
+    required bool enabled,
+    required bool hasError,
+    required bool focused,
+  }) {
+    if (!enabled) {
+      return BorderSide(color: semantics.disabled, width: BirbBorders.thin);
+    }
+
+    return BorderSide(
+      color: hasError
+          ? semantics.errorIndicator
+          : focused
+          ? semantics.focus
+          : colors.outline,
+      width: focused ? BirbBorders.strong : BirbBorders.thin,
+    );
   }
-
-  return BorderSide(
-    color: hasError
-        ? semantics.errorIndicator
-        : focused
-        ? semantics.focus
-        : colors.outline,
-    width: focused ? BirbBorders.strong : BirbBorders.thin,
-  );
 }
