@@ -37,6 +37,7 @@ abstract final class BirbThemeHarnessInventory {
   ];
 
   static const surfaces = <String>[
+    'appBar',
     'surface',
     'surfaceDim',
     'surfaceBright',
@@ -54,6 +55,7 @@ abstract final class BirbThemeHarnessInventory {
     'elevatedButton',
     'outlinedButton',
     'textButton',
+    'menuButton',
     'iconButton',
     'disabledButton',
     'checkboxSelected',
@@ -128,50 +130,45 @@ abstract final class BirbThemeHarnessKeys {
 }
 
 /// A host-neutral gallery of every design-system component family and state.
-class BirbThemeHarness extends StatefulWidget {
+class BirbThemeHarness extends StatelessWidget {
   const BirbThemeHarness({super.key});
 
   @override
-  State<BirbThemeHarness> createState() => _BirbThemeHarnessState();
-}
-
-class _BirbThemeHarnessState extends State<BirbThemeHarness> {
-  bool _checkbox = true;
-  String _radio = 'selected';
-  bool _toggle = true;
-  double _slider = 0.5;
-  bool _chip = true;
-  int _navigationBarIndex = 0;
-  int _navigationRailIndex = 0;
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       key: BirbThemeHarnessKeys.root,
-      appBar: AppBar(title: const Text('Design system preview')),
+      appBar: AppBar(
+        key: _key(BirbHarnessFamily.surfaces, 'appBar'),
+        title: const Text('Design system preview'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(BirbSpacing.space4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _Section(title: 'Typography', child: _typography(theme.textTheme)),
-            _Section(title: 'Surfaces', child: _surfaces(theme.colorScheme)),
-            _Section(
+            const _Section(title: 'Typography', child: _TypographyPreview()),
+            const _Section(title: 'Surfaces', child: _SurfacesPreview()),
+            const _Section(
               title: 'Interactive controls',
-              child: _interactiveControls(),
+              child: _InteractiveControlsPreview(),
             ),
-            _Section(title: 'Overlays', child: _overlays()),
-            _Section(title: 'Statuses', child: _statuses(theme)),
-            _Section(title: 'Navigation', child: _navigation()),
-            _Section(title: 'Inputs', child: _inputs()),
+            const _Section(title: 'Overlays', child: _OverlaysPreview()),
+            const _Section(title: 'Statuses', child: _StatusesPreview()),
+            const _Section(title: 'Navigation', child: _NavigationPreview()),
+            const _Section(title: 'Inputs', child: _InputsPreview()),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _typography(TextTheme textTheme) {
+class _TypographyPreview extends StatelessWidget {
+  const _TypographyPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final styles = <String, TextStyle?>{
       'displayLarge': textTheme.displayLarge,
       'displayMedium': textTheme.displayMedium,
@@ -201,8 +198,14 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ],
     );
   }
+}
 
-  Widget _surfaces(ColorScheme colors) {
+class _SurfacesPreview extends StatelessWidget {
+  const _SurfacesPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final surfaces = <String, Color>{
       'surface': colors.surface,
       'surfaceDim': colors.surfaceDim,
@@ -236,8 +239,29 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ],
     );
   }
+}
 
-  Widget _interactiveControls() => Wrap(
+class _InteractiveControlsPreview extends StatefulWidget {
+  const _InteractiveControlsPreview();
+
+  @override
+  State<_InteractiveControlsPreview> createState() =>
+      _InteractiveControlsPreviewState();
+}
+
+class _InteractiveControlsPreviewState
+    extends State<_InteractiveControlsPreview> {
+  bool _checkbox = true;
+  bool _checkboxUnselected = false;
+  String _radio = 'selected';
+  bool _toggle = true;
+  bool _toggleUnselected = false;
+  double _slider = 0.5;
+  bool _chip = true;
+  bool _chipUnselected = false;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
     spacing: BirbSpacing.space2,
     runSpacing: BirbSpacing.space2,
     crossAxisAlignment: WrapCrossAlignment.center,
@@ -262,6 +286,11 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
         onPressed: () {},
         child: const Text('Text'),
       ),
+      MenuItemButton(
+        key: _controlKey('menuButton'),
+        onPressed: () {},
+        child: const Text('Menu item'),
+      ),
       IconButton(
         key: _controlKey('iconButton'),
         onPressed: () {},
@@ -273,69 +302,102 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
         onPressed: null,
         child: const Text('Disabled'),
       ),
-      Checkbox(
+      _LabeledControl(
         key: _controlKey('checkboxSelected'),
-        value: _checkbox,
-        onChanged: (value) => setState(() => _checkbox = value!),
+        label: 'Selected checkbox',
+        child: Checkbox(
+          value: _checkbox,
+          onChanged: (value) => setState(() => _checkbox = value!),
+        ),
       ),
-      Checkbox(
+      _LabeledControl(
         key: _controlKey('checkboxUnselected'),
-        value: false,
-        onChanged: (_) {},
+        label: 'Unselected checkbox',
+        child: Checkbox(
+          value: _checkboxUnselected,
+          onChanged: (value) {
+            setState(() => _checkboxUnselected = value!);
+          },
+        ),
       ),
-      Checkbox(
+      _LabeledControl(
         key: _controlKey('checkboxError'),
-        value: false,
-        isError: true,
-        onChanged: (_) {},
+        label: 'Error checkbox',
+        child: Checkbox(value: false, isError: true, onChanged: (_) {}),
       ),
-      Checkbox(
+      _LabeledControl(
         key: _controlKey('checkboxDisabled'),
-        value: false,
-        onChanged: null,
+        label: 'Disabled checkbox',
+        child: const Checkbox(value: false, onChanged: null),
       ),
       RadioGroup<String>(
         groupValue: _radio,
         onChanged: (value) => setState(() => _radio = value!),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          spacing: BirbSpacing.space2,
+          runSpacing: BirbSpacing.space2,
           children: [
-            Radio<String>(key: _controlKey('radioSelected'), value: 'selected'),
-            Radio<String>(
-              key: _controlKey('radioUnselected'),
-              value: 'unselected',
+            _LabeledControl(
+              key: _controlKey('radioSelected'),
+              label: 'Selected radio',
+              child: const Radio<String>(value: 'selected'),
             ),
-            Radio<String>(
+            _LabeledControl(
+              key: _controlKey('radioUnselected'),
+              label: 'Unselected radio',
+              child: const Radio<String>(value: 'unselected'),
+            ),
+            _LabeledControl(
               key: _controlKey('radioDisabled'),
-              value: 'disabled',
-              enabled: false,
+              label: 'Disabled radio',
+              child: const Radio<String>(value: 'disabled', enabled: false),
             ),
           ],
         ),
       ),
-      Switch(
+      _LabeledControl(
         key: _controlKey('switchSelected'),
-        value: _toggle,
-        onChanged: (value) => setState(() => _toggle = value),
-      ),
-      Switch(
-        key: _controlKey('switchUnselected'),
-        value: false,
-        onChanged: (_) {},
-      ),
-      Switch(key: _controlKey('switchDisabled'), value: false, onChanged: null),
-      SizedBox(
-        key: _controlKey('sliderEnabled'),
-        width: 160,
-        child: Slider(
-          value: _slider,
-          onChanged: (value) => setState(() => _slider = value),
+        label: 'Selected switch',
+        child: Switch(
+          value: _toggle,
+          onChanged: (value) => setState(() => _toggle = value),
         ),
       ),
-      SizedBox(
+      _LabeledControl(
+        key: _controlKey('switchUnselected'),
+        label: 'Unselected switch',
+        child: Switch(
+          value: _toggleUnselected,
+          onChanged: (value) {
+            setState(() => _toggleUnselected = value);
+          },
+        ),
+      ),
+      _LabeledControl(
+        key: _controlKey('switchDisabled'),
+        label: 'Disabled switch',
+        child: const Switch(value: false, onChanged: null),
+      ),
+      _LabeledControl(
+        key: _controlKey('sliderEnabled'),
+        label: 'Enabled slider',
+        child: SizedBox(
+          width: 160,
+          child: Slider(
+            value: _slider,
+            semanticFormatterCallback: (value) =>
+                '${(value * 100).round()} percent',
+            onChanged: (value) => setState(() => _slider = value),
+          ),
+        ),
+      ),
+      _LabeledControl(
         key: _controlKey('sliderDisabled'),
-        width: 160,
-        child: const Slider(value: 0.5, onChanged: null),
+        label: 'Disabled slider',
+        child: const SizedBox(
+          width: 160,
+          child: Slider(value: 0.5, onChanged: null),
+        ),
       ),
       BirbFilterChip(
         key: _controlKey('chipSelected'),
@@ -346,8 +408,8 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       BirbFilterChip(
         key: _controlKey('chipUnselected'),
         label: const Text('Unselected'),
-        selected: false,
-        onSelected: (_) {},
+        selected: _chipUnselected,
+        onSelected: (value) => setState(() => _chipUnselected = value),
       ),
       BirbFilterChip(
         key: _controlKey('chipDisabled'),
@@ -357,73 +419,187 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ),
     ],
   );
+}
 
-  Widget _overlays() => Wrap(
+class _OverlaysPreview extends StatelessWidget {
+  const _OverlaysPreview();
+
+  @override
+  Widget build(BuildContext context) => Wrap(
     spacing: BirbSpacing.space2,
     runSpacing: BirbSpacing.space2,
     children: <Widget>[
       FilledButton(
         key: _key(BirbHarnessFamily.overlays, 'dialogTrigger'),
-        onPressed: _showDialog,
+        onPressed: () => _showDialog(context),
         child: const Text('Dialog'),
       ),
-      PopupMenuButton<String>(
-        key: _key(BirbHarnessFamily.overlays, 'menuTrigger'),
-        tooltip: 'Menu',
-        itemBuilder: (_) => const [
-          PopupMenuItem<String>(
+      MenuAnchor(
+        menuChildren: <Widget>[
+          MenuItemButton(
             key: BirbThemeHarnessKeys.menuItem,
-            value: 'inspect',
-            child: Text('Inspect'),
+            onPressed: () {},
+            child: const Text('Inspect'),
           ),
         ],
+        builder: (context, controller, child) => FilledButton(
+          key: _key(BirbHarnessFamily.overlays, 'menuTrigger'),
+          onPressed: controller.open,
+          child: const Text('Menu'),
+        ),
       ),
       FilledButton(
         key: _key(BirbHarnessFamily.overlays, 'snackbarTrigger'),
-        onPressed: _showSnackbar,
+        onPressed: () => _showSnackbar(context),
         child: const Text('Snackbar'),
       ),
       Tooltip(
         key: _key(BirbHarnessFamily.overlays, 'tooltip'),
         message: 'Theme tooltip',
-        child: const Icon(Icons.info),
+        child: IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.info, semanticLabel: 'Theme tooltip'),
+        ),
       ),
     ],
   );
 
-  Widget _statuses(ThemeData theme) {
+  Future<void> _showDialog(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: BirbThemeHarnessKeys.dialog,
+      title: const Text('Theme dialog'),
+      content: const Text('Reusable dialog content'),
+      actions: [
+        TextButton(
+          key: BirbThemeHarnessKeys.dialogDismiss,
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Dismiss'),
+        ),
+      ],
+    ),
+  );
+
+  void _showSnackbar(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: BirbThemeHarnessKeys.snackbar,
+        content: Text('Theme snackbar'),
+      ),
+    );
+  }
+}
+
+class _StatusesPreview extends StatelessWidget {
+  const _StatusesPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final semantic = theme.extension<BirbSemanticColors>()!;
     final colors = theme.colorScheme;
-    final statuses = <String, (Color, Color, IconData)>{
-      'success': (semantic.success, semantic.onSuccess, Icons.check),
-      'warning': (semantic.warning, semantic.onWarning, Icons.warning),
-      'info': (semantic.info, semantic.onInfo, Icons.info),
-      'error': (colors.error, colors.onError, Icons.error),
-      'selected': (colors.primary, colors.onPrimary, Icons.star),
-      'loading': (semantic.info, semantic.onInfo, Icons.sync),
-      'disabled': (colors.surface, semantic.disabled, Icons.block),
-    };
+    final statuses = <_StatusFixture>[
+      (
+        name: 'success',
+        background: semantic.success,
+        foreground: semantic.onSuccess,
+        icon: Icons.check,
+        selected: null,
+        enabled: null,
+        loading: false,
+      ),
+      (
+        name: 'warning',
+        background: semantic.warning,
+        foreground: semantic.onWarning,
+        icon: Icons.warning,
+        selected: null,
+        enabled: null,
+        loading: false,
+      ),
+      (
+        name: 'info',
+        background: semantic.info,
+        foreground: semantic.onInfo,
+        icon: Icons.info,
+        selected: null,
+        enabled: null,
+        loading: false,
+      ),
+      (
+        name: 'error',
+        background: colors.error,
+        foreground: colors.onError,
+        icon: Icons.error,
+        selected: null,
+        enabled: null,
+        loading: false,
+      ),
+      (
+        name: 'selected',
+        background: colors.primary,
+        foreground: colors.onPrimary,
+        icon: Icons.star,
+        selected: true,
+        enabled: null,
+        loading: false,
+      ),
+      (
+        name: 'loading',
+        background: semantic.info,
+        foreground: semantic.onInfo,
+        icon: Icons.sync,
+        selected: null,
+        enabled: null,
+        loading: true,
+      ),
+      (
+        name: 'disabled',
+        background: colors.surface,
+        foreground: semantic.disabled,
+        icon: Icons.block,
+        selected: null,
+        enabled: false,
+        loading: false,
+      ),
+    ];
     return Wrap(
       spacing: BirbSpacing.space2,
       runSpacing: BirbSpacing.space2,
       children: [
-        for (final MapEntry(key: name, value: appearance) in statuses.entries)
+        for (final status in statuses)
           Semantics(
-            key: _key(BirbHarnessFamily.statuses, name),
-            label: '$name status',
-            selected: name == 'selected',
-            enabled: name != 'disabled',
-            child: Material(
-              color: appearance.$1,
-              child: Padding(
-                padding: const EdgeInsets.all(BirbSpacing.space2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(appearance.$3, color: appearance.$2),
-                    const SizedBox(width: BirbSpacing.space1),
-                    Text(name, style: TextStyle(color: appearance.$2)),
-                  ],
+            key: _key(BirbHarnessFamily.statuses, status.name),
+            container: true,
+            label: '${status.name} status',
+            value: status.loading ? 'Loading' : null,
+            selected: status.selected,
+            enabled: status.enabled,
+            child: ExcludeSemantics(
+              child: Material(
+                color: status.background,
+                child: Padding(
+                  padding: const EdgeInsets.all(BirbSpacing.space2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (status.loading)
+                        SizedBox.square(
+                          dimension: 24,
+                          child: CircularProgressIndicator(
+                            color: status.foreground,
+                            value: 0.5,
+                          ),
+                        )
+                      else
+                        Icon(status.icon, color: status.foreground),
+                      const SizedBox(width: BirbSpacing.space1),
+                      Text(
+                        status.name,
+                        style: TextStyle(color: status.foreground),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -431,8 +607,21 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ],
     );
   }
+}
 
-  Widget _navigation() => Column(
+class _NavigationPreview extends StatefulWidget {
+  const _NavigationPreview();
+
+  @override
+  State<_NavigationPreview> createState() => _NavigationPreviewState();
+}
+
+class _NavigationPreviewState extends State<_NavigationPreview> {
+  int _navigationBarIndex = 0;
+  int _navigationRailIndex = 0;
+
+  @override
+  Widget build(BuildContext context) => Column(
     children: <Widget>[
       NavigationBar(
         key: _key(BirbHarnessFamily.navigation, 'navigationBar'),
@@ -467,8 +656,13 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ),
     ],
   );
+}
 
-  Widget _inputs() => Column(
+class _InputsPreview extends StatelessWidget {
+  const _InputsPreview();
+
+  @override
+  Widget build(BuildContext context) => Column(
     children: <Widget>[
       BirbTextFormField(
         key: _key(BirbHarnessFamily.inputs, 'enabled'),
@@ -489,37 +683,40 @@ class _BirbThemeHarnessState extends State<BirbThemeHarness> {
       ),
     ],
   );
+}
 
-  Future<void> _showDialog() => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      key: BirbThemeHarnessKeys.dialog,
-      title: const Text('Theme dialog'),
-      content: const Text('Reusable dialog content'),
-      actions: [
-        TextButton(
-          key: BirbThemeHarnessKeys.dialogDismiss,
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Dismiss'),
-        ),
+Key _controlKey(String name) =>
+    _key(BirbHarnessFamily.interactiveControls, name);
+
+Key _key(BirbHarnessFamily family, String name) =>
+    BirbThemeHarnessKeys.fixture((family: family, name: name));
+
+typedef _StatusFixture = ({
+  String name,
+  Color background,
+  Color foreground,
+  IconData icon,
+  bool? selected,
+  bool? enabled,
+  bool loading,
+});
+
+class _LabeledControl extends StatelessWidget {
+  const _LabeledControl({super.key, required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MergeSemantics(
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        child,
+        Flexible(child: Text(label)),
       ],
     ),
   );
-
-  void _showSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        key: BirbThemeHarnessKeys.snackbar,
-        content: Text('Theme snackbar'),
-      ),
-    );
-  }
-
-  Key _controlKey(String name) =>
-      _key(BirbHarnessFamily.interactiveControls, name);
-
-  Key _key(BirbHarnessFamily family, String name) =>
-      BirbThemeHarnessKeys.fixture((family: family, name: name));
 }
 
 class _Section extends StatelessWidget {
