@@ -4,11 +4,20 @@ The temporary source oracle was rebuilt from Birbparty commit
 `0a037dc0d696cf6ea09e006d9c7145b0ab9f8291` and removed after the parity gate
 passed, as required by the extraction plan.
 
+The source design contract from that commit (`ui/DESIGN.md`, Git blob
+`120a3f798a1fce82d0db9347d9686afe06fd54fd`) is preserved and adapted at the
+repository root in [`DESIGN.md`](../../../../DESIGN.md). The companion
+[`design-contract-coverage.md`](../../../../docs/verification/design-contract-coverage.md)
+maps its documented families to the committed implementation and tests.
+
 - Oracle tree digest (`birbparty-source-oracle-v1`):
   `7c08acbd3ae681349d9acd617c037b1d9417713894bf825ebc4001a3de330cd1`
 - Temporary component parity test digest:
   `bac69f76588ea7e1c9d46adb89a64dadad83842a4695c3010b46a023c36f8b2b`
-- Command: `flutter test --reporter compact packages/birb_design_system/test/source_oracle/component_source_oracle_parity_test.dart`
+- Historical command (temporary oracle; not runnable from this checkout):
+  `flutter test --reporter compact packages/birb_design_system/test/source_oracle/component_source_oracle_parity_test.dart`
+- Reconstruction inputs: the pinned Birbparty commit and source-file hashes
+  recorded in this document.
 - Result: both light and dark source-parity cases passed.
 
 The temporary test compared every source-authored component-theme property
