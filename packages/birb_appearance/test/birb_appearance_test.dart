@@ -6,6 +6,7 @@ void main() {
   test('public barrel exposes the appearance runtime', () {
     expect(AppearanceMode.system.themeMode, ThemeMode.system);
     expect(AppearanceController, isNotNull);
+    expect(AppearanceSelector, isNotNull);
     expect(AppearanceStore, isNotNull);
     expect(PreferencesAppearanceStore, isNotNull);
   });
