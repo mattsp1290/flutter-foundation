@@ -192,6 +192,7 @@ class _CatalogHomeState extends State<CatalogHome> {
 
   Widget _page() => switch (_section) {
     CatalogSection.components => const BirbThemeHarness(),
+    CatalogSection.codeReview => const BirbReviewHarness(),
     CatalogSection.appearance => _AppearancePage(
       controller: widget.controller,
       preview: widget.preview,
@@ -201,12 +202,14 @@ class _CatalogHomeState extends State<CatalogHome> {
 
   static String _label(CatalogSection section) => switch (section) {
     CatalogSection.components => 'Components',
+    CatalogSection.codeReview => 'Code review',
     CatalogSection.appearance => 'Appearance',
     CatalogSection.accessibility => 'Accessibility',
   };
 
   static IconData _icon(CatalogSection section) => switch (section) {
     CatalogSection.components => Icons.widgets_outlined,
+    CatalogSection.codeReview => Icons.rate_review_outlined,
     CatalogSection.appearance => Icons.brightness_6_outlined,
     CatalogSection.accessibility => Icons.accessibility_new,
   };

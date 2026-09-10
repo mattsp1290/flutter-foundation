@@ -225,6 +225,8 @@ expose its current value as required above.
   `MediaQuery.disableAnimations`.
 - Typography uses the platform Material typeface and preserves OS text
   scaling. Default text uses `onSurface`; variants select a semantic role.
+  Section 10.1 documents the one authored exception: source code in the review
+  components uses a platform monospace family at `bodyMedium` metrics.
 
 | Text style | Size | Weight | Height |
 | --- | ---: | ---: | ---: |
@@ -433,6 +435,180 @@ Before merging a new screen or component:
 - [ ] Run the anti-template check.
 - [ ] Document any new token or justified exception before merge.
 
+## 10. Code review components
+
+The design system provides a bounded set of pull-request review components:
+`BirbReviewStatusBadge`, `BirbChangedFileList`, `BirbDiffView`,
+`BirbReviewThreadView`, and `BirbReviewComposer`. They render immutable host
+presentation models and emit controlled callbacks. GitHub is a workflow
+reference only: no provider DTO, HTTP call, authentication, Markdown or HTML
+execution, persistence, or state-management framework enters this package.
+
+### 10.1 Scoped monospace exception
+
+Source code is the one authored typography exception to section 5's
+platform-typeface rule. Code rows use `bodyMedium` size, height, and weight
+with a monospace family resolved from the platform fallback list
+`ui-monospace`, `SFMono-Regular`, `Menlo`, `Consolas`, `Roboto Mono`,
+`Courier New`, `monospace`. No font asset is bundled and no remote font is
+fetched, so an unavailable family degrades to the next entry. OS text scaling
+is preserved; code text is never shrunk to fit. The exception applies to source
+lines, hunk headings, and the numeric line-number cells, which must stay
+column-aligned with the source beside them. It never applies to labels, comment
+bodies, or a row's prose metadata: a stacked row's line description uses
+ordinary platform typography.
+
+A rune count only approximates display width, so snapshot preparation keeps the
+several longest rows as candidates and lays out all of them to find the true
+column width. Snapshot preparation therefore stays O(total source text) with a
+bounded number of source layouts — plus one layout per hunk heading, re-paid on
+a width or scale change — while row construction stays O(visible rows).
+Font-metric or text-scale changes invalidate the measurement and it is
+recomputed.
+
+Tab stops and that candidate ranking count one Unicode code point as one
+column. Fullwidth, combining, and multi-code-point emoji text renders and
+copies correctly, but its alignment to the four-column grid is approximate.
+Measuring several candidates rather than one is what keeps a wide-glyph row from
+being clipped with no scroll extent left to reach it.
+
+Tabs expand for display to the next four-column stop. `Copy source line`
+always copies the original text with real tab characters, no line numbers, no
+change sign, and no trailing newline; it remains available when commenting is
+disabled. Native text selection copies what is displayed, which means the
+spaces expanded from a tab. Both behaviors are documented in the package README
+and here. The source column is one selection region that excludes line numbers
+and change signs, so a selection may span rows and still yields displayed source
+text only.
+
+### 10.2 Diff row roles
+
+| Element | Fill | Foreground | Boundary/cue |
+| --- | --- | --- | --- |
+| code row, context | `surface` | `onSurface` | Both line numbers; no sign fill |
+| addition marker | semantic `success` | semantic `onSuccess` | Literal `+` glyph |
+| deletion marker | semantic `error` (`ColorScheme.error`) | `onError` | Literal `−` glyph |
+| selected row | `surfaceContainerHigh` | `onSurface` | Leading `Icons.arrow_right` in `onSurface` plus `selected` semantics |
+| active row, region focused | Base row fill | Base row foreground | Semantic `focus` 2 px box |
+| active row, region unfocused | Base row fill | Base row foreground | `outline` 1 px box |
+| hunk heading | `surfaceContainerLow` | `onSurfaceVariant` | Top `outline` 1 px |
+| file/thread boundary | `surface` | `onSurface` | `outline` 1 px, radius 0 |
+
+A row that ends a file without a trailing newline appends the caller-supplied
+no-final-newline marker to its line description, which is both announced and
+visible in the stacked layout and in the action area.
+
+Change markers are compact non-interactive cells, never full-row tinted
+backgrounds, because a translucent red or green row fill would need an authored
+alpha effect and would invalidate code contrast. Additions and deletions
+therefore carry an explicit sign glyph, an accessible kind word, and a line
+identity in addition to color. Selection never hides a sign, native text
+selection, or the keyboard focus box. One boundary per meaningful grouped
+object; no nested decorative cards.
+
+### 10.3 Review status badge
+
+| Status | Fill | Foreground | Icon |
+| --- | --- | --- | --- |
+| `pending` | semantic `warning` | semantic `onWarning` | `Icons.schedule` |
+| `approved` | semantic `success` | semantic `onSuccess` | `Icons.check` |
+| `changesRequested` | `ColorScheme.error` | `onError` | `Icons.close` |
+| `commented` | semantic `info` | semantic `onInfo` | `Icons.chat_bubble_outline` |
+
+Every badge pairs its icon with human-readable text, so status never depends on
+color alone. The badge is presentation state; it implies nothing about
+mergeability or authorization.
+
+### 10.4 Geometry, targets, and layout
+
+Code text is non-interactive and may be denser than 48 logical pixels so that a
+diff stays readable. Every interactive review control keeps the 48×48 target
+from section 5: file items, the diff action area, resolve/reopen, and the
+composer buttons are ordinary themed Material buttons.
+
+A diff row's line numbers and change sign never require horizontal scrolling.
+The source column is the only horizontally scrolled region, it shares one
+offset across rows, and that offset is reachable with `Left`/`Right` from the
+diff navigation region as well as with the labeled horizontal scrollbar. Below
+360 logical pixels of row width, above 1.5× effective code text scale, or
+whenever an inline gutter would leave fewer than twelve columns of source, each
+row stacks its metadata above its source text instead of shrinking text or
+overflowing.
+
+The horizontal offset is reachable four ways: `Left`/`Right` from the
+navigation region, a horizontal drag anywhere over the source rows, the labelled
+scrollbar below them — whose scrollable fills a full interaction target even
+though the thumb is thin — and its scroll semantics actions. The row drag is
+restricted to touch and stylus on purpose: a mouse or trackpad drag belongs to
+the native text selection section 10.1 requires.
+
+`BirbDiffView` is a bounded-height, finite-width widget; the host supplies
+finite constraints. Loading, failure, and retry belong to the host around the
+diff, not to asynchronous work inside it. Empty text, binary, and unavailable
+content render distinct caller-overridable messages rather than an empty diff.
+
+### 10.5 Keyboard contract
+
+The diff exposes one focusable navigation region, then one stable action area,
+and no per-row tab stops. While the navigation region owns focus:
+
+- `Up`/`Down` move the active line and reveal it.
+- `Home`/`End` move to the first and last line.
+- `Left`/`Right` scroll the source column.
+- `F2` reveals the active line, enters its native selectable source text, and
+  places the caret at the start; native `Shift+Arrow` selection and the
+  platform copy shortcut then operate on that text.
+- `Escape` returns focus to the navigation region and preserves the active
+  line identity.
+
+A pointer tap or an assistive-technology activation on a row also makes it the
+active line and gives the navigation region focus, so the next arrow key
+continues from there. A host-supplied `selectedAnchor` does the same and reveals
+its row. The active-line description is a live region, so that
+change is announced. A row announces its kind and both line numbers once,
+followed by its source text; the gutter repeats neither.
+
+`Tab` advances from the navigation region to the action area and then out of
+the diff; `Shift+Tab` reverses it. There is no focus trap. The same key list is
+visible on screen, not only in semantics. If pointer scrolling unmounts the
+row that owns focus, focus returns to the navigation region and the active line
+identity is preserved.
+
+### 10.6 Discussion and composition
+
+`BirbReviewThreadView` renders author, timestamp, plain-text body, anchor
+summary, and resolved or outdated labels with semantics. Bodies are plain text:
+links and Markdown are never executed, and an HTML-like string appears
+literally. All comments stay visible when a thread is resolved; collapsing is
+deferred. Resolve and reopen report the intent to the host, which owns the
+model; the widget never updates it optimistically. While a state change is
+pending the action is disabled with a meaningful progress label, and a failure
+stays visible in a scoped live region with retry through the same action.
+
+`BirbReviewComposer` borrows the host's controller and focus node, never
+disposes them, and never clears draft text. It uses the multiline
+`BirbTextFormField` ledger with `minLines: 3` and `maxLines: 8`. `Enter`
+inserts a newline; submission is only through the labeled button. Whitespace-
+only drafts are rejected, and a valid draft is emitted untrimmed. While
+submitting, text stays visible and read-only, which is semantically distinct
+from disabled. A failure keeps the text and shows the error in the existing
+live correction row. Hosts key controllers and pending operations by thread or
+by new-discussion anchor including revision, so a late completion for one
+draft never clears or appends to another.
+
+### 10.7 Semantic role exposure
+
+`BirbReviewStyle` is public so that hosts and contrast tests can enumerate
+every foreground, background, boundary, and icon this section names, plus the
+default English word for each enum value. It returns only `ColorScheme` and
+`BirbSemanticColors` roles resolved from the ambient theme. It does not read the
+private palette, construct a color, or transform one, and it adds no required
+field to `BirbSemanticColors`.
+
+Source-text transformation is not presentation, so it lives in `BirbSourceText`
+rather than in the style table: that separation also keeps the one file the
+design-source audit allows to name a typeface as small as its exemption.
+
 ## Deferred work
 
 A manual/persisted theme preference, high-contrast themes, a licensed brand or
@@ -440,3 +616,11 @@ pixel-display font, golden infrastructure, product-specific streaming
 components, and static analyzer integration are separate design decisions.
 They are not exceptions to this contract and are not part of the initial
 design-system implementation.
+
+For the section 10 review components the following are also deferred and are
+not exceptions to this contract: raw patch parsing, provider adapters and
+authentication, side-by-side diffs, syntax highlighting, Markdown comment
+bodies, editable suggestions, review submission and merge, complete
+pull-request timelines, and persisted drafts. A selection may span rows today
+(section 10.1); what stays deferred is selecting across the gutter, and any
+selection surviving a scroll far enough to unmount its rows.

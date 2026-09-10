@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-enum CatalogSection { components, appearance, accessibility }
+enum CatalogSection { components, codeReview, appearance, accessibility }
 
 abstract final class CatalogKeys {
   static const root = ValueKey<String>('catalog-root');

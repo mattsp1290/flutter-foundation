@@ -8,3 +8,12 @@
 - Add the stable preview harness with typography, surfaces, controls, overlays,
   statuses, navigation, and input states.
 - Add public source-audit tooling while keeping palette primitives private.
+- Add code-review components for statuses, changed files, diffs, threads,
+  composition, source text, presentation models, and review styling.
+- Extend `BirbTextFormField` with multiline and read-only support while
+  preserving its previous defaults.
+- Add a simulated `BirbReviewHarness` with deterministic fixtures and public
+  preview keys.
+- Preserve assistive-technology actions and announcements across review
+  controls, mouse and trackpad text selection, draggable scrollbars, and
+  bounded composer activation.

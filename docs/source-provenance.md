@@ -31,7 +31,13 @@ author or separate license until its rights holder gives an explicit decision.
   - `ui/lib/design_system/src/birb_input_border.dart`
   - `ui/lib/design_system/src/birb_palette.dart`
 
-No Birbparty source is copied by the workspace-scaffolding change.
+No Birbparty source was copied by the workspace-scaffolding change.
+
+The root `DESIGN.md` added later adapts `ui/DESIGN.md` at revision
+`0a037dc0d696cf6ea09e006d9c7145b0ab9f8291` under the rights decision recorded
+above: package-relative paths were corrected for this workspace and a section
+was added for the code-review components. Its core requirements are otherwise
+preserved, and the adaptation is recorded in a comment at the top of the file.
 
 ## Toolchain and dependency pins
 

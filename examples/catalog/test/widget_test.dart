@@ -1,4 +1,5 @@
 import 'package:birb_appearance/birb_appearance.dart';
+import 'package:birb_design_system/birb_design_system.dart';
 import 'package:birb_design_system/design_system_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,13 @@ void main() {
           reason: '${fixture.family.name}/${fixture.name}',
         );
       }
+
+      await _selectSection(tester, CatalogSection.codeReview);
+      expect(find.byType(BirbReviewHarness), findsOneWidget);
+      expect(
+        find.byKey(BirbReviewHarnessKeys.simulationNotice),
+        findsOneWidget,
+      );
 
       await _selectSection(tester, CatalogSection.appearance);
       expect(
@@ -126,18 +134,52 @@ void main() {
     tester,
   ) async {
     await _pumpCatalog(tester, _CatalogStore(), size: const Size(1000, 900));
-    await _selectSection(tester, CatalogSection.accessibility);
+    await _selectSection(tester, CatalogSection.codeReview);
 
     await tester.tap(find.byKey(CatalogKeys.narrowToggle));
     await tester.tap(find.byKey(CatalogKeys.largeTextToggle));
     await tester.pump();
 
     expect(tester.getSize(find.byKey(CatalogKeys.contentViewport)).width, 320);
-    final section = find.byKey(
-      CatalogKeys.section(CatalogSection.accessibility),
-    );
+    final section = find.byKey(CatalogKeys.section(CatalogSection.codeReview));
     expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 20);
+    expect(find.byKey(BirbReviewHarnessKeys.diff), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the review workflow runs through the public package API', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogStore(), size: const Size(1200, 1400));
+    await _selectSection(tester, CatalogSection.codeReview);
+
+    await tester.ensureVisible(
+      find.byKey(BirbDiffViewKeys.line('modified-added-11')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(BirbDiffViewKeys.line('modified-added-11')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(BirbDiffViewKeys.commentAction));
+    await tester.pumpAndSettle();
+    expect(find.text('New discussion — On new line 11'), findsOneWidget);
+
+    final composer = find.byKey(BirbReviewHarnessKeys.newDiscussionComposer);
+    await tester.enterText(
+      find.descendant(of: composer, matching: find.byType(TextField)),
+      'Catalog reply',
+    );
+    await tester.pump();
+    final submit = find.descendant(
+      of: composer,
+      matching: find.byKey(BirbReviewComposerKeys.submitAction),
+    );
+    await tester.ensureVisible(submit);
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catalog reply'), findsWidgets);
+    expect(find.text('You · just now'), findsOneWidget);
   });
 
   testWidgets('preserves the ambient text scale until preview overrides it', (

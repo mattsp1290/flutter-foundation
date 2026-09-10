@@ -17,6 +17,9 @@ import '../tokens/birb_tokens.dart';
 /// its borderless [TextField] owns editing, focus, and input callbacks. The
 /// widget synchronizes those layers while borrowing any caller-provided
 /// controller or focus node, and disposes only the objects it creates.
+///
+/// [minLines], [maxLines], and [readOnly] forward to that editor. The defaults
+/// keep the single-line, writable input this widget has always rendered.
 class BirbTextFormField extends StatefulWidget {
   const BirbTextFormField({
     required this.label,
@@ -26,17 +29,32 @@ class BirbTextFormField extends StatefulWidget {
     this.focusNode,
     this.enabled = true,
     this.required = false,
+    this.readOnly = false,
     this.errorText,
     this.hintText,
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
+    this.minLines,
+    this.maxLines = 1,
     this.onChanged,
     this.onFieldSubmitted,
     this.onSaved,
     this.validator,
     this.autovalidateMode = AutovalidateMode.disabled,
-  }) : assert(controller == null || initialValue == null);
+  }) : assert(controller == null || initialValue == null),
+       assert(
+         minLines == null || minLines > 0,
+         'minLines must be positive when supplied',
+       ),
+       assert(
+         maxLines == null || maxLines > 0,
+         'maxLines must be positive when supplied',
+       ),
+       assert(
+         minLines == null || maxLines == null || maxLines >= minLines,
+         'maxLines must be at least minLines',
+       );
 
   final String label;
   final TextEditingController? controller;
@@ -44,11 +62,25 @@ class BirbTextFormField extends StatefulWidget {
   final FocusNode? focusNode;
   final bool enabled;
   final bool required;
+
+  /// Whether the editor rejects input while staying focusable and copyable.
+  ///
+  /// This is semantically distinct from `enabled: false`, which also blocks
+  /// focus and callbacks.
+  final bool readOnly;
   final String? errorText;
   final String? hintText;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
+
+  /// The smallest number of lines the editor occupies.
+  final int? minLines;
+
+  /// The largest number of lines the editor grows to before scrolling.
+  ///
+  /// Null lets the editor grow without bound.
+  final int? maxLines;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final FormFieldSetter<String>? onSaved;
@@ -351,6 +383,9 @@ class _BirbTextFormFieldState extends State<BirbTextFormField> {
               controller: _controller,
               focusNode: _focusNode,
               enabled: widget.enabled,
+              readOnly: widget.readOnly,
+              minLines: widget.minLines,
+              maxLines: widget.maxLines,
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
               autofillHints: widget.autofillHints,
