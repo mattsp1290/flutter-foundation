@@ -62,6 +62,7 @@ void main() {
               .getSemantics(find.byType(MergeSemantics))
               .getSemanticsData();
           expect(editorSemantics.flagsCollection.isTextField, isTrue);
+          expect(editorSemantics.flagsCollection.isRequired, Tristate.isTrue);
           expect(editorSemantics.label, 'Display name, required');
           expect(editorSemantics.value, 'Birb');
           expect(
@@ -94,8 +95,23 @@ void main() {
             .getSemanticsData();
         expect(editorSemantics.flagsCollection.isEnabled, Tristate.isFalse);
         expect(editorSemantics.flagsCollection.isTextField, isTrue);
+        expect(editorSemantics.flagsCollection.isRequired, Tristate.isTrue);
         expect(editorSemantics.label, 'Display name, required');
         semanticsHandle.dispose();
+      });
+
+      testWidgets('marks optional fields as not required', (tester) async {
+        final semanticsHandle = tester.ensureSemantics();
+        try {
+          await _pumpOptionalField(tester, mode.theme);
+          final editorSemantics = tester
+              .getSemantics(find.byType(MergeSemantics))
+              .getSemanticsData();
+          expect(editorSemantics.flagsCollection.isRequired, Tristate.isFalse);
+          expect(editorSemantics.label, 'Display name');
+        } finally {
+          semanticsHandle.dispose();
+        }
       });
 
       testWidgets('stacks at narrow widths and stays split at wide widths', (
@@ -183,6 +199,56 @@ void main() {
     expect(formKey.currentState!.validate(), isFalse);
   });
 
+  testWidgets('keeps controller and FormField reset values synchronized', (
+    tester,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController(text: 'Initial');
+    addTearDown(controller.dispose);
+    String? saved;
+    await _pumpForm(
+      tester,
+      formKey: formKey,
+      controller: controller,
+      onSaved: (value) => saved = value,
+    );
+
+    await tester.enterText(find.byType(TextField), 'Edited');
+    await tester.pump();
+    await _pumpForm(
+      tester,
+      formKey: formKey,
+      controller: controller,
+      onSaved: (value) => saved = value,
+    );
+
+    formKey.currentState!.reset();
+    await tester.pump();
+    expect(controller.text, 'Initial');
+    expect(formKey.currentState!.validate(), isTrue);
+    formKey.currentState!.save();
+    expect(saved, 'Initial');
+  });
+
+  testWidgets('forwards change and submit callbacks from the editor', (
+    tester,
+  ) async {
+    String? changed;
+    String? submitted;
+    await _pumpCallbackField(
+      tester,
+      onChanged: (value) => changed = value,
+      onSubmitted: (value) => submitted = value,
+    );
+
+    await tester.enterText(find.byType(TextField), 'Edited');
+    expect(changed, 'Edited');
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(submitted, 'Edited');
+  });
+
   testWidgets('disposes owned controller and focus node', (tester) async {
     await _pumpField(tester, BirbTheme.light);
     final editor = tester.widget<TextField>(find.byType(TextField));
@@ -239,6 +305,71 @@ void main() {
     expect(() => firstFocusNode.addListener(() {}), returnsNormally);
     expect(() => secondFocusNode.addListener(() {}), returnsNormally);
   });
+
+  testWidgets('detaches replaced controller and focus listeners', (
+    tester,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final firstController = TextEditingController(text: 'First');
+    final secondController = TextEditingController(text: 'Second');
+    final firstFocusNode = FocusNode();
+    final secondFocusNode = FocusNode();
+    addTearDown(firstController.dispose);
+    addTearDown(secondController.dispose);
+    addTearDown(firstFocusNode.dispose);
+    addTearDown(secondFocusNode.dispose);
+    String? saved;
+
+    await _pumpBorrowedForm(
+      tester,
+      formKey: formKey,
+      controller: firstController,
+      focusNode: firstFocusNode,
+      onSaved: (value) => saved = value,
+    );
+    await _pumpBorrowedForm(
+      tester,
+      formKey: formKey,
+      controller: secondController,
+      focusNode: secondFocusNode,
+      onSaved: (value) => saved = value,
+    );
+    await tester.pump();
+
+    firstController.text = 'Stale';
+    await tester.pump();
+    formKey.currentState!.save();
+    expect(saved, 'Second');
+
+    secondController.text = 'Active';
+    await tester.pump();
+    formKey.currentState!.save();
+    expect(saved, 'Active');
+
+    secondFocusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(secondFocusNode.hasFocus, isTrue);
+    expect(
+      _frameDecoration(tester).border!.top,
+      BorderSide(
+        color: BirbSemanticColors.light.focus,
+        width: BirbBorders.strong,
+      ),
+    );
+
+    secondFocusNode.unfocus();
+    firstFocusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(firstFocusNode.hasFocus, isFalse);
+    expect(secondFocusNode.hasFocus, isFalse);
+    expect(
+      _frameDecoration(tester).border!.top,
+      BorderSide(
+        color: BirbTheme.light.colorScheme.outline,
+        width: BirbBorders.thin,
+      ),
+    );
+  });
 }
 
 Future<void> _pumpField(
@@ -274,6 +405,16 @@ Future<void> _pumpField(
     ),
   );
 }
+
+Future<void> _pumpOptionalField(WidgetTester tester, ThemeData theme) =>
+    tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: const Scaffold(
+          body: BirbTextFormField(label: 'Display name', initialValue: 'Birb'),
+        ),
+      ),
+    );
 
 BoxDecoration _frameDecoration(WidgetTester tester) {
   for (final widget in tester.widgetList<DecoratedBox>(
@@ -348,6 +489,48 @@ Future<void> _pumpBorrowedField(
         label: 'Display name',
         controller: controller,
         focusNode: focusNode,
+      ),
+    ),
+  ),
+);
+
+Future<void> _pumpCallbackField(
+  WidgetTester tester, {
+  required ValueChanged<String> onChanged,
+  required ValueChanged<String> onSubmitted,
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: BirbTheme.light,
+    home: Scaffold(
+      body: BirbTextFormField(
+        label: 'Display name',
+        textInputAction: TextInputAction.done,
+        onChanged: onChanged,
+        onFieldSubmitted: onSubmitted,
+      ),
+    ),
+  ),
+);
+
+Future<void> _pumpBorrowedForm(
+  WidgetTester tester, {
+  required GlobalKey<FormState> formKey,
+  required TextEditingController controller,
+  required FocusNode focusNode,
+  required FormFieldSetter<String> onSaved,
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: BirbTheme.light,
+    home: Scaffold(
+      body: Form(
+        key: formKey,
+        child: BirbTextFormField(
+          key: const ValueKey('replacement-field'),
+          label: 'Display name',
+          controller: controller,
+          focusNode: focusNode,
+          onSaved: onSaved,
+        ),
       ),
     ),
   ),

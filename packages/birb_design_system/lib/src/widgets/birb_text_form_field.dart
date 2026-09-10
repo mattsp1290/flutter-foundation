@@ -12,6 +12,11 @@ import '../tokens/birb_tokens.dart';
 /// The caption occupies its own cell instead of floating through the field
 /// outline. At narrow widths or large text scales the caption stacks above the
 /// editable value so neither region has to truncate.
+///
+/// An outer [FormField] owns validation, forced errors, save, and reset state;
+/// its borderless [TextField] owns editing, focus, and input callbacks. The
+/// widget synchronizes those layers while borrowing any caller-provided
+/// controller or focus node, and disposes only the objects it creates.
 class BirbTextFormField extends StatefulWidget {
   const BirbTextFormField({
     required this.label,
@@ -155,7 +160,7 @@ class _BirbTextFormFieldState extends State<BirbTextFormField> {
 
     return FormField<String>(
       key: _formFieldKey,
-      initialValue: _controller.text,
+      initialValue: _initialText,
       enabled: widget.enabled,
       forceErrorText: externalError,
       validator: widget.validator,
@@ -337,6 +342,7 @@ class _BirbTextFormFieldState extends State<BirbTextFormField> {
           child: Semantics(
             label: semanticLabel,
             enabled: widget.enabled,
+            isRequired: widget.required,
             hint: hasError ? 'Error: $errorText' : null,
             validationResult: hasError
                 ? SemanticsValidationResult.invalid
