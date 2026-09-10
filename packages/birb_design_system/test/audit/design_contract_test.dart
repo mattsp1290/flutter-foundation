@@ -34,6 +34,7 @@ void main() {
       '### Flutter 3.47.1 mechanisms',
       '## 8. Accessibility and responsive requirements',
       '## 9. Contribution checklist',
+      '## 10. Code review components',
     ]) {
       expect(contract, contains(heading), reason: heading);
     }
@@ -72,6 +73,8 @@ void main() {
       'Text input',
       'Preview inventory and responsive fixtures',
       'Semantic-role consumption boundary',
+      'Code review components',
+      'Simulated review host',
     });
     expect(_tableFirstColumn(contract, 'Component/state'), <String>{
       'scaffold',

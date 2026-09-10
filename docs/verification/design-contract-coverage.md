@@ -25,6 +25,8 @@ The committed test suite provides the following implementation evidence:
 | Text input | `lib/src/theme/components/input_decoration_theme.dart`, `lib/src/widgets/birb_text_form_field.dart` | `test/theme/input_decoration_theme_test.dart`, `test/widgets/birb_text_form_field_test.dart` |
 | Preview inventory and responsive fixtures | `lib/src/preview/birb_theme_harness.dart` | `test/preview/birb_theme_harness_test.dart` |
 | Semantic-role consumption boundary | `lib/src/audit/design_system_audit.dart` | `test/audit/design_system_audit_test.dart` |
+| Code review components | `lib/src/review/birb_diff_view.dart`, `lib/src/review/birb_review_style.dart`, `lib/src/review/birb_review_models.dart` | `test/review/birb_diff_view_test.dart`, `test/review/birb_review_style_test.dart`, `test/review/birb_review_models_test.dart` |
+| Simulated review host | `lib/src/preview/birb_review_harness.dart` | `test/preview/birb_review_harness_test.dart` |
 
 [`source_parity_evidence.md`](../../packages/birb_design_system/test/source_oracle/source_parity_evidence.md)
 records the temporary source-oracle comparison. The contract test treats this
