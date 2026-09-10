@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/focus_test_support.dart';
+
 void main() {
   for (final theme in <ThemeData>[BirbTheme.light, BirbTheme.dark]) {
     testWidgets('${theme.brightness.name} dialog renders Birb theme', (
@@ -196,11 +198,11 @@ void main() {
       final rail = find.byKey(railKey);
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pump();
-      for (var tabs = 0; tabs < 20 && !_focusIsInside(rail); tabs += 1) {
+      for (var tabs = 0; tabs < 20 && !focusIsInside(rail); tabs += 1) {
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
       }
-      expect(_focusIsInside(rail), isTrue);
+      expect(focusIsInside(rail), isTrue);
       final homeInk = find.ancestor(
         of: find.byKey(homeKey),
         matching: find.byWidgetPredicate((widget) => widget is InkResponse),
@@ -220,7 +222,7 @@ void main() {
         of: find.byKey(partyKey),
         matching: find.byWidgetPredicate((widget) => widget is InkResponse),
       );
-      expect(_focusIsInside(partyInk), isTrue);
+      expect(focusIsInside(partyInk), isTrue);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pump();
       expect(selectedIndex, 1);
@@ -251,17 +253,4 @@ TextStyle _effectiveTextStyle(WidgetTester tester, Finder text) {
         find.ancestor(of: text, matching: find.byType(DefaultTextStyle)).first,
       )
       .style;
-}
-
-bool _focusIsInside(Finder finder) {
-  final target = finder.evaluate().single;
-  final context = FocusManager.instance.primaryFocus?.context;
-  if (context is! Element) return false;
-  if (context == target) return true;
-  var inside = false;
-  context.visitAncestorElements((element) {
-    inside = element == target;
-    return !inside;
-  });
-  return inside;
 }

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('runtime barrel does not expose palette primitives', () async {
+  test('runtime barrel does not expose private or preview APIs', () async {
     final packageConfigUri = Uri.file(
       Platform.executableArguments
           .singleWhere((argument) => argument.startsWith('--packages='))
@@ -37,6 +37,7 @@ import 'package:birb_design_system/birb_design_system.dart';
 
 void main() {
   print(BirbPalette.black);
+  print(BirbThemeHarness);
 }
 ''');
       final result = await Process.run(dart.path, <String>[
@@ -49,12 +50,13 @@ void main() {
       expect(result.exitCode, isNot(0), reason: diagnostics);
       expect(diagnostics, contains('UNDEFINED_IDENTIFIER'));
       expect(diagnostics, contains("Undefined name 'BirbPalette'"));
+      expect(diagnostics, contains("Undefined name 'BirbThemeHarness'"));
     } finally {
       if (probe.existsSync()) {
         probe.deleteSync();
       }
     }
-  });
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }
 
 Directory _packageRoot(

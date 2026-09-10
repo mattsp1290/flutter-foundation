@@ -1,4 +1,5 @@
 import 'package:birb_design_system/birb_design_system.dart';
+import 'package:birb_design_system/design_system_preview.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -7,5 +8,6 @@ void main() {
       const BirbTextFormField(label: 'Display name'),
       isA<BirbTextFormField>(),
     );
+    expect(const BirbThemeHarness(), isA<BirbThemeHarness>());
   });
 }

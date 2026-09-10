@@ -2,7 +2,7 @@ import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../source_oracle/birbparty_foundation_oracle.dart';
+import 'expected_theme_values.dart';
 import 'theme_test_support.dart';
 
 void main() {
@@ -21,8 +21,8 @@ void main() {
         ).textTheme,
       );
 
-      expect(actual.keys, sourceTypography.keys);
-      for (final entry in sourceTypography.entries) {
+      expect(actual.keys, expectedTypography.keys);
+      for (final entry in expectedTypography.entries) {
         final style = actual[entry.key]!;
         final baseline = platform[entry.key]!;
         expect(style.fontSize, entry.value.$1, reason: entry.key);
