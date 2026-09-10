@@ -110,6 +110,32 @@ void main() {
     expect(_focusIsInside(target), isTrue);
   });
 
+  testWidgets('keeps section selection across the navigation breakpoint', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogStore(), size: const Size(600, 900));
+
+    expect(find.byKey(CatalogKeys.navigationBar), findsOneWidget);
+    expect(find.byKey(CatalogKeys.navigationRail), findsNothing);
+    await _selectSection(tester, CatalogSection.codeReview);
+
+    tester.view.physicalSize = const Size(1000, 900);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(CatalogKeys.navigationBar), findsNothing);
+    expect(find.byKey(CatalogKeys.navigationRail), findsOneWidget);
+    expect(
+      tester
+          .widget<NavigationRail>(find.byKey(CatalogKeys.navigationRail))
+          .selectedIndex,
+      CatalogSection.codeReview.index,
+    );
+    expect(
+      find.byKey(CatalogKeys.section(CatalogSection.codeReview)),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('appearance selection keeps the selected catalog section', (
     tester,
   ) async {

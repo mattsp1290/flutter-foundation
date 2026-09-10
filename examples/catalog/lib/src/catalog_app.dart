@@ -109,14 +109,6 @@ class _CatalogHomeState extends State<CatalogHome> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final useRail = constraints.maxWidth >= 720;
-      final destinations = CatalogSection.values
-          .map(
-            (section) => NavigationDestination(
-              icon: Icon(_icon(section), key: CatalogKeys.destination(section)),
-              label: _label(section),
-            ),
-          )
-          .toList(growable: false);
       final content = Column(
         children: <Widget>[
           _PreviewControls(
@@ -140,11 +132,14 @@ class _CatalogHomeState extends State<CatalogHome> {
                     selectedIndex: _section.index,
                     labelType: NavigationRailLabelType.all,
                     onDestinationSelected: _selectIndex,
-                    destinations: destinations
+                    destinations: CatalogSection.values
                         .map(
-                          (destination) => NavigationRailDestination(
-                            icon: destination.icon,
-                            label: Text(destination.label),
+                          (section) => NavigationRailDestination(
+                            icon: Icon(
+                              section.icon,
+                              key: CatalogKeys.destination(section),
+                            ),
+                            label: Text(section.label),
                           ),
                         )
                         .toList(growable: false),
@@ -160,7 +155,17 @@ class _CatalogHomeState extends State<CatalogHome> {
                 key: CatalogKeys.navigationBar,
                 selectedIndex: _section.index,
                 onDestinationSelected: _selectIndex,
-                destinations: destinations,
+                destinations: CatalogSection.values
+                    .map(
+                      (section) => NavigationDestination(
+                        icon: Icon(
+                          section.icon,
+                          key: CatalogKeys.destination(section),
+                        ),
+                        label: section.label,
+                      ),
+                    )
+                    .toList(growable: false),
               ),
       );
     },
@@ -199,15 +204,17 @@ class _CatalogHomeState extends State<CatalogHome> {
     ),
     CatalogSection.accessibility => const _AccessibilityPage(),
   };
+}
 
-  static String _label(CatalogSection section) => switch (section) {
+extension on CatalogSection {
+  String get label => switch (this) {
     CatalogSection.components => 'Components',
     CatalogSection.codeReview => 'Code review',
     CatalogSection.appearance => 'Appearance',
     CatalogSection.accessibility => 'Accessibility',
   };
 
-  static IconData _icon(CatalogSection section) => switch (section) {
+  IconData get icon => switch (this) {
     CatalogSection.components => Icons.widgets_outlined,
     CatalogSection.codeReview => Icons.rate_review_outlined,
     CatalogSection.appearance => Icons.brightness_6_outlined,
