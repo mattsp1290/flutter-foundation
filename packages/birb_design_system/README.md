@@ -23,6 +23,7 @@ contracts.
 | `BirbReviewThreadView` | One host-controlled conversation |
 | `BirbReviewComposer` | A multiline reply editor with host-owned async state |
 | `BirbReviewStyle` | The semantic roles, icons, and code style they paint |
+| `BirbSourceText` | Tab expansion for displayed source |
 
 Models (`BirbReviewFile`, `BirbDiffHunk`, `BirbDiffLine`, `BirbDiffSnapshot`,
 `BirbDiffAnchor`, `BirbReviewComment`, `BirbReviewThread`) validate their
@@ -97,7 +98,8 @@ SizedBox(
   a duplicate hunk, line, or comment id within one snapshot or thread; hunks on
   binary or unavailable content; and a bidirectional control in a path, or an
   unterminated bidi override in an author or timestamp. `BirbDiffSnapshot.anchorFor`
-  throws for a line the snapshot does not contain. `BirbDiffLine.text` is
+  throws for a line the snapshot does not contain; use
+  `BirbDiffSnapshot.contains` to test an anchor first. `BirbDiffLine.text` is
   deliberately exempt: source renders verbatim so a reviewer can see a
   Trojan-Source sequence. Normalize a provider payload before constructing.
 - **Replace the snapshot rather than re-keying the widget.** Changing

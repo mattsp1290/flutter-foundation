@@ -18,3 +18,5 @@
 - Bound the composer's activation guard to one frame and disable the action
   while it holds, so it can neither deadlock nor be reopened by an unrelated
   rebuild.
+- Add `BirbDiffSnapshot.contains` so hosts and widgets share one anchor
+  membership rule, and `BirbSourceText` for tab expansion.

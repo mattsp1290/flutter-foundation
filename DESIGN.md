@@ -591,10 +591,15 @@ draft never clears or appends to another.
 ### 9.7 Semantic role exposure
 
 `BirbReviewStyle` is public so that hosts and contrast tests can enumerate
-every foreground, background, boundary, and icon this section names. It returns
-only `ColorScheme` and `BirbSemanticColors` roles resolved from the ambient
-theme. It does not read the private palette, construct a color, or transform
-one, and it adds no required field to `BirbSemanticColors`.
+every foreground, background, boundary, and icon this section names, plus the
+default English word for each enum value. It returns only `ColorScheme` and
+`BirbSemanticColors` roles resolved from the ambient theme. It does not read the
+private palette, construct a color, or transform one, and it adds no required
+field to `BirbSemanticColors`.
+
+Source-text transformation is not presentation, so it lives in `BirbSourceText`
+rather than in the style table: that separation also keeps the one file the
+design-source audit allows to name a typeface as small as its exemption.
 
 ## 10. Contribution checklist
 

@@ -271,6 +271,15 @@ final class BirbDiffSnapshot {
   /// Whether this snapshot has no displayable line.
   bool get isEmpty => hunks.every((hunk) => hunk.lines.isEmpty);
 
+  /// Whether [anchor] names a line this snapshot actually shows.
+  ///
+  /// An anchor from another file or another revision belongs to different
+  /// content, so it is not a member here even when its line number exists.
+  bool contains(BirbDiffAnchor anchor) =>
+      anchor.fileId == file.id &&
+      anchor.revisionId == revisionId &&
+      _lineIds.contains(anchor.lineId);
+
   /// Builds the anchor a line action emits for [line].
   ///
   /// Throws [ArgumentError] when [line] does not belong to this snapshot.

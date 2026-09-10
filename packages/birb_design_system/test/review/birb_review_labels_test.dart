@@ -1,10 +1,14 @@
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Label classes are compared by value in `didUpdateWidget`, so a host that
-/// rebuilds them every frame must not force a re-measure of the whole
-/// snapshot. These tests fail if the `==`/`hashCode` implementations are
-/// removed.
+/// Every label class is an immutable value type, so value equality is part of
+/// its contract and these tests fail if an `==`/`hashCode` pair is removed.
+///
+/// Only `BirbDiffViewLabels` is load-bearing today: `BirbDiffView`'s
+/// `didUpdateWidget` compares it, and an identity-only comparison would make a
+/// host that builds labels inside `build()` re-measure the whole snapshot every
+/// frame. The other three are asserted for consistency, so a future widget that
+/// does compare them cannot regress silently.
 void main() {
   group('BirbDiffViewLabels', () {
     test('two default instances are equal', () {

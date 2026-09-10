@@ -9,6 +9,7 @@ export 'src/review/birb_review_models.dart';
 export 'src/review/birb_review_status_badge.dart';
 export 'src/review/birb_review_style.dart';
 export 'src/review/birb_review_thread.dart';
+export 'src/review/birb_source_text.dart';
 export 'src/theme/birb_theme.dart';
 export 'src/tokens/birb_tokens.dart';
 export 'src/widgets/birb_filter_chip.dart';

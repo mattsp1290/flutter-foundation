@@ -104,6 +104,10 @@ final class BirbReviewComposer extends StatefulWidget {
   final FocusNode? focusNode;
 
   /// Receives the untrimmed draft text. Null disables submission.
+  ///
+  /// Required — unlike the optional callbacks on the other review widgets —
+  /// because a composer with no submission is a deliberate read-only state a
+  /// host should have to ask for, not something to reach by omission.
   final ValueChanged<String>? onSubmit;
 
   /// Discards the draft. Null hides the cancel action.

@@ -144,33 +144,6 @@ void main() {
       hasLength(BirbReviewFileChange.values.length),
     );
   });
-
-  group('expandTabs', () {
-    test('advances to the next four-column stop', () {
-      expect(BirbReviewStyle.expandTabs('\ta'), '    a');
-      expect(BirbReviewStyle.expandTabs('a\tb'), 'a   b');
-      expect(BirbReviewStyle.expandTabs('abc\td'), 'abc d');
-      expect(BirbReviewStyle.expandTabs('abcd\te'), 'abcd    e');
-      expect(BirbReviewStyle.expandTabs('\t\tx'), '        x');
-    });
-
-    test('leaves text without tabs identical', () {
-      const text = 'naïve — 🐦 — <b>literal</b>';
-      expect(BirbReviewStyle.expandTabs(text), same(text));
-    });
-
-    test('honours a custom tab size and rejects a non-positive one', () {
-      expect(BirbReviewStyle.expandTabs('a\tb', tabSize: 2), 'a b');
-      expect(
-        () => BirbReviewStyle.expandTabs('a\tb', tabSize: 0),
-        throwsArgumentError,
-      );
-    });
-
-    test('counts a surrogate pair as one display column', () {
-      expect(BirbReviewStyle.expandTabs('🐦\tx'), '🐦   x');
-    });
-  });
 }
 
 List<_Pair> _textPairs(ThemeData theme) {

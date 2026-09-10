@@ -14,10 +14,10 @@ typedef BirbReviewRoles = ({Color background, Color foreground});
 /// palette, and no field is added to [BirbSemanticColors]. `DESIGN.md`
 /// section 9 is the authority for each mapping; this class exists so hosts and
 /// contrast tests can enumerate the same pairs the widgets paint.
+///
+/// Source-text transformations live in [BirbSourceText]: this class resolves
+/// presentation, it does not process content.
 abstract final class BirbReviewStyle {
-  /// Display columns one tab advances to. See `DESIGN.md` section 9.1.
-  static const int codeTabSize = 4;
-
   /// Platform monospace families for source code, best match first.
   ///
   /// No font asset is bundled and no remote font is fetched, so an unavailable
@@ -183,34 +183,4 @@ abstract final class BirbReviewStyle {
   /// The boundary around one meaningful grouped object.
   static BorderSide objectSide(ThemeData theme) =>
       BorderSide(color: theme.colorScheme.outline, width: BirbBorders.thin);
-
-  /// Expands tab characters in [text] to the next [tabSize] display column.
-  ///
-  /// Flutter does not lay tabs out as columns, so display text is expanded
-  /// while `Copy source line` keeps the original characters.
-  ///
-  /// A column is counted as one Unicode code point. Fullwidth, combining, and
-  /// multi-code-point emoji text therefore reaches a tab stop that does not
-  /// match its rendered advance. Such text still renders and copies correctly;
-  /// only its alignment to the four-column grid is approximate. See
-  /// `DESIGN.md` section 9.1.
-  static String expandTabs(String text, {int tabSize = codeTabSize}) {
-    if (tabSize < 1) {
-      throw ArgumentError.value(tabSize, 'tabSize', 'must be positive');
-    }
-    if (!text.contains('\t')) return text;
-    final buffer = StringBuffer();
-    var column = 0;
-    for (final rune in text.runes) {
-      if (rune == 0x09) {
-        final advance = tabSize - (column % tabSize);
-        buffer.write(' ' * advance);
-        column += advance;
-      } else {
-        buffer.writeCharCode(rune);
-        column += 1;
-      }
-    }
-    return buffer.toString();
-  }
 }

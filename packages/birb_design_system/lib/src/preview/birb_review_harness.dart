@@ -73,8 +73,8 @@ class BirbReviewHarness extends StatefulWidget {
 }
 
 class _BirbReviewHarnessState extends State<BirbReviewHarness> {
-  final Map<String, TextEditingController> _drafts =
-      <String, TextEditingController>{};
+  final Map<BirbReviewDraftKey, TextEditingController> _drafts =
+      <BirbReviewDraftKey, TextEditingController>{};
   final List<Timer> _timers = <Timer>[];
 
   late BirbReviewDemoState _state;
@@ -104,7 +104,7 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     super.dispose();
   }
 
-  TextEditingController _draftFor(String key) =>
+  TextEditingController _draftFor(BirbReviewDraftKey key) =>
       _drafts.putIfAbsent(key, TextEditingController.new);
 
   /// Runs [completion] after the configured delay, guarded against unmount.
@@ -167,13 +167,13 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     });
   }
 
-  void _submit(String draftKey, String text, {BirbDiffAnchor? anchor}) {
+  void _submit(BirbReviewDraftKey draftKey, String text) {
     final revisionId = _state.selectedSnapshot.revisionId;
     setState(() {
       _state = _state.copyWith(
         // Each draft has its own in-flight entry, so a second reply never
         // discards a first that is still running.
-        pending: <String, BirbReviewSubmission>{
+        pending: <BirbReviewDraftKey, BirbReviewSubmission>{
           ..._state.pending,
           draftKey: BirbReviewSubmission(
             draftKey: draftKey,
@@ -181,8 +181,9 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
             text: text,
           ),
         },
-        submissionErrors: <String, String>{..._state.submissionErrors}
-          ..remove(draftKey),
+        submissionErrors: <BirbReviewDraftKey, String>{
+          ..._state.submissionErrors,
+        }..remove(draftKey),
         clearStaleResult: true,
       );
     });
@@ -191,14 +192,15 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     _schedule(() {
       final submission = _state.pending[draftKey];
       if (submission == null) return;
-      final remaining = <String, BirbReviewSubmission>{..._state.pending}
-        ..remove(draftKey);
+      final remaining = <BirbReviewDraftKey, BirbReviewSubmission>{
+        ..._state.pending,
+      }..remove(draftKey);
 
       if (outcome == BirbReviewOutcome.fails) {
         setState(() {
           _state = _state.copyWith(
             pending: remaining,
-            submissionErrors: <String, String>{
+            submissionErrors: <BirbReviewDraftKey, String>{
               ..._state.submissionErrors,
               draftKey:
                   'The simulated host rejected this reply. Your draft is kept.',
@@ -226,18 +228,24 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
         body: submission.text,
       );
       setState(() {
-        final threadId = draftKey.startsWith('thread:')
-            ? draftKey.substring('thread:'.length)
-            : 'thread-new-${_threadSequence++}';
+        // The key itself says which thread this belongs to; nothing is parsed.
         _state =
-            (anchor == null
-                    ? _state.withComment(threadId, comment)
-                    : _state.withNewThread(threadId, anchor, comment))
-                .copyWith(
-                  pending: remaining,
-                  submissionErrors: <String, String>{..._state.submissionErrors}
-                    ..remove(draftKey),
-                );
+            (switch (draftKey) {
+              BirbReviewReplyKey(:final threadId) => _state.withComment(
+                threadId,
+                comment,
+              ),
+              BirbReviewAnchorKey(:final anchor) => _state.withNewThread(
+                'thread-new-${_threadSequence++}',
+                anchor,
+                comment,
+              ),
+            }).copyWith(
+              pending: remaining,
+              submissionErrors: <BirbReviewDraftKey, String>{
+                ..._state.submissionErrors,
+              }..remove(draftKey),
+            );
       });
       // Only the successful draft is cleared, and only by the host.
       _drafts[draftKey]?.clear();
@@ -465,7 +473,6 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
           _composer(
             key: BirbReviewHarnessKeys.newDiscussionComposer,
             draftKey: BirbReviewDemoState.anchorDraftKey(anchor),
-            anchor: anchor,
           ),
         ],
         for (final thread in _state.visibleThreads) ...<Widget>[
@@ -487,20 +494,14 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     );
   }
 
-  Widget _composer({
-    required Key key,
-    required String draftKey,
-    BirbDiffAnchor? anchor,
-  }) {
+  Widget _composer({required Key key, required BirbReviewDraftKey draftKey}) {
     final isSubmitting = _state.pending.containsKey(draftKey);
     return BirbReviewComposer(
       key: key,
       controller: _draftFor(draftKey),
       isSubmitting: isSubmitting,
-      errorText: isSubmitting ? null : _errorFor(draftKey),
-      onSubmit: (text) => _submit(draftKey, text, anchor: anchor),
+      errorText: isSubmitting ? null : _state.submissionErrors[draftKey],
+      onSubmit: (text) => _submit(draftKey, text),
     );
   }
-
-  String? _errorFor(String draftKey) => _state.submissionErrors[draftKey];
 }

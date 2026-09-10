@@ -3,9 +3,20 @@ part of 'design_system_audit.dart';
 const _standalonePalettePath = 'lib/src/foundation/birb_palette.dart';
 const _workspacePalettePath =
     'packages/birb_design_system/lib/src/foundation/birb_palette.dart';
-const _standaloneReviewStylePath = 'lib/src/review/birb_review_style.dart';
-const _workspaceReviewStylePath =
-    'packages/birb_design_system/lib/src/review/birb_review_style.dart';
+
+/// One file exempt from a rule, addressed from either audit root.
+typedef _Exemption = ({String standalonePath, String workspacePath});
+
+_Exemption _exemption(String packageRelativePath) => (
+  standalonePath: packageRelativePath,
+  workspacePath: 'packages/birb_design_system/$packageRelativePath',
+);
+
+/// The only file permitted to name a typeface. See `DESIGN.md` section 9.1.
+final _reviewStyleExemption = _exemption(
+  'lib/src/review/birb_review_style.dart',
+);
+
 const _standaloneAuditBarrel = 'lib/design_system_audit.dart';
 const _workspaceAuditBarrel =
     'packages/birb_design_system/lib/design_system_audit.dart';
@@ -108,7 +119,7 @@ List<DesignSystemViolation> _tokenViolations(
     // documented in DESIGN.md first.
     if ((token.lexeme == 'fontFamily' ||
             token.lexeme == 'fontFamilyFallback') &&
-        !_isReviewStylePath(relativePath, standaloneDesignSystem)) {
+        !_covers(_reviewStyleExemption, relativePath, standaloneDesignSystem)) {
       add(token, 'authored typeface outside the scoped code-style exception');
     }
 
@@ -159,9 +170,9 @@ List<DesignSystemViolation> _tokenViolations(
   return violations;
 }
 
-bool _isReviewStylePath(String path, bool standaloneDesignSystem) =>
-    path == _workspaceReviewStylePath ||
-    (standaloneDesignSystem && path == _standaloneReviewStylePath);
+bool _covers(_Exemption exemption, String path, bool standaloneDesignSystem) =>
+    path == exemption.workspacePath ||
+    (standaloneDesignSystem && path == exemption.standalonePath);
 
 bool _isPalettePath(String path, bool standaloneDesignSystem) =>
     path == _workspacePalettePath ||

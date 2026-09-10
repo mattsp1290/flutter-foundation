@@ -8,11 +8,56 @@ enum BirbReviewLoadState { loading, ready, failed }
 /// Whether a simulated submission succeeds or fails.
 enum BirbReviewOutcome { succeeds, fails }
 
+/// Which draft a submission belongs to.
+///
+/// A typed key means the identity is constructed once and matched by value:
+/// nothing formats it into a string and nothing parses it back out, so host
+/// identifiers containing the separator cannot be misread.
+@immutable
+sealed class BirbReviewDraftKey {
+  const BirbReviewDraftKey();
+}
+
+/// A reply to an existing thread.
+final class BirbReviewReplyKey extends BirbReviewDraftKey {
+  const BirbReviewReplyKey(this.threadId);
+
+  final String threadId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbReviewReplyKey && other.threadId == threadId;
+
+  @override
+  int get hashCode => Object.hash('reply', threadId);
+
+  @override
+  String toString() => 'reply($threadId)';
+}
+
+/// A new discussion at one anchor, including the revision it was written
+/// against.
+final class BirbReviewAnchorKey extends BirbReviewDraftKey {
+  const BirbReviewAnchorKey(this.anchor);
+
+  final BirbDiffAnchor anchor;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbReviewAnchorKey && other.anchor == anchor;
+
+  @override
+  int get hashCode => Object.hash('anchor', anchor);
+
+  @override
+  String toString() => 'anchor(${anchor.lineId}@${anchor.revisionId})';
+}
+
 /// One pending simulated submission.
 ///
-/// The identity is the draft key plus the revision the draft was written
-/// against, so a late completion can be matched to exactly one draft and
-/// rejected when the revision has moved on.
+/// The identity is the draft key, which already carries the revision an anchor
+/// draft was written against, so a late completion can be matched to exactly
+/// one draft and rejected when the revision has moved on.
 @immutable
 final class BirbReviewSubmission {
   const BirbReviewSubmission({
@@ -21,7 +66,7 @@ final class BirbReviewSubmission {
     required this.text,
   });
 
-  final String draftKey;
+  final BirbReviewDraftKey draftKey;
   final String revisionId;
   final String text;
 
@@ -50,8 +95,8 @@ final class BirbReviewDemoState {
     this.status = BirbReviewStatus.pending,
     this.loadState = BirbReviewLoadState.ready,
     this.selectedAnchor,
-    this.pending = const <String, BirbReviewSubmission>{},
-    this.submissionErrors = const <String, String>{},
+    this.pending = const <BirbReviewDraftKey, BirbReviewSubmission>{},
+    this.submissionErrors = const <BirbReviewDraftKey, String>{},
     this.updatingThreadIds = const <String>{},
     this.threadErrors = const <String, String>{},
     this.staleResultMessage,
@@ -67,13 +112,13 @@ final class BirbReviewDemoState {
   final BirbDiffAnchor? selectedAnchor;
 
   /// Submissions in flight, keyed by draft. Each draft completes on its own.
-  final Map<String, BirbReviewSubmission> pending;
+  final Map<BirbReviewDraftKey, BirbReviewSubmission> pending;
 
   /// The visible failure for each draft, keyed the same way as [pending].
   ///
   /// Errors are per draft so starting a second request never erases one the
   /// viewer has not read yet.
-  final Map<String, String> submissionErrors;
+  final Map<BirbReviewDraftKey, String> submissionErrors;
 
   /// Threads whose resolved state the host is currently applying.
   final Set<String> updatingThreadIds;
@@ -117,11 +162,12 @@ final class BirbReviewDemoState {
   }
 
   /// The draft key for a reply on [threadId].
-  static String replyDraftKey(String threadId) => 'thread:$threadId';
+  static BirbReviewDraftKey replyDraftKey(String threadId) =>
+      BirbReviewReplyKey(threadId);
 
   /// The draft key for a new discussion at [anchor].
-  static String anchorDraftKey(BirbDiffAnchor anchor) =>
-      'anchor:${anchor.fileId}:${anchor.revisionId}:${anchor.lineId}';
+  static BirbReviewDraftKey anchorDraftKey(BirbDiffAnchor anchor) =>
+      BirbReviewAnchorKey(anchor);
 
   BirbReviewDemoState copyWith({
     Map<String, BirbDiffSnapshot>? snapshots,
@@ -131,8 +177,8 @@ final class BirbReviewDemoState {
     BirbReviewLoadState? loadState,
     BirbDiffAnchor? selectedAnchor,
     bool clearSelectedAnchor = false,
-    Map<String, BirbReviewSubmission>? pending,
-    Map<String, String>? submissionErrors,
+    Map<BirbReviewDraftKey, BirbReviewSubmission>? pending,
+    Map<BirbReviewDraftKey, String>? submissionErrors,
     Set<String>? updatingThreadIds,
     Map<String, String>? threadErrors,
     String? staleResultMessage,
@@ -231,19 +277,16 @@ final class BirbReviewDemoState {
     );
   }
 
-  /// Draft keys whose anchors named a revision this state no longer shows.
+  /// Draft keys whose anchors named content this state no longer shows.
   ///
   /// A host uses this to release the controllers it created for them.
-  Iterable<String> staleAnchorDraftKeys(Iterable<String> draftKeys) sync* {
-    final live = <String>{
-      for (final snapshot in snapshots.values)
-        '${snapshot.file.id}:${snapshot.revisionId}',
-    };
+  Iterable<BirbReviewDraftKey> staleAnchorDraftKeys(
+    Iterable<BirbReviewDraftKey> draftKeys,
+  ) sync* {
     for (final key in draftKeys) {
-      if (!key.startsWith('anchor:')) continue;
-      final parts = key.substring('anchor:'.length).split(':');
-      if (parts.length < 3) continue;
-      if (!live.contains('${parts[0]}:${parts[1]}')) yield key;
+      if (key is! BirbReviewAnchorKey) continue;
+      final snapshot = snapshots[key.anchor.fileId];
+      if (snapshot == null || !snapshot.contains(key.anchor)) yield key;
     }
   }
 
