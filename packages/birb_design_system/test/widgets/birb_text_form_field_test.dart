@@ -370,6 +370,153 @@ void main() {
       ),
     );
   });
+
+  group('multiline and read-only editor', () {
+    testWidgets('defaults stay single-line and writable', (tester) async {
+      await _pumpOptionalField(tester, BirbTheme.light);
+      final editor = tester.widget<TextField>(find.byType(TextField));
+      expect(editor.maxLines, 1);
+      expect(editor.minLines, isNull);
+      expect(editor.readOnly, isFalse);
+    });
+
+    testWidgets('forwards minLines, maxLines, and readOnly to the editor', (
+      tester,
+    ) async {
+      await _pumpMultilineField(tester);
+      final editor = tester.widget<TextField>(find.byType(TextField));
+      expect(editor.minLines, 3);
+      expect(editor.maxLines, 8);
+      expect(editor.readOnly, isFalse);
+    });
+
+    testWidgets('a multiline draft wraps and grows to maxLines then scrolls', (
+      tester,
+    ) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+      await _pumpMultilineField(tester, controller: controller);
+      final emptyHeight = tester.getSize(find.byType(TextField)).height;
+
+      controller.text = List<String>.generate(4, (i) => 'line \$i').join('\n');
+      await tester.pumpAndSettle();
+      final fourLineHeight = tester.getSize(find.byType(TextField)).height;
+      expect(fourLineHeight, greaterThan(emptyHeight));
+
+      controller.text = List<String>.generate(30, (i) => 'line \$i').join('\n');
+      await tester.pumpAndSettle();
+      final cappedHeight = tester.getSize(find.byType(TextField)).height;
+      expect(cappedHeight, greaterThan(fourLineHeight));
+      expect(tester.takeException(), isNull);
+
+      controller.text = List<String>.generate(60, (i) => 'line \$i').join('\n');
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(TextField)).height, cappedHeight);
+    });
+
+    testWidgets('read-only keeps focus and text while blocking input', (
+      tester,
+    ) async {
+      final controller = TextEditingController(text: 'Kept draft');
+      final focusNode = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(focusNode.dispose);
+      await _pumpMultilineField(
+        tester,
+        controller: controller,
+        focusNode: focusNode,
+        readOnly: true,
+      );
+
+      expect(find.text('Kept draft'), findsOneWidget);
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(focusNode.hasFocus, isTrue);
+
+      await tester.enterText(find.byType(TextField), 'Typed over');
+      await tester.pumpAndSettle();
+      expect(controller.text, 'Kept draft');
+    });
+
+    testWidgets('read-only is semantically distinct from disabled', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpMultilineField(tester, readOnly: true);
+      final readOnlyData = tester
+          .getSemantics(find.byType(TextField))
+          .getSemanticsData();
+      expect(readOnlyData.flagsCollection.isEnabled, isNot(Tristate.isFalse));
+
+      await _pumpMultilineField(tester, enabled: false);
+      final disabledData = tester
+          .getSemantics(find.byType(TextField))
+          .getSemanticsData();
+      expect(disabledData.flagsCollection.isEnabled, Tristate.isFalse);
+      handle.dispose();
+    });
+
+    testWidgets('multiline validation still uses the live correction row', (
+      tester,
+    ) async {
+      await _pumpMultilineField(tester, errorText: 'Reply is too long');
+      expect(find.text('Reply is too long'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Error: Reply is too long')),
+        isNotNull,
+      );
+    });
+
+    testWidgets('a borrowed controller survives replacement and is not '
+        'disposed', (tester) async {
+      final first = TextEditingController(text: 'First draft');
+      final second = TextEditingController(text: 'Second draft');
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      await _pumpMultilineField(tester, controller: first);
+      expect(find.text('First draft'), findsOneWidget);
+      await _pumpMultilineField(tester, controller: second);
+      await tester.pumpAndSettle();
+      expect(find.text('Second draft'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(first.text, 'First draft');
+      expect(second.text, 'Second draft');
+    });
+  });
+}
+
+Future<void> _pumpMultilineField(
+  WidgetTester tester, {
+  TextEditingController? controller,
+  FocusNode? focusNode,
+  bool readOnly = false,
+  bool enabled = true,
+  String? errorText,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: BirbTheme.light,
+      home: Scaffold(
+        body: SizedBox(
+          width: 640,
+          child: BirbTextFormField(
+            label: 'Reply',
+            controller: controller,
+            focusNode: focusNode,
+            readOnly: readOnly,
+            enabled: enabled,
+            errorText: errorText,
+            keyboardType: TextInputType.multiline,
+            minLines: 3,
+            maxLines: 8,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpField(
