@@ -58,7 +58,7 @@ Pub cache, `.dart_tool`, or build directories.
 
 Theme and component changes require both automated coverage and the manual
 light/dark, 320 logical pixel, 200 percent text, keyboard-focus, and overlay
-inspection described by `DESIGN.md` once that contract exists.
+inspection described by the root `DESIGN.md`.
 
 Never stage `reviews/`, plan-loop state or locks, local settings, build output,
 or unrelated working-tree changes.

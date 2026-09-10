@@ -51,11 +51,9 @@ final class BirbReviewDemoState {
     this.loadState = BirbReviewLoadState.ready,
     this.selectedAnchor,
     this.pending = const <String, BirbReviewSubmission>{},
-    this.submissionError,
-    this.failedDraftKey,
+    this.submissionErrors = const <String, String>{},
     this.updatingThreadIds = const <String>{},
-    this.threadError,
-    this.failedThreadId,
+    this.threadErrors = const <String, String>{},
     this.staleResultMessage,
     this.nextOutcome = BirbReviewOutcome.succeeds,
   });
@@ -70,17 +68,18 @@ final class BirbReviewDemoState {
 
   /// Submissions in flight, keyed by draft. Each draft completes on its own.
   final Map<String, BirbReviewSubmission> pending;
-  final String? submissionError;
 
-  /// Which draft the visible [submissionError] belongs to.
-  final String? failedDraftKey;
+  /// The visible failure for each draft, keyed the same way as [pending].
+  ///
+  /// Errors are per draft so starting a second request never erases one the
+  /// viewer has not read yet.
+  final Map<String, String> submissionErrors;
 
   /// Threads whose resolved state the host is currently applying.
   final Set<String> updatingThreadIds;
-  final String? threadError;
 
-  /// Which thread the visible [threadError] belongs to.
-  final String? failedThreadId;
+  /// The visible failure for each thread, keyed by thread identity.
+  final Map<String, String> threadErrors;
 
   /// A visible message when a late completion no longer matches the content.
   final String? staleResultMessage;
@@ -133,13 +132,9 @@ final class BirbReviewDemoState {
     BirbDiffAnchor? selectedAnchor,
     bool clearSelectedAnchor = false,
     Map<String, BirbReviewSubmission>? pending,
-    String? submissionError,
-    String? failedDraftKey,
-    bool clearSubmissionError = false,
+    Map<String, String>? submissionErrors,
     Set<String>? updatingThreadIds,
-    String? threadError,
-    String? failedThreadId,
-    bool clearThreadError = false,
+    Map<String, String>? threadErrors,
     String? staleResultMessage,
     bool clearStaleResult = false,
     BirbReviewOutcome? nextOutcome,
@@ -155,17 +150,9 @@ final class BirbReviewDemoState {
           ? null
           : selectedAnchor ?? this.selectedAnchor,
       pending: pending ?? this.pending,
-      submissionError: clearSubmissionError
-          ? null
-          : submissionError ?? this.submissionError,
-      failedDraftKey: clearSubmissionError
-          ? null
-          : failedDraftKey ?? this.failedDraftKey,
+      submissionErrors: submissionErrors ?? this.submissionErrors,
       updatingThreadIds: updatingThreadIds ?? this.updatingThreadIds,
-      threadError: clearThreadError ? null : threadError ?? this.threadError,
-      failedThreadId: clearThreadError
-          ? null
-          : failedThreadId ?? this.failedThreadId,
+      threadErrors: threadErrors ?? this.threadErrors,
       staleResultMessage: clearStaleResult
           ? null
           : staleResultMessage ?? this.staleResultMessage,
@@ -242,6 +229,22 @@ final class BirbReviewDemoState {
       ],
       clearSelectedAnchor: true,
     );
+  }
+
+  /// Draft keys whose anchors named a revision this state no longer shows.
+  ///
+  /// A host uses this to release the controllers it created for them.
+  Iterable<String> staleAnchorDraftKeys(Iterable<String> draftKeys) sync* {
+    final live = <String>{
+      for (final snapshot in snapshots.values)
+        '${snapshot.file.id}:${snapshot.revisionId}',
+    };
+    for (final key in draftKeys) {
+      if (!key.startsWith('anchor:')) continue;
+      final parts = key.substring('anchor:'.length).split(':');
+      if (parts.length < 3) continue;
+      if (!live.contains('${parts[0]}:${parts[1]}')) yield key;
+    }
   }
 
   /// Applies a resolved state to the thread identified by [threadId].

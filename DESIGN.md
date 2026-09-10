@@ -445,12 +445,16 @@ with a monospace family resolved from the platform fallback list
 `Courier New`, `monospace`. No font asset is bundled and no remote font is
 fetched, so an unavailable family degrades to the next entry. OS text scaling
 is preserved; code text is never shrunk to fit. The exception applies to source
-lines and hunk headings only, never to labels, comment bodies, or metadata.
+lines, hunk headings, and the numeric line-number cells, which must stay
+column-aligned with the source beside them. It never applies to labels, comment
+bodies, or a row's prose metadata: a stacked row's line description uses
+ordinary platform typography.
 
 A rune count only approximates display width, so snapshot preparation keeps the
 several longest rows as candidates and lays out all of them to find the true
 column width. Snapshot preparation therefore stays O(total source text) with a
-bounded number of text layouts, while row construction stays O(visible rows).
+bounded number of source layouts — plus one layout per hunk heading, re-paid on
+a width or scale change — while row construction stays O(visible rows).
 Font-metric or text-scale changes invalidate the measurement and it is
 recomputed.
 
@@ -518,14 +522,17 @@ A diff row's line numbers and change sign never require horizontal scrolling.
 The source column is the only horizontally scrolled region, it shares one
 offset across rows, and that offset is reachable with `Left`/`Right` from the
 diff navigation region as well as with the labeled horizontal scrollbar. Below
-360 logical pixels of row width, or above 1.5× effective code text scale, each
+360 logical pixels of row width, above 1.5× effective code text scale, or
+whenever an inline gutter would leave fewer than twelve columns of source, each
 row stacks its metadata above its source text instead of shrinking text or
 overflowing.
 
 The horizontal offset is reachable four ways: `Left`/`Right` from the
 navigation region, a horizontal drag anywhere over the source rows, the labelled
-scrollbar below them — whose hit area is a full interaction target even though
-the thumb is thin — and its scroll semantics actions.
+scrollbar below them — whose scrollable fills a full interaction target even
+though the thumb is thin — and its scroll semantics actions. The row drag is
+restricted to touch and stylus on purpose: a mouse or trackpad drag belongs to
+the native text selection section 9.1 requires.
 
 `BirbDiffView` is a bounded-height, finite-width widget; the host supplies
 finite constraints. Loading, failure, and retry belong to the host around the
@@ -548,7 +555,8 @@ and no per-row tab stops. While the navigation region owns focus:
 
 A pointer tap or an assistive-technology activation on a row also makes it the
 active line and gives the navigation region focus, so the next arrow key
-continues from there. The active-line description is a live region, so that
+continues from there. A host-supplied `selectedAnchor` does the same and reveals
+its row. The active-line description is a live region, so that
 change is announced. A row announces its kind and both line numbers once,
 followed by its source text; the gutter repeats neither.
 
@@ -612,5 +620,7 @@ design-system implementation.
 For the section 9 review components the following are also deferred and are
 not exceptions to this contract: raw patch parsing, provider adapters and
 authentication, side-by-side diffs, syntax highlighting, Markdown comment
-bodies, cross-row continuous selection, editable suggestions, review
-submission and merge, complete pull-request timelines, and persisted drafts.
+bodies, editable suggestions, review submission and merge, complete
+pull-request timelines, and persisted drafts. A selection may span rows today
+(section 9.1); what stays deferred is selecting across the gutter, and any
+selection surviving a scroll far enough to unmount its rows.

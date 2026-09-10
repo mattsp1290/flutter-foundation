@@ -3,6 +3,9 @@ part of 'design_system_audit.dart';
 const _standalonePalettePath = 'lib/src/foundation/birb_palette.dart';
 const _workspacePalettePath =
     'packages/birb_design_system/lib/src/foundation/birb_palette.dart';
+const _standaloneReviewStylePath = 'lib/src/review/birb_review_style.dart';
+const _workspaceReviewStylePath =
+    'packages/birb_design_system/lib/src/review/birb_review_style.dart';
 const _standaloneAuditBarrel = 'lib/design_system_audit.dart';
 const _workspaceAuditBarrel =
     'packages/birb_design_system/lib/design_system_audit.dart';
@@ -100,6 +103,15 @@ List<DesignSystemViolation> _tokenViolations(
       add(token, 'private BirbPalette boundary violation');
     }
 
+    // The scoped monospace exception for source code lives in exactly one
+    // file; any other authored typeface is a new exception that has to be
+    // documented in DESIGN.md first.
+    if ((token.lexeme == 'fontFamily' ||
+            token.lexeme == 'fontFamilyFallback') &&
+        !_isReviewStylePath(relativePath, standaloneDesignSystem)) {
+      add(token, 'authored typeface outside the scoped code-style exception');
+    }
+
     if (!{'import', 'export', 'part'}.contains(token.lexeme)) continue;
     final directiveEnd = tokens.indexWhere(
       (candidate) => candidate.lexeme == ';',
@@ -146,6 +158,10 @@ List<DesignSystemViolation> _tokenViolations(
 
   return violations;
 }
+
+bool _isReviewStylePath(String path, bool standaloneDesignSystem) =>
+    path == _workspaceReviewStylePath ||
+    (standaloneDesignSystem && path == _standaloneReviewStylePath);
 
 bool _isPalettePath(String path, bool standaloneDesignSystem) =>
     path == _workspacePalettePath ||

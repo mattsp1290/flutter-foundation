@@ -1,6 +1,7 @@
 import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:birb_design_system/birb_design_system.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -102,14 +103,39 @@ void main() {
       );
     });
 
-    testWidgets('renamed and deleted files render their metadata', (
-      tester,
-    ) async {
+    testWidgets('a deleted file renders its metadata', (tester) async {
       await pumpDiff(tester, snapshot: deletedSnapshot());
       expect(find.text(deletedFile.path), findsOneWidget);
       expect(find.text('class OldDiff {}'), findsOneWidget);
       expect(find.text('−'), findsOneWidget);
       expect(find.text('+'), findsNothing);
+    });
+
+    testWidgets('a renamed file names its previous path', (tester) async {
+      await pumpDiff(tester, snapshot: renamedSnapshot());
+      expect(find.text(renamedFile.path), findsOneWidget);
+      expect(
+        find.text('Renamed from ${renamedFile.previousPath}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Renamed · +1 additions · −1 deletions'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(
+        themedHost(
+          BirbDiffView(
+            snapshot: renamedSnapshot(),
+            labels: const BirbDiffViewLabels(renamedFrom: 'Umbenannt von'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Umbenannt von ${renamedFile.previousPath}'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('empty, binary, and unavailable content render distinct '
@@ -184,6 +210,43 @@ void main() {
       expect(rowSemantics.label, startsWith('Added new line 11'));
       expect(rowSemantics.flagsCollection.isSelected, Tristate.isTrue);
       handle.dispose();
+    });
+
+    testWidgets('a host-driven anchor reveals its row', (tester) async {
+      final snapshot = largeSnapshot(lineCount: 500);
+      final target = snapshot.lines.firstWhere(
+        (line) => line.id == 'large-line-400',
+      );
+      Widget build(BirbDiffAnchor? anchor) => themedHost(
+        BirbDiffView(
+          key: const ValueKey<String>('diff'),
+          snapshot: snapshot,
+          selectedAnchor: anchor,
+        ),
+      );
+
+      await tester.pumpWidget(build(null));
+      await tester.pumpAndSettle();
+      final vertical = tester
+          .widget<Scrollable>(
+            find
+                .descendant(
+                  of: find.byKey(BirbDiffViewKeys.navigationRegion),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .controller!;
+      expect(vertical.offset, 0);
+
+      await tester.pumpWidget(build(snapshot.anchorFor(target)));
+      await tester.pumpAndSettle();
+
+      expect(vertical.offset, greaterThan(0));
+      expect(
+        find.byKey(BirbDiffViewKeys.line('large-line-400')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('an anchor from another revision or file is ignored', (
@@ -396,6 +459,60 @@ void main() {
       expect(emitted, hasLength(1));
       expect(emitted.single.revisionId, 'rev-2');
       expect(emitted.single.lineId, 'line-context-10');
+    });
+
+    testWidgets('a same-identity content change keeps the active line', (
+      tester,
+    ) async {
+      BirbDiffSnapshot build({required bool extraLine}) => BirbDiffSnapshot(
+        file: textFile,
+        revisionId: 'rev-1',
+        hunks: <BirbDiffHunk>[
+          BirbDiffHunk(
+            id: 'hunk-1',
+            lines: <BirbDiffLine>[
+              BirbDiffLine(
+                id: 'line-context-10',
+                kind: BirbDiffLineKind.context,
+                text: 'a',
+                oldNumber: 10,
+                newNumber: 10,
+              ),
+              BirbDiffLine(
+                id: 'line-added-11',
+                kind: BirbDiffLineKind.addition,
+                text: 'b',
+                newNumber: 11,
+              ),
+              if (extraLine)
+                BirbDiffLine(
+                  id: 'line-added-12',
+                  kind: BirbDiffLineKind.addition,
+                  text: 'c',
+                  newNumber: 12,
+                ),
+            ],
+          ),
+        ],
+      );
+
+      Widget host(BirbDiffSnapshot snapshot) => themedHost(
+        BirbDiffView(
+          key: const ValueKey<String>('diff'),
+          snapshot: snapshot,
+          onCommentRequested: (_) {},
+        ),
+      );
+
+      await tester.pumpWidget(host(build(extraLine: false)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(BirbDiffViewKeys.line('line-added-11')));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment on added line 11'), findsOneWidget);
+
+      await tester.pumpWidget(host(build(extraLine: true)));
+      await tester.pumpAndSettle();
+      expect(find.text('Comment on added line 11'), findsOneWidget);
     });
 
     testWidgets('replacing the file resets owned scroll positions', (
@@ -717,17 +834,116 @@ void main() {
       }
     });
 
+    testWidgets('a mouse drag selects source text rather than scrolling it', (
+      tester,
+    ) async {
+      final clipboard = captureClipboard(tester);
+      await pumpDiff(tester, snapshot: largeSnapshot(lineCount: 40));
+
+      final strip = tester.widget<Scrollable>(
+        find.descendant(
+          of: find.byKey(BirbDiffViewKeys.horizontalScroll),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      final row = tester.getRect(
+        find.byKey(BirbDiffViewKeys.line('large-line-5')),
+      );
+
+      final mouse = await tester.startGesture(
+        Offset(row.left + 4, row.center.dy),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pump();
+      for (var step = 0; step < 12; step += 1) {
+        await mouse.moveBy(const Offset(14, 0));
+        await tester.pump();
+      }
+      await mouse.up();
+      await tester.pumpAndSettle();
+
+      // The drag must not have been taken by the pan recognizer.
+      expect(strip.controller!.offset, 0);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+      await tester.pumpAndSettle();
+
+      expect(clipboard, isNotEmpty, reason: 'drag-to-select produced nothing');
+      expect(clipboard.single, isNotEmpty);
+      // Selection yields source text only: no line numbers, no change sign.
+      expect(clipboard.single, isNot(contains('5')));
+    });
+
+    testWidgets('a touch drag pans the source column', (tester) async {
+      await pumpDiff(tester, snapshot: largeSnapshot(lineCount: 40));
+      final strip = tester.widget<Scrollable>(
+        find.descendant(
+          of: find.byKey(BirbDiffViewKeys.horizontalScroll),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      final row = tester.getRect(
+        find.byKey(BirbDiffViewKeys.line('large-line-3')),
+      );
+
+      final touch = await tester.startGesture(
+        Offset(row.center.dx, row.center.dy),
+      );
+      await tester.pump();
+      for (var step = 0; step < 10; step += 1) {
+        await touch.moveBy(const Offset(-15, 0));
+        await tester.pump();
+      }
+      await touch.up();
+      await tester.pumpAndSettle();
+
+      expect(strip.controller!.offset, greaterThan(0));
+    });
+
+    testWidgets('the horizontal strip responds across its whole target', (
+      tester,
+    ) async {
+      await pumpDiff(tester, snapshot: largeSnapshot(lineCount: 40));
+      final stripRect = tester.getRect(
+        find.byKey(BirbDiffViewKeys.horizontalScroll),
+      );
+      expect(
+        stripRect.height,
+        greaterThanOrEqualTo(BirbSizes.minimumInteractiveDimension),
+      );
+
+      final strip = tester.widget<Scrollable>(
+        find.descendant(
+          of: find.byKey(BirbDiffViewKeys.horizontalScroll),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      // A drag near the top edge of the reserved target must still scroll.
+      await tester.dragFrom(
+        Offset(stripRect.center.dx, stripRect.top + 4),
+        const Offset(-120, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(strip.controller!.offset, greaterThan(0));
+    });
+
     testWidgets('the source column is one selection region that excludes the '
         'gutter', (tester) async {
       await pumpDiff(tester, snapshot: modifiedSnapshot());
       expect(find.byType(SelectionArea), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(BirbDiffViewKeys.line('line-added-11')),
-          matching: find.byType(SelectionContainer),
-        ),
-        findsWidgets,
-      );
+      // A `SelectionContainer` with no delegate is a disabled one; the source
+      // Text contributes a delegated container, so filter it out.
+      final disabled = find
+          .descendant(
+            of: find.byKey(BirbDiffViewKeys.line('line-added-11')),
+            matching: find.byType(SelectionContainer),
+          )
+          .evaluate()
+          .map((element) => element.widget as SelectionContainer)
+          .where((container) => container.delegate == null);
+      expect(disabled, isNotEmpty);
     });
   });
 

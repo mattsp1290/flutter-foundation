@@ -192,7 +192,7 @@ void main() {
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(BirbDiffViewKeys.commentAction));
     await tester.pumpAndSettle();
-    expect(find.text('New discussion on new line 11'), findsOneWidget);
+    expect(find.text('New discussion — On new line 11'), findsOneWidget);
 
     // Make the next request fail, then reply.
     await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.failNextToggle));
@@ -432,6 +432,66 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a second request never erases another failure', (tester) async {
+    useViewport(tester, const Size(1200, 1400));
+    await tester.pumpWidget(host(delay: const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.failNextToggle));
+    await tester.pumpAndSettle();
+
+    // Fail a reply.
+    await reply(
+      tester,
+      composerKey: BirbReviewHarnessKeys.replyComposer(
+        BirbReviewFixtures.lineThread,
+      ),
+      text: 'Doomed reply',
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('The simulated host rejected this reply. Your draft is kept.'),
+      findsOneWidget,
+    );
+
+    // Start an unrelated resolve; the reply's failure must survive it.
+    await tapVisible(
+      tester,
+      find.descendant(
+        of: find.byKey(
+          BirbReviewHarnessKeys.thread(BirbReviewFixtures.generalThread),
+        ),
+        matching: find.byKey(BirbReviewThreadKeys.resolutionAction),
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.text('The simulated host rejected this reply. Your draft is kept.'),
+      findsOneWidget,
+      reason: 'starting another request erased an unread failure',
+    );
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    // Now both failures are visible, each on its own surface.
+    expect(
+      find.text('The simulated host rejected this reply. Your draft is kept.'),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(
+          BirbReviewHarnessKeys.thread(BirbReviewFixtures.generalThread),
+        ),
+        matching: find.byKey(BirbReviewThreadKeys.errorStatus),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(BirbReviewThreadKeys.errorStatus), findsOneWidget);
   });
 
   testWidgets('two overlapping submissions both complete', (tester) async {

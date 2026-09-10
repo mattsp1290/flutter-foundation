@@ -142,10 +142,11 @@ void main() {
     );
     await tester.pump();
     expect(requests, isEmpty);
-    expect(
-      tester.getSemantics(find.byKey(BirbReviewThreadKeys.pendingStatus)).label,
-      'Updating thread state',
-    );
+    final pending = tester
+        .getSemantics(find.byKey(BirbReviewThreadKeys.pendingStatus))
+        .getSemanticsData();
+    expect(pending.label, 'Updating thread state');
+    expect(pending.flagsCollection.isLiveRegion, isTrue);
   });
 
   testWidgets('an error stays visible in a live region and retries with the '
@@ -164,10 +165,11 @@ void main() {
 
     await tester.pumpWidget(build(updating: false, error: 'Network failed'));
     expect(find.text('Network failed'), findsOneWidget);
-    expect(
-      tester.getSemantics(find.bySemanticsLabel('Error: Network failed')),
-      isNotNull,
-    );
+    final errorData = tester
+        .getSemantics(find.byKey(BirbReviewThreadKeys.errorStatus))
+        .getSemanticsData();
+    expect(errorData.label, 'Error: Network failed');
+    expect(errorData.flagsCollection.isLiveRegion, isTrue);
 
     await tester.tap(find.byKey(BirbReviewThreadKeys.resolutionAction));
     await tester.pumpAndSettle();

@@ -130,20 +130,66 @@ void main() {
     expect(submitted, <String>['Draft']);
   });
 
-  testWidgets('a host rebuild re-arms the submit action', (tester) async {
+  testWidgets('the guard disables the action while it holds', (tester) async {
     final submitted = <String>[];
     await pump(tester, onSubmit: submitted.add);
     await tester.enterText(find.byType(TextField), 'Draft');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(BirbReviewComposerKeys.submitAction));
-    await tester.pumpAndSettle();
+    tester
+        .widget<FilledButton>(find.byKey(BirbReviewComposerKeys.submitAction))
+        .onPressed!();
+    // Within the same frame the action is visibly unavailable, not silently
+    // inert.
+    await tester.pump(Duration.zero);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BirbReviewComposerKeys.submitAction))
+          .onPressed,
+      isNull,
+    );
     expect(submitted, hasLength(1));
+  });
 
-    await pump(tester, onSubmit: submitted.add, errorText: 'Rejected');
-    await tester.tap(find.byKey(BirbReviewComposerKeys.submitAction));
+  testWidgets('the guard releases without any prop change', (tester) async {
+    final submitted = <String>[];
+    // A host that keeps a stable callback and never changes a prop must not
+    // leave the composer permanently unable to submit.
+    void onSubmit(String text) => submitted.add(text);
+
+    await pump(tester, onSubmit: onSubmit);
+    await tester.enterText(find.byType(TextField), 'Draft');
     await tester.pumpAndSettle();
-    expect(submitted, hasLength(2));
+
+    for (var attempt = 0; attempt < 3; attempt += 1) {
+      await tester.tap(find.byKey(BirbReviewComposerKeys.submitAction));
+      await tester.pumpAndSettle();
+    }
+    expect(submitted, hasLength(3));
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(BirbReviewComposerKeys.submitAction))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('an identical repeated failure still allows a retry', (
+    tester,
+  ) async {
+    final submitted = <String>[];
+    void onSubmit(String text) => submitted.add(text);
+
+    await pump(tester, onSubmit: onSubmit, errorText: 'boom');
+    await tester.enterText(find.byType(TextField), 'Draft');
+    await tester.pumpAndSettle();
+
+    for (var attempt = 0; attempt < 3; attempt += 1) {
+      await tester.tap(find.byKey(BirbReviewComposerKeys.submitAction));
+      // The host reports the same error every time: no prop delta at all.
+      await pump(tester, onSubmit: onSubmit, errorText: 'boom');
+    }
+    expect(submitted, hasLength(3));
   });
 
   testWidgets('while submitting the text stays visible and read-only, the '
@@ -171,12 +217,11 @@ void main() {
           .onPressed,
       isNull,
     );
-    expect(
-      tester
-          .getSemantics(find.byKey(BirbReviewComposerKeys.pendingStatus))
-          .label,
-      'Sending reply',
-    );
+    final pending = tester
+        .getSemantics(find.byKey(BirbReviewComposerKeys.pendingStatus))
+        .getSemanticsData();
+    expect(pending.label, 'Sending reply');
+    expect(pending.flagsCollection.isLiveRegion, isTrue);
 
     await tester.enterText(find.byType(TextField), 'Typed over');
     await tester.pump();

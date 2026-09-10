@@ -23,7 +23,7 @@ and demonstrated by `examples/catalog`.
 | Check Dart formatting | pass |
 | Audit design-system source | pass |
 | Analyze workspace | pass, no issues |
-| Test `birb_design_system` | pass, 313 tests |
+| Test `birb_design_system` | pass, 331 tests |
 | Test `birb_appearance` | pass, 1 test |
 | Test catalog | pass, 5 tests |
 | Build catalog web runner | pass, `✓ Built build/web` |
@@ -32,7 +32,33 @@ and demonstrated by `examples/catalog`.
 change to the generated runner files (`git status` clean apart from the
 untracked planning inputs under `.agents/`).
 
-### Dual review
+### Second review round — the gauntlet
+
+The branch was then put through a second dual review at
+`d63606e`. Both reviewers again returned `REQUEST_CHANGES`. The
+significant finding was a regression introduced by the first round's own fix:
+the horizontal-drag `GestureDetector` added to make the source pannable sat
+inside the `SelectionArea` and won the gesture arena, removing drag-to-select
+for every pointer. The recognizer is now restricted to touch and stylus and is
+only installed when there is something to scroll, and a test drives a mouse drag
+and asserts the platform copy shortcut returns the selection.
+
+Also fixed in that round: the composer's activation guard could deadlock (a host
+reporting the same error twice could never submit again, with the button still
+enabled) and was simultaneously defeated by any host passing an inline callback
+— it is now bounded to one frame and disables the action while it holds; a
+host-driven `selectedAnchor` moved the active line without revealing it; the
+harness kept single-slot errors after its pending state went per-key, so
+starting any second request erased an unread failure; the scrollbar reserved a
+48-pixel target but only 12 pixels of it responded; a stacked row rendered its
+prose metadata in the monospace code style, contradicting section 9.1; and the
+bidi rule written for file paths also rejected legitimate bidi-isolated author
+names. Documentation claims that did not hold — the scrollbar hit area, the
+monospace scope, the contrast coverage, "rename metadata" among the tested
+behaviours, and a self-contradiction about cross-row selection — were corrected
+rather than left standing.
+
+### First review round
 
 Two independent reviewers examined the first commit and both returned
 `REQUEST_CHANGES`. Their reports stay local under the ignored `reviews/`
@@ -52,15 +78,21 @@ the fix.
 - **Models.** Defensive list copies, legal empty states, duplicate identities,
   illegal numbering/kind combinations, and exact anchor construction for added,
   deleted, and context lines.
-- **Style.** Every foreground/background pair the components paint reaches
-  4.5:1, every boundary and focus cue reaches 3:1, in both themes. The style
-  resolves only existing `ColorScheme` and `BirbSemanticColors` roles — a set
-  difference against the allowed roles is asserted, so a new primitive colour
-  would fail the test.
-- **Diff.** Signs, old/new numbers, hunk headings, rename metadata, non-colour
-  selected semantics, distinct empty/binary/unavailable messages, exact anchors
-  per line kind, and identity replacement clearing obsolete state and resetting
-  owned scroll positions.
+- **Style.** Every foreground/background pair the review widgets paint —
+  including the four painted outside `BirbReviewStyle` (the thread's error row
+  and state labels, and the diff header and action area) — reaches 4.5:1, and
+  every boundary and focus cue reaches 3:1, in both themes. The style resolves
+  only existing `ColorScheme` and `BirbSemanticColors` roles; a set difference
+  against the allowed roles is asserted, though because this theme maps several
+  roles onto the same palette primitive that assertion compares colour values,
+  not role identity. The ban on constructing a `Color` at all is enforced by
+  `check_design_system.dart`, which also now scopes the monospace `fontFamily`
+  exception to `birb_review_style.dart`.
+- **Diff.** Signs, old/new numbers, hunk headings, the rename header and its
+  overridable label, non-colour selected semantics, distinct
+  empty/binary/unavailable messages, exact anchors per line kind, identity
+  replacement clearing obsolete state and resetting owned scroll positions, and
+  a same-identity content change keeping the reader's active line.
 - **Keyboard.** Tab reaches the navigation region, then the action area, then
   leaves the diff; arrows, `Home`, and `End` move the active line; `Left`/
   `Right` scroll the source. A keyboard-only path reaches a tab-containing line,
@@ -70,7 +102,9 @@ the fix.
   `Clipboard.setData` platform message rather than a callback.
 - **Copy boundary.** `Copy source line` copies the original text with real tabs
   and Unicode and without decoration, in both commenting modes; native selection
-  copies the displayed, tab-expanded text.
+  copies the displayed, tab-expanded text. A mouse drag across a row selects
+  source and copies it with the platform shortcut without panning the column,
+  while a touch drag pans it — the two gestures are asserted separately.
 - **Bounded construction.** A 10,000-line snapshot containing a 2,000-character
   line builds fewer than 200 source rows at an 800×600 viewport, and keyboard
   `End` reaches line 10,000 and emits its exact anchor without tester scrolling
@@ -128,10 +162,11 @@ the row extent is fixed from the measured line height.
 
 ## Limitations recorded from the inspection
 
-- At 320 logical pixels with a large text scale, the diff's action area and
-  keyboard help occupy a scrollable region capped at 35 percent of the
-  available height. Everything stays reachable, but the source viewport is
-  small; hosts that need more room should give the diff more height.
+- The diff's action area and keyboard help occupy a scrollable region capped at
+  35 percent of the available height. That cap binds well before 320 logical
+  pixels: in a diff about 500 logical pixels tall the third action button is
+  already partly below the fold. Everything stays reachable by scrolling that
+  region, but hosts should give the diff more height where they can.
 - A hunk heading wraps at narrow widths and can be several lines tall. The
   active line is revealed after a snapshot is prepared so a tall heading never
   hides it.

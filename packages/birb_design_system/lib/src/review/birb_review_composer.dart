@@ -79,9 +79,11 @@ abstract final class BirbReviewComposerKeys {
 /// shows [errorText] in the existing live correction row so the same action can
 /// retry.
 ///
-/// An internal activation guard suppresses repeated submit activations until the
-/// host rebuilds this widget. Hosts must therefore rebuild with pending state as
-/// soon as they accept a submission. See `DESIGN.md` section 9.6.
+/// An internal activation guard suppresses repeated submit activations within a
+/// single frame and disables the action while it holds, so a double activation
+/// cannot send one draft twice. It releases on the next frame and never depends
+/// on callback identity, so it can neither deadlock nor be reopened by an
+/// unrelated rebuild. See `DESIGN.md` section 9.6.
 final class BirbReviewComposer extends StatefulWidget {
   const BirbReviewComposer({
     required this.controller,
@@ -129,7 +131,7 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
 
   bool _rejectedBlankDraft = false;
 
-  /// Suppresses repeated activations until the host acknowledges the last one.
+  /// Suppresses repeated activations within one frame.
   bool _awaitingHostRebuild = false;
 
   @override
@@ -145,15 +147,6 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
       oldWidget.controller.removeListener(_handleDraftChange);
       widget.controller.addListener(_handleDraftChange);
       _rejectedBlankDraft = false;
-    }
-    // Only an observable acknowledgement re-arms submission — an unrelated
-    // ancestor rebuild must not reopen the guard.
-    if (widget.isSubmitting != oldWidget.isSubmitting ||
-        widget.errorText != oldWidget.errorText ||
-        widget.enabled != oldWidget.enabled ||
-        widget.onSubmit != oldWidget.onSubmit ||
-        widget.controller != oldWidget.controller) {
-      _awaitingHostRebuild = false;
     }
   }
 
@@ -171,17 +164,29 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
   }
 
   bool get _interactive =>
-      widget.enabled && !widget.isSubmitting && widget.onSubmit != null;
+      widget.enabled &&
+      !widget.isSubmitting &&
+      !_awaitingHostRebuild &&
+      widget.onSubmit != null;
 
   void _handleSubmit() {
-    if (!_interactive || _awaitingHostRebuild) return;
+    if (!_interactive) return;
     final text = widget.controller.text;
     if (text.trim().isEmpty) {
       setState(() => _rejectedBlankDraft = true);
       return;
     }
-    _awaitingHostRebuild = true;
+    setState(() => _awaitingHostRebuild = true);
     widget.onSubmit!(text);
+    // The guard only has to survive repeated activations within one frame. A
+    // prop-delta release would deadlock against a host that reports the same
+    // failure twice, and would be defeated by any host passing an inline
+    // callback, so release it on the next frame instead.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _awaitingHostRebuild) {
+        setState(() => _awaitingHostRebuild = false);
+      }
+    });
   }
 
   @override

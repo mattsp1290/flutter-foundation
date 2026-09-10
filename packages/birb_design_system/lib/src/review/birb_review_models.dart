@@ -97,6 +97,12 @@ final class BirbReviewFile {
 ///
 /// [text] excludes the line terminator. Hosts supply numbering; no widget
 /// reconstructs patch positions.
+///
+/// Unlike the display strings on the other models, [text] is deliberately
+/// exempt from the bidirectional-override check: source is rendered verbatim,
+/// and a reviewer needs to see exactly what the file contains — including a
+/// Trojan-Source sequence. A host that wants such lines flagged marks them
+/// through its own presentation.
 @immutable
 final class BirbDiffLine {
   BirbDiffLine({
@@ -354,8 +360,8 @@ final class BirbReviewComment {
     required this.body,
   }) {
     _requireIdentity(id, 'BirbReviewComment.id');
-    _requireDisplayText(author, 'BirbReviewComment.author');
-    _requireDisplayText(timestamp, 'BirbReviewComment.timestamp');
+    _requireDisplayName(author, 'BirbReviewComment.author');
+    _requireDisplayName(timestamp, 'BirbReviewComment.timestamp');
     if (body.trim().isEmpty) {
       throw ArgumentError.value(body, 'body', 'must not be blank');
     }
@@ -439,14 +445,33 @@ void _requireIdentity(String value, String name) {
   }
 }
 
-/// Bidi overrides and isolates, which can make one path render as another.
-const Set<int> _forbiddenDisplayRunes = <int>{
+/// Bidi marks, embeddings, overrides, and isolates.
+///
+/// A path is rejected for any of these: a file path has no legitimate use for
+/// reordering, and one that reorders can render as a different path.
+const Set<int> _forbiddenPathRunes = <int>{
   0x200E, 0x200F, // LRM, RLM
   0x202A, 0x202B, 0x202C, 0x202D, 0x202E, // embeddings and overrides
   0x2066, 0x2067, 0x2068, 0x2069, // isolates
 };
 
-void _requireDisplayText(String value, String name) {
+/// The unterminated overrides, which reorder everything after them.
+///
+/// Human names legitimately contain marks and isolates, so a display name is
+/// rejected only for these two.
+const Set<int> _forbiddenNameRunes = <int>{0x202D, 0x202E};
+
+/// Validates a single-line display string that names a resource, such as a
+/// file path.
+void _requireDisplayText(String value, String name) =>
+    _requireSingleLine(value, name, _forbiddenPathRunes);
+
+/// Validates a single-line human display string, such as an author name or a
+/// host-formatted timestamp.
+void _requireDisplayName(String value, String name) =>
+    _requireSingleLine(value, name, _forbiddenNameRunes);
+
+void _requireSingleLine(String value, String name, Set<int> forbidden) {
   if (value.trim().isEmpty) {
     throw ArgumentError.value(value, name, 'must not be blank');
   }
@@ -454,12 +479,12 @@ void _requireDisplayText(String value, String name) {
     if (rune == 0x0A || rune == 0x0D) {
       throw ArgumentError.value(value, name, 'must be a single display line');
     }
-    if (_forbiddenDisplayRunes.contains(rune)) {
+    if (forbidden.contains(rune)) {
       throw ArgumentError.value(
         value,
         name,
-        'must not contain a bidirectional override, which could make one '
-        'path render as another',
+        'must not contain a bidirectional override, which could make it '
+        'render as different text',
       );
     }
   }

@@ -46,9 +46,21 @@ abstract final class BirbReviewStyle {
     );
   }
 
-  /// The style for a diff row's line-number gutter.
+  /// The style for a diff row's numeric line-number cells.
+  ///
+  /// The numbers are part of the scoped monospace exception so they stay
+  /// column-aligned with the source beside them.
   static TextStyle gutterTextStyle(ThemeData theme) =>
       codeTextStyle(theme).copyWith(color: theme.colorScheme.onSurfaceVariant);
+
+  /// The style for a row's prose metadata, such as its line description.
+  ///
+  /// This is ordinary platform typography: the monospace exception covers
+  /// source code and the numeric cells, never prose. See `DESIGN.md` 9.1.
+  static TextStyle rowMetadataTextStyle(ThemeData theme) =>
+      (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      );
 
   /// The style for a hunk heading.
   static TextStyle hunkHeadingTextStyle(ThemeData theme) =>

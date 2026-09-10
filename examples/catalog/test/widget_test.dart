@@ -91,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(BirbDiffViewKeys.commentAction));
     await tester.pumpAndSettle();
-    expect(find.text('New discussion on new line 11'), findsOneWidget);
+    expect(find.text('New discussion — On new line 11'), findsOneWidget);
 
     // Reply through the composer and see the comment appear.
     final composer = find.byKey(BirbReviewHarnessKeys.newDiscussionComposer);

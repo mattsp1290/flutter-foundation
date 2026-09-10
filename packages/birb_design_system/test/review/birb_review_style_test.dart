@@ -206,6 +206,29 @@ List<_Pair> _textPairs(ThemeData theme) {
       BirbReviewStyle.gutterTextStyle(theme).color!,
       BirbReviewStyle.selectedRowBackground(theme),
     ),
+    _Pair(
+      'rowMetadata/code',
+      BirbReviewStyle.rowMetadataTextStyle(theme).color!,
+      BirbReviewStyle.codeBackground(theme),
+    ),
+    // Pairs the review widgets paint outside BirbReviewStyle: the thread's
+    // error row, its state labels, and the diff header and action area.
+    _Pair(
+      'threadError/surface',
+      theme.extension<BirbSemanticColors>()!.errorIndicator,
+      colors.surface,
+    ),
+    _Pair('threadStateLabel/surface', colors.onSurfaceVariant, colors.surface),
+    _Pair(
+      'diffHeader/surfaceContainerLow',
+      colors.onSurface,
+      colors.surfaceContainerLow,
+    ),
+    _Pair(
+      'diffHeaderSecondary/surfaceContainerLow',
+      colors.onSurfaceVariant,
+      colors.surfaceContainerLow,
+    ),
   ];
   for (final kind in BirbDiffLineKind.values) {
     final roles = BirbReviewStyle.lineMarker(theme, kind);

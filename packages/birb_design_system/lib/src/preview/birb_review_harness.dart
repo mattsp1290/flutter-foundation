@@ -85,6 +85,12 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
   void initState() {
     super.initState();
     _state = birbReviewFixtureState();
+    assert(() {
+      // Catches a fixture file added without its snapshot, which would
+      // otherwise surface as a raw null-check error inside a build.
+      _state.debugAssertConsistent();
+      return true;
+    }(), 'fixture state is inconsistent');
   }
 
   @override
@@ -135,6 +141,12 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
           .withNewRevision('fixture-revision-$_revisionSequence')
           .copyWith(clearStaleResult: true);
     });
+    // Anchor draft keys embed the revision, so the controllers created for the
+    // superseded one are unreachable; release them instead of leaking one per
+    // line per push.
+    for (final key in _state.staleAnchorDraftKeys(_drafts.keys.toList())) {
+      _drafts.remove(key)?.dispose();
+    }
   }
 
   void _reloadContent() {
@@ -169,7 +181,8 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
             text: text,
           ),
         },
-        clearSubmissionError: true,
+        submissionErrors: <String, String>{..._state.submissionErrors}
+          ..remove(draftKey),
         clearStaleResult: true,
       );
     });
@@ -185,9 +198,11 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
         setState(() {
           _state = _state.copyWith(
             pending: remaining,
-            submissionError:
-                'The simulated host rejected this reply. Your draft is kept.',
-            failedDraftKey: draftKey,
+            submissionErrors: <String, String>{
+              ..._state.submissionErrors,
+              draftKey:
+                  'The simulated host rejected this reply. Your draft is kept.',
+            },
           );
         });
         return;
@@ -218,7 +233,11 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
             (anchor == null
                     ? _state.withComment(threadId, comment)
                     : _state.withNewThread(threadId, anchor, comment))
-                .copyWith(pending: remaining, clearSubmissionError: true);
+                .copyWith(
+                  pending: remaining,
+                  submissionErrors: <String, String>{..._state.submissionErrors}
+                    ..remove(draftKey),
+                );
       });
       // Only the successful draft is cleared, and only by the host.
       _drafts[draftKey]?.clear();
@@ -229,7 +248,8 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     setState(() {
       _state = _state.copyWith(
         updatingThreadIds: <String>{..._state.updatingThreadIds, threadId},
-        clearThreadError: true,
+        threadErrors: <String, String>{..._state.threadErrors}
+          ..remove(threadId),
       );
     });
     final outcome = _state.nextOutcome;
@@ -239,14 +259,17 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
         _state = outcome == BirbReviewOutcome.fails
             ? _state.copyWith(
                 updatingThreadIds: remaining,
-                threadError: 'The simulated host could not change this thread.',
-                failedThreadId: threadId,
+                threadErrors: <String, String>{
+                  ..._state.threadErrors,
+                  threadId: 'The simulated host could not change this thread.',
+                },
               )
             : _state
                   .withResolved(threadId, resolved: resolved)
                   .copyWith(
                     updatingThreadIds: remaining,
-                    clearThreadError: true,
+                    threadErrors: <String, String>{..._state.threadErrors}
+                      ..remove(threadId),
                   );
       });
     });
@@ -434,9 +457,8 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
         if (anchor != null) ...<Widget>[
           const SizedBox(height: BirbSpacing.space3),
           Text(
-            'New discussion on '
-            '${anchor.side == BirbDiffSide.before ? 'old' : 'new'} '
-            'line ${anchor.lineNumber}',
+            'New discussion — '
+            '${const BirbReviewThreadLabels().anchorLabel(anchor)}',
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: BirbSpacing.space2),
@@ -452,9 +474,7 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
             key: BirbReviewHarnessKeys.thread(thread.id),
             thread: thread,
             isUpdating: _state.updatingThreadIds.contains(thread.id),
-            errorText: _state.failedThreadId == thread.id
-                ? _state.threadError
-                : null,
+            errorText: _state.threadErrors[thread.id],
             onResolutionRequested: _requestResolution,
           ),
           const SizedBox(height: BirbSpacing.space2),
@@ -482,6 +502,5 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     );
   }
 
-  String? _errorFor(String draftKey) =>
-      _state.failedDraftKey == draftKey ? _state.submissionError : null;
+  String? _errorFor(String draftKey) => _state.submissionErrors[draftKey];
 }

@@ -215,6 +215,32 @@ BirbDiffSnapshot unavailableSnapshot() => BirbDiffSnapshot(
   hunks: const <BirbDiffHunk>[],
 );
 
+/// A renamed-file snapshot, so the rename header can be exercised.
+BirbDiffSnapshot renamedSnapshot() => BirbDiffSnapshot(
+  file: renamedFile,
+  revisionId: 'rev-renamed',
+  hunks: <BirbDiffHunk>[
+    BirbDiffHunk(
+      id: 'renamed-hunk',
+      heading: '@@ -1,1 +1,1 @@',
+      lines: <BirbDiffLine>[
+        BirbDiffLine(
+          id: 'renamed-deleted-1',
+          kind: BirbDiffLineKind.deletion,
+          text: 'class ChangedFiles {}',
+          oldNumber: 1,
+        ),
+        BirbDiffLine(
+          id: 'renamed-added-1',
+          kind: BirbDiffLineKind.addition,
+          text: 'class BirbChangedFileList {}',
+          newNumber: 1,
+        ),
+      ],
+    ),
+  ],
+);
+
 /// A deleted-file snapshot whose lines are all deletions.
 BirbDiffSnapshot deletedSnapshot() => BirbDiffSnapshot(
   file: deletedFile,

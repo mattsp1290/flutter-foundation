@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -209,7 +210,6 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   static const double _stackBreakpoint = 360;
   static const double _maximumInlineCodeScale = 1.5;
   static const double _rowPadding = BirbSpacing.space1;
-  static const double _stripHeight = BirbSpacing.space3;
   static const double _selectionCueWidth = BirbSpacing.space4;
 
   /// How many of the longest rows are laid out to find the true column width.
@@ -232,9 +232,13 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   ScrollController _vertical = ScrollController();
   ScrollController _horizontal = ScrollController();
 
+  /// Controllers replaced on an identity change, awaiting a safe disposal.
+  final List<ScrollController> _retiredControllers = <ScrollController>[];
+
   List<_DiffRow> _rows = const <_DiffRow>[];
   Map<String, int> _rowIndexByLineId = const <String, int>{};
   List<BirbDiffLine> _lines = const <BirbDiffLine>[];
+  Map<String, int> _lineIndexByLineId = const <String, int>{};
   List<String> _widthCandidates = const <String>[];
   String _widestGutterText = '';
   int _numberDigits = 1;
@@ -277,7 +281,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       return;
     }
     if (widget.snapshot != oldWidget.snapshot) {
-      _prepareSnapshot();
+      _prepareSnapshot(preserveActive: true);
       return;
     }
     if (widget.labels != oldWidget.labels) {
@@ -286,7 +290,15 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       if (previous != _widestGutterText) _metricsKey = null;
     }
     if (widget.selectedAnchor != oldWidget.selectedAnchor) {
+      final previous = _activeLineId;
       _adoptSelectedAnchor();
+      if (_activeLineId != previous) {
+        // didUpdateWidget runs before layout, so reveal once this frame's
+        // extents and viewport exist.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _revealActive();
+        });
+      }
     }
   }
 
@@ -298,6 +310,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _sourceSelectionFocus.dispose();
     _selectionRegionFocus.dispose();
     _sourceSelectionController.dispose();
+    _drainRetired();
     _vertical.dispose();
     _horizontal.dispose();
     super.dispose();
@@ -308,18 +321,27 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   }
 
   void _resetScrollControllers() {
-    final vertical = _vertical;
-    final horizontal = _horizontal;
+    _retiredControllers.addAll(<ScrollController>[_vertical, _horizontal]);
     _vertical = ScrollController();
     _horizontal = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      vertical.dispose();
-      horizontal.dispose();
-    });
+    // Disposal waits for the frame that detaches them, but dispose() drains
+    // the same list so a tear-down with no next frame cannot leak them.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _drainRetired());
+  }
+
+  void _drainRetired() {
+    for (final controller in _retiredControllers) {
+      controller.dispose();
+    }
+    _retiredControllers.clear();
   }
 
   /// Flattens and measures the snapshot once, not on every lazy row build.
-  void _prepareSnapshot() {
+  ///
+  /// [preserveActive] keeps the reader's position when only the snapshot's
+  /// content changed; a file or revision replacement always restarts.
+  void _prepareSnapshot({bool preserveActive = false}) {
+    final previousActive = _activeLineId;
     final rows = <_DiffRow>[];
     final indexByLineId = <String, int>{};
     final lines = <BirbDiffLine>[];
@@ -350,6 +372,10 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _rows = List<_DiffRow>.unmodifiable(rows);
     _rowIndexByLineId = Map<String, int>.unmodifiable(indexByLineId);
     _lines = List<BirbDiffLine>.unmodifiable(lines);
+    _lineIndexByLineId = Map<String, int>.unmodifiable(<String, int>{
+      for (var index = 0; index < lines.length; index += 1)
+        lines[index].id: index,
+    });
     _widthCandidates = List<String>.unmodifiable(candidates);
     _numberDigits = digits;
     _extents = const <double>[];
@@ -357,7 +383,9 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _computeWidestGutterText();
     _metricsKey = null;
     _sourceSelectionLineId = null;
-    _activeLineId = lines.isEmpty ? null : lines.first.id;
+    _activeLineId = preserveActive && indexByLineId.containsKey(previousActive)
+        ? previousActive
+        : (lines.isEmpty ? null : lines.first.id);
     _adoptSelectedAnchor();
     // A tall hunk heading must not hide the active line on first layout.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -482,7 +510,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _stackedGutterHeight = _stacked && _widestGutterText.isNotEmpty
         ? _measure(
             _widestGutterText,
-            gutterStyle,
+            BirbReviewStyle.rowMetadataTextStyle(theme),
             scaler,
             maxWidth: (width - BirbSpacing.space2 * 2).clamp(
               1.0,
@@ -563,11 +591,13 @@ class _BirbDiffViewState extends State<BirbDiffView> {
 
   void _moveActive(int delta) {
     if (_lines.isEmpty) return;
-    final current = _lines.indexWhere((line) => line.id == _activeLineId);
-    final next = (current < 0 ? 0 : current + delta).clamp(
-      0,
-      _lines.length - 1,
-    );
+    final current = _lineIndexByLineId[_activeLineId];
+    // With no active line, Down starts at the first line and Up at the last.
+    final next =
+        (current == null
+                ? (delta > 0 ? 0 : _lines.length - 1)
+                : current + delta)
+            .clamp(0, _lines.length - 1);
     _setActive(_lines[next].id);
   }
 
@@ -704,55 +734,71 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     return Material(
       key: BirbDiffViewKeys.root,
       color: theme.colorScheme.surface,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.fromBorderSide(BirbReviewStyle.objectSide(theme)),
-          borderRadius: BirbRadii.none,
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            assert(
-              constraints.hasBoundedHeight,
-              'BirbDiffView needs a finite height. Wrap it in a SizedBox or '
-              'an Expanded inside a bounded layout.',
-            );
-            assert(
-              constraints.hasBoundedWidth,
-              'BirbDiffView needs a finite width. Wrap it in a SizedBox or '
-              'a bounded layout.',
-            );
-            // Chrome takes its natural height but never enough to squeeze the
-            // source list out of the layout, so nothing overflows at 320
-            // logical pixels or 200 percent text.
-            final available = constraints.maxHeight;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: available * 0.2),
-                  child: SingleChildScrollView(child: _header(theme)),
-                ),
-                if (unavailable != null)
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(BirbSpacing.space3),
-                      child: Text(
-                        unavailable,
-                        key: BirbDiffViewKeys.unavailableMessage,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  )
-                else ...<Widget>[
-                  Expanded(child: _sourceRegion(theme)),
+      // Escape is handled for the whole diff, not just the navigation region,
+      // so it still closes source selection once focus has tabbed to the
+      // action area. DESIGN.md 9.5 states that contract unqualified.
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyUpEvent) return KeyEventResult.ignored;
+          if (event.logicalKey != LogicalKeyboardKey.escape) {
+            return KeyEventResult.ignored;
+          }
+          if (_sourceSelectionLineId == null) return KeyEventResult.ignored;
+          _exitSourceSelection();
+          return KeyEventResult.handled;
+        },
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.fromBorderSide(BirbReviewStyle.objectSide(theme)),
+            borderRadius: BirbRadii.none,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              assert(
+                constraints.hasBoundedHeight,
+                'BirbDiffView needs a finite height. Wrap it in a SizedBox or '
+                'an Expanded inside a bounded layout.',
+              );
+              assert(
+                constraints.hasBoundedWidth,
+                'BirbDiffView needs a finite width. Wrap it in a SizedBox or '
+                'a bounded layout.',
+              );
+              // Chrome takes its natural height but never enough to squeeze the
+              // source list out of the layout, so nothing overflows at 320
+              // logical pixels or 200 percent text.
+              final available = constraints.maxHeight;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
                   ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: available * 0.35),
-                    child: SingleChildScrollView(child: _chrome(theme)),
+                    constraints: BoxConstraints(maxHeight: available * 0.2),
+                    child: SingleChildScrollView(child: _header(theme)),
                   ),
+                  if (unavailable != null)
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(BirbSpacing.space3),
+                        child: Text(
+                          unavailable,
+                          key: BirbDiffViewKeys.unavailableMessage,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                    )
+                  else ...<Widget>[
+                    Expanded(child: _sourceRegion(theme)),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: available * 0.35),
+                      child: SingleChildScrollView(child: _chrome(theme)),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -813,10 +859,8 @@ class _BirbDiffViewState extends State<BirbDiffView> {
                   hint: widget.labels.keyboardHelp,
                   child: SelectionArea(
                     focusNode: _selectionRegionFocus,
-                    child: GestureDetector(
-                      excludeFromSemantics: true,
-                      onHorizontalDragUpdate: (details) =>
-                          _scrollSource(-details.delta.dx),
+                    child: _sourceDragTarget(
+                      width: constraints.maxWidth,
                       child: ListView.builder(
                         controller: _vertical,
                         itemCount: _rows.length,
@@ -837,11 +881,46 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     );
   }
 
+  /// Pans the source column with a touch drag, without taking the gesture
+  /// away from native text selection.
+  ///
+  /// [SelectableRegion] hosts its own drag recognizers above this point, so a
+  /// plain [GestureDetector] here would win the arena for every pointer and
+  /// remove drag-to-select entirely. Restricting the recognizer to touch and
+  /// stylus leaves precise pointers selecting, and they still reach the offset
+  /// through the scrollbar and the `Left`/`Right` keys. The recognizer is only
+  /// installed when there is something to scroll.
+  Widget _sourceDragTarget({required double width, required Widget child}) {
+    if (_contentWidth <= width) return child;
+    return RawGestureDetector(
+      excludeFromSemantics: true,
+      gestures: <Type, GestureRecognizerFactory>{
+        HorizontalDragGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              HorizontalDragGestureRecognizer
+            >(
+              () => HorizontalDragGestureRecognizer(
+                debugOwner: this,
+                supportedDevices: const <PointerDeviceKind>{
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              (instance) {
+                instance.onUpdate = (details) =>
+                    _scrollSource(-details.delta.dx);
+              },
+            ),
+      },
+      child: child,
+    );
+  }
+
   /// The shared horizontal offset control for the source column.
   ///
-  /// The thumb stays thin but its hit area is a full interaction target, the
-  /// scroll actions stay in semantics, and a horizontal drag anywhere over the
-  /// source rows moves the same offset.
+  /// The thumb stays thin, but the scrollable fills the whole reserved
+  /// interaction target so a drag anywhere in it moves the offset, and the
+  /// scroll actions stay in semantics.
   Widget _horizontalStrip(ThemeData theme, double width) {
     final scrollable = _contentWidth > width;
     return Semantics(
@@ -850,15 +929,16 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       label: widget.labels.horizontalScrollLabel,
       child: SizedBox(
         height: BirbSizes.minimumInteractiveDimension,
-        child: Align(
-          child: Scrollbar(
+        child: Scrollbar(
+          controller: _horizontal,
+          thumbVisibility: scrollable,
+          child: SingleChildScrollView(
             controller: _horizontal,
-            thumbVisibility: scrollable,
-            child: SingleChildScrollView(
-              controller: _horizontal,
-              scrollDirection: Axis.horizontal,
-              physics: scrollable ? null : const NeverScrollableScrollPhysics(),
-              child: SizedBox(width: _contentWidth, height: _stripHeight),
+            scrollDirection: Axis.horizontal,
+            physics: scrollable ? null : const NeverScrollableScrollPhysics(),
+            child: SizedBox(
+              width: _contentWidth,
+              height: BirbSizes.minimumInteractiveDimension,
             ),
           ),
         ),
@@ -1073,7 +1153,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
                   alignment: AlignmentDirectional.topStart,
                   child: Text(
                     _activeLineDescription(line),
-                    style: BirbReviewStyle.gutterTextStyle(theme),
+                    style: BirbReviewStyle.rowMetadataTextStyle(theme),
                   ),
                 ),
               ),

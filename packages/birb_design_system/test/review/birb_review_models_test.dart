@@ -32,6 +32,32 @@ void main() {
       );
     });
 
+    test('rejects every bidi control in a path', () {
+      for (final control in <String>[
+        '\u200E',
+        '\u200F',
+        '\u202A',
+        '\u202B',
+        '\u202C',
+        '\u202D',
+        '\u202E',
+        '\u2066',
+        '\u2067',
+        '\u2068',
+        '\u2069',
+      ]) {
+        expect(
+          () => BirbReviewFile(
+            id: 'f1',
+            path: 'lib/${control}main.dart',
+            change: BirbReviewFileChange.modified,
+          ),
+          throwsArgumentError,
+          reason: 'control ${control.codeUnitAt(0).toRadixString(16)}',
+        );
+      }
+    });
+
     test('rejects negative counts', () {
       expect(
         () => BirbReviewFile(
@@ -185,6 +211,18 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+
+    test('source text is exempt from the bidi rule and kept verbatim', () {
+      // A reviewer must see a Trojan-Source sequence, not have it rejected.
+      const trojan = 'if (admin) {\u202E // \u202D';
+      final line = BirbDiffLine(
+        id: 'l1',
+        kind: BirbDiffLineKind.addition,
+        text: trojan,
+        newNumber: 1,
+      );
+      expect(line.text, trojan);
     });
 
     test('empty text and no-final-newline are legal', () {
@@ -511,6 +549,34 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+
+    test('accepts a bidi-isolated display name', () {
+      // Isolates and marks are legitimate in a human name; only the
+      // unterminated overrides are rejected.
+      final comment = BirbReviewComment(
+        id: 'c1',
+        author: '\u2066Ada\u2069',
+        timestamp: '\u200Ftoday',
+        body: 'ok',
+      );
+      expect(comment.author, '\u2066Ada\u2069');
+      expect(comment.timestamp, '\u200Ftoday');
+    });
+
+    test('rejects an unterminated bidi override in a display name', () {
+      for (final override in <String>['\u202D', '\u202E']) {
+        expect(
+          () => BirbReviewComment(
+            id: 'c1',
+            author: 'Ada${override}evil',
+            timestamp: 'today',
+            body: 'ok',
+          ),
+          throwsArgumentError,
+          reason: 'override ${override.codeUnitAt(0).toRadixString(16)}',
+        );
+      }
     });
 
     test('keeps a multiline body verbatim', () {

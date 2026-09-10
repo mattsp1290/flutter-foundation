@@ -88,7 +88,22 @@ SizedBox(
   revision — so a late completion can only affect the draft it belongs to.
 - **Supply display text.** Every label has an English default and an override.
   Timestamps arrive as host-formatted strings; there is no localization
-  dependency.
+  dependency. The label classes compare by value, so building them inside
+  `build()` is safe.
+- **Expect the models to throw.** Validation uses `throw ArgumentError`, not
+  `assert`, so it applies in release too. Rejected: blank or multi-line display
+  text; a non-positive line number; a numbering/kind mismatch (a context line
+  needs both numbers, an addition only a new one, a deletion only an old one);
+  a duplicate hunk, line, or comment id within one snapshot or thread; hunks on
+  binary or unavailable content; and a bidirectional control in a path, or an
+  unterminated bidi override in an author or timestamp. `BirbDiffSnapshot.anchorFor`
+  throws for a line the snapshot does not contain. `BirbDiffLine.text` is
+  deliberately exempt: source renders verbatim so a reviewer can see a
+  Trojan-Source sequence. Normalize a provider payload before constructing.
+- **Replace the snapshot rather than re-keying the widget.** Changing
+  `snapshot.file.id` or `revisionId` restarts the active line, drops any open
+  source selection, and replaces both owned scroll controllers. A change to the
+  same file and revision keeps the reader's active line.
 
 ### Copy and selection
 
@@ -124,12 +139,18 @@ bodies, cross-row continuous selection, editable suggestions, review submission
 and merge, complete pull-request timelines, and persisted drafts. Comment bodies
 are plain text; an HTML-like string appears literally. Large snapshots build
 lazily — snapshot preparation is O(total source text) with a bounded number of
-text layouts, and row construction is O(visible rows) — but no arbitrary
-repository size is claimed.
+source layouts plus one per hunk heading, and row construction is O(visible
+rows) — but no arbitrary repository size is claimed.
 
-Tab stops and the measured column width count one Unicode code point as one
-display column. Fullwidth, combining, and multi-code-point emoji source renders
-and copies correctly, but does not align exactly to the four-column grid.
+Tab stops count one Unicode code point as one display column, so fullwidth,
+combining, and multi-code-point emoji source renders and copies correctly but
+does not align exactly to the four-column grid. The column width itself is
+measured, not estimated: the longest rows by code point are all laid out, so a
+wide-glyph line is not clipped.
+
+A drag over the source rows pans the column for touch and stylus only. A mouse
+or trackpad drag selects text instead; those pointers reach the offset through
+the scrollbar, `Left`/`Right`, or the scroll semantics actions.
 
 ### Preview
 
