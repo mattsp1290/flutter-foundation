@@ -84,7 +84,7 @@ final class BirbReviewThreadLabels {
 /// jump-to-current-line action.
 ///
 /// A host composes a reply editor below this widget; the thread owns neither the
-/// draft nor any network operation. See `DESIGN.md` section 9.6.
+/// draft nor any network operation. See `DESIGN.md` section 10.6.
 final class BirbReviewThreadView extends StatelessWidget {
   const BirbReviewThreadView({
     required this.thread,

@@ -1,27 +1,10 @@
-<!--
-Adapted from the Birb Party UI design contract recorded in
-`docs/source-provenance.md`:
-
-- Source repository identifier: `birbparty/birbparty`
-- Source revision: `0a037dc0d696cf6ea09e006d9c7145b0ab9f8291`
-- Source path: `ui/DESIGN.md`
-- Author of the recorded design history: Matt Spurlin
-- Redistribution under this repository's MIT license was approved by Matt
-  Spurlin on `2026-09-08T22:29:02Z`.
-
-Package-relative paths were corrected for this workspace and section 9 was
-added for the code-review components. Core requirements are otherwise
-preserved.
--->
-
-# Birb Party UI Design Contract
+# Birb Flutter Design Contract
 
 ## 1. Purpose and authority
 
-This document governs authored user-interface work in this repository:
-`packages/birb_design_system/`, `packages/birb_appearance/`, and
-`examples/catalog/`. When two directions conflict, use this order of
-authority:
+This document governs authored user-interface work under
+`packages/birb_design_system/` and `examples/catalog/`. When two
+directions conflict, use this order of authority:
 
 1. Accessibility requirements and platform semantics.
 2. Semantic token contracts implemented by the design system.
@@ -35,7 +18,7 @@ colors by appearance.
 
 ## 2. Visual direction
 
-Birb Party uses a **fantasy-console utility** direction:
+The Birb design system uses a **fantasy-console utility** direction:
 
 - limited, deliberate color;
 - crisp boundaries and flat fills;
@@ -191,11 +174,14 @@ for contrast tests and the theme harness. “All surfaces” means `surface`,
 | semantic `disabled` | `surface`, `surfaceBright`, `surfaceContainerLowest`, `surfaceContainerLow` | All surfaces |
 | `errorIndicator` | All surfaces | All surfaces |
 
-The harness renders input error/focused-error states on all surfaces. It
-renders disabled boundaries on only the semantic `disabled` row's assigned
-surfaces because `gray` is not a 3:1 boundary against `lightGray`. Other
-component/state fixtures use the row for the foreground or boundary under
-test. Adding a surface role or permitting a state on another background
+Contrast tests exhaustively verify every assigned foreground/background pair.
+Component tests verify error and focused-error border resolution, while widget
+tests render representative field states on standard theme surfaces. The
+preview harness renders representative enabled, error, and disabled inputs.
+Disabled boundaries are permitted only on the semantic `disabled` row's
+assigned surfaces because `gray` is not a 3:1 boundary against `lightGray`.
+Other component/state fixtures use the row for the foreground or boundary
+under test. Adding a surface role or permitting a state on another background
 requires updating this table and its exhaustive contrast rows first.
 
 Status widgets combine color with a label, icon, border pattern, or shape.
@@ -216,6 +202,11 @@ technology:
 - native checked, selected, toggled, enabled, and value semantics remain
   intact.
 
+The preview loading fixture uses its excluded spinner as a decorative status
+glyph and exposes the meaningful label “Loading”; it does not represent a
+measured product-progress value. Product progress that is determinate must
+expose its current value as required above.
+
 ## 5. Foundation tokens
 
 - Spacing: 4, 8, 12, 16, 24, 32, and 48 logical pixels, named `space1`,
@@ -234,7 +225,7 @@ technology:
   `MediaQuery.disableAnimations`.
 - Typography uses the platform Material typeface and preserves OS text
   scaling. Default text uses `onSurface`; variants select a semantic role.
-  Section 9.1 documents the one authored exception: source code in the review
+  Section 10.1 documents the one authored exception: source code in the review
   components uses a platform monospace family at `bodyMedium` metrics.
 
 | Text style | Size | Weight | Height |
@@ -312,7 +303,7 @@ rule above.
 | divider | n/a | `outline` | 1 px |
 | navigation bar/rail, unselected | `surface` | `onSurfaceVariant` | Divider where separated |
 | navigation bar/rail, selected | `primaryContainer` | `onPrimaryContainer` | Square indicator plus icon/label-weight cue |
-| text selection/cursor/handle | `lightBlue` under light text; `blue` under dark text | Selected text remains `black`/`white` | Cursor and handle use `primary` |
+| text selection/cursor/handle | Light mode: `lightBlue` under `black`; dark mode: `blue` under `white` | Selected text remains `black`/`white` | Cursor and handle use `primary` |
 
 Cards use boundaries only for real grouped objects. Chips are for filters,
 selection, or compact status. Labels never rely on placeholders. Navigation
@@ -381,7 +372,7 @@ reason. Sources checked for this contract on 2026-08-28:
 - [WCAG 2.2](https://www.w3.org/TR/WCAG22/) defines contrast, non-color,
   focus, target-size, and related accessibility criteria.
 
-| Common default | Birb Party counter-rule | Legitimate exception |
+| Common default | Birb counter-rule | Legitimate exception |
 | --- | --- | --- |
 | Purple/indigo gradient hero and gradient buttons | Use flat semantic roles; create hierarchy with type, spacing, and borders | Future game artwork may have separately reviewed art direction |
 | Centered oversized headline, badge, subhead, and two generic calls to action | Derive composition from the user's task and real content | A centered empty state when it improves comprehension |
@@ -411,23 +402,40 @@ reason. Sources checked for this contract on 2026-08-28:
 - Normal text reaches 4.5:1; large text reaches 3:1; meaningful non-text
   boundaries and states reach 3:1; focus is visibly distinguishable.
 - Status, error, selection, and progress retain a color-independent cue.
-- Harness semantics tests assert labels, live-region updates, progress values,
-  and native checked/selected/toggled/enabled/value flags in both modes.
+- Harness and component tests cover representative labels, progress labels,
+  and native checked/selected/toggled/enabled/value flags. Live-region behavior
+  is implemented by the reusable error component and remains a required direct
+  assertion when dynamic status components are added.
 - Layout remains readable at the largest supported text scale and at narrow
   mobile widths.
 - Controls remain semantic Material controls with accessible labels, not
   painted-pixel replacements.
 - Keyboard access and focus order remain intact on web and desktop.
-- Android 48×48 and iOS 44×44 target guidance is tested; implementation uses
-  the stricter 48×48 token.
+- Implementation uses the stricter 48×48 token and direct target assertions,
+  which also exceed the iOS 44×44 guidance.
 
-The committed theme harness exercises these requirements in light and dark
-modes. If an automated guideline cannot evaluate an unpainted or disabled
+The committed theme harness exercises layout and rendering in light and dark
+modes. Focused behavior, semantics, keyboard, and target tests use
+representative fixtures where brightness does not change the platform
+semantics. If an automated guideline cannot evaluate an unpainted or disabled
 state, retain the direct token/component and rendered-state assertion and name
 the scanner limitation in the test. Do not remove the contract to satisfy a
 scanner limitation.
 
-## 9. Code review components
+## 9. Contribution checklist
+
+Before merging a new screen or component:
+
+- [ ] Consume semantic theme roles instead of raw `BirbPalette` values.
+- [ ] Use an existing spacing, radius, border, and motion token.
+- [ ] Verify both light and dark modes.
+- [ ] Test required contrast and a non-color cue.
+- [ ] Test large text and a narrow width.
+- [ ] Inspect keyboard focus and semantics.
+- [ ] Run the anti-template check.
+- [ ] Document any new token or justified exception before merge.
+
+## 10. Code review components
 
 The design system provides a bounded set of pull-request review components:
 `BirbReviewStatusBadge`, `BirbChangedFileList`, `BirbDiffView`,
@@ -436,7 +444,7 @@ presentation models and emit controlled callbacks. GitHub is a workflow
 reference only: no provider DTO, HTTP call, authentication, Markdown or HTML
 execution, persistence, or state-management framework enters this package.
 
-### 9.1 Scoped monospace exception
+### 10.1 Scoped monospace exception
 
 Source code is the one authored typography exception to section 5's
 platform-typeface rule. Code rows use `bodyMedium` size, height, and weight
@@ -473,7 +481,7 @@ and here. The source column is one selection region that excludes line numbers
 and change signs, so a selection may span rows and still yields displayed source
 text only.
 
-### 9.2 Diff row roles
+### 10.2 Diff row roles
 
 | Element | Fill | Foreground | Boundary/cue |
 | --- | --- | --- | --- |
@@ -498,7 +506,7 @@ identity in addition to color. Selection never hides a sign, native text
 selection, or the keyboard focus box. One boundary per meaningful grouped
 object; no nested decorative cards.
 
-### 9.3 Review status badge
+### 10.3 Review status badge
 
 | Status | Fill | Foreground | Icon |
 | --- | --- | --- | --- |
@@ -511,7 +519,7 @@ Every badge pairs its icon with human-readable text, so status never depends on
 color alone. The badge is presentation state; it implies nothing about
 mergeability or authorization.
 
-### 9.4 Geometry, targets, and layout
+### 10.4 Geometry, targets, and layout
 
 Code text is non-interactive and may be denser than 48 logical pixels so that a
 diff stays readable. Every interactive review control keeps the 48×48 target
@@ -532,14 +540,14 @@ navigation region, a horizontal drag anywhere over the source rows, the labelled
 scrollbar below them — whose scrollable fills a full interaction target even
 though the thumb is thin — and its scroll semantics actions. The row drag is
 restricted to touch and stylus on purpose: a mouse or trackpad drag belongs to
-the native text selection section 9.1 requires.
+the native text selection section 10.1 requires.
 
 `BirbDiffView` is a bounded-height, finite-width widget; the host supplies
 finite constraints. Loading, failure, and retry belong to the host around the
 diff, not to asynchronous work inside it. Empty text, binary, and unavailable
 content render distinct caller-overridable messages rather than an empty diff.
 
-### 9.5 Keyboard contract
+### 10.5 Keyboard contract
 
 The diff exposes one focusable navigation region, then one stable action area,
 and no per-row tab stops. While the navigation region owns focus:
@@ -566,7 +574,7 @@ visible on screen, not only in semantics. If pointer scrolling unmounts the
 row that owns focus, focus returns to the navigation region and the active line
 identity is preserved.
 
-### 9.6 Discussion and composition
+### 10.6 Discussion and composition
 
 `BirbReviewThreadView` renders author, timestamp, plain-text body, anchor
 summary, and resolved or outdated labels with semantics. Bodies are plain text:
@@ -588,7 +596,7 @@ live correction row. Hosts key controllers and pending operations by thread or
 by new-discussion anchor including revision, so a late completion for one
 draft never clears or appends to another.
 
-### 9.7 Semantic role exposure
+### 10.7 Semantic role exposure
 
 `BirbReviewStyle` is public so that hosts and contrast tests can enumerate
 every foreground, background, boundary, and icon this section names, plus the
@@ -601,19 +609,6 @@ Source-text transformation is not presentation, so it lives in `BirbSourceText`
 rather than in the style table: that separation also keeps the one file the
 design-source audit allows to name a typeface as small as its exemption.
 
-## 10. Contribution checklist
-
-Before merging a new screen or component:
-
-- [ ] Consume semantic theme roles instead of raw `BirbPalette` values.
-- [ ] Use an existing spacing, radius, border, and motion token.
-- [ ] Verify both light and dark modes.
-- [ ] Test required contrast and a non-color cue.
-- [ ] Test large text and a narrow width.
-- [ ] Inspect keyboard focus and semantics.
-- [ ] Run the anti-template check.
-- [ ] Document any new token or justified exception before merge.
-
 ## Deferred work
 
 A manual/persisted theme preference, high-contrast themes, a licensed brand or
@@ -622,10 +617,10 @@ components, and static analyzer integration are separate design decisions.
 They are not exceptions to this contract and are not part of the initial
 design-system implementation.
 
-For the section 9 review components the following are also deferred and are
+For the section 10 review components the following are also deferred and are
 not exceptions to this contract: raw patch parsing, provider adapters and
 authentication, side-by-side diffs, syntax highlighting, Markdown comment
 bodies, editable suggestions, review submission and merge, complete
 pull-request timelines, and persisted drafts. A selection may span rows today
-(section 9.1); what stays deferred is selecting across the gutter, and any
+(section 10.1); what stays deferred is selecting across the gutter, and any
 selection surviving a scroll far enough to unmount its rows.

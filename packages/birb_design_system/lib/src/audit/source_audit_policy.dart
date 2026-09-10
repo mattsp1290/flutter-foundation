@@ -12,7 +12,7 @@ _Exemption _exemption(String packageRelativePath) => (
   workspacePath: 'packages/birb_design_system/$packageRelativePath',
 );
 
-/// The only file permitted to name a typeface. See `DESIGN.md` section 9.1.
+/// The only file permitted to name a typeface. See `DESIGN.md` section 10.1.
 final _reviewStyleExemption = _exemption(
   'lib/src/review/birb_review_style.dart',
 );

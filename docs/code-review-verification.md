@@ -51,7 +51,7 @@ host-driven `selectedAnchor` moved the active line without revealing it; the
 harness kept single-slot errors after its pending state went per-key, so
 starting any second request erased an unread failure; the scrollbar reserved a
 48-pixel target but only 12 pixels of it responded; a stacked row rendered its
-prose metadata in the monospace code style, contradicting section 9.1; and the
+prose metadata in the monospace code style, contradicting section 10.1; and the
 bidi rule written for file paths also rejected legitimate bidi-isolated author
 names. Documentation claims that did not hold — the scrollbar hit area, the
 monospace scope, the contrast coverage, "rename metadata" among the tested

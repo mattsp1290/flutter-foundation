@@ -12,7 +12,7 @@ The package provides a bounded set of pull-request review widgets. They render
 immutable host presentation models and emit controlled callbacks. GitHub is a
 workflow reference only: there is no provider DTO, HTTP call, authentication,
 Markdown or HTML execution, persistence, or state-management dependency.
-`DESIGN.md` section 9 is the authority for their roles, geometry, and keyboard
+`DESIGN.md` section 10 is the authority for their roles, geometry, and keyboard
 contracts.
 
 | API | Responsibility |

@@ -56,7 +56,7 @@ abstract final class BirbReviewStyle {
   /// The style for a row's prose metadata, such as its line description.
   ///
   /// This is ordinary platform typography: the monospace exception covers
-  /// source code and the numeric cells, never prose. See `DESIGN.md` 9.1.
+  /// source code and the numeric cells, never prose. See `DESIGN.md` 10.1.
   static TextStyle rowMetadataTextStyle(ThemeData theme) =>
       (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
         color: theme.colorScheme.onSurfaceVariant,
@@ -176,7 +176,7 @@ abstract final class BirbReviewStyle {
         BirbReviewFileChange.renamed => 'Renamed',
       };
 
-  /// The 1 px top boundary above a hunk heading. See `DESIGN.md` section 9.2.
+  /// The 1 px top boundary above a hunk heading. See `DESIGN.md` section 10.2.
   static Border hunkHeadingBorder(ThemeData theme) =>
       Border(top: objectSide(theme));
 

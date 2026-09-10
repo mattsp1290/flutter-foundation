@@ -83,7 +83,7 @@ abstract final class BirbReviewComposerKeys {
 /// single frame and disables the action while it holds, so a double activation
 /// cannot send one draft twice. It releases on the next frame and never depends
 /// on callback identity, so it can neither deadlock nor be reopened by an
-/// unrelated rebuild. See `DESIGN.md` section 9.6.
+/// unrelated rebuild. See `DESIGN.md` section 10.6.
 final class BirbReviewComposer extends StatefulWidget {
   const BirbReviewComposer({
     required this.controller,

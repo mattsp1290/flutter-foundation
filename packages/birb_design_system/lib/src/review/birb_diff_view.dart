@@ -29,7 +29,7 @@ part 'birb_diff_row.dart';
 /// null [onCommentRequested] removes the comment action and leaves a read-only
 /// diff whose `Copy source line` action still works.
 ///
-/// See `DESIGN.md` section 9 for the role, geometry, and keyboard contracts.
+/// See `DESIGN.md` section 10 for the role, geometry, and keyboard contracts.
 final class BirbDiffView extends StatefulWidget {
   const BirbDiffView({
     required this.snapshot,

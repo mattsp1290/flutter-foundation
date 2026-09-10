@@ -8,7 +8,7 @@ import 'birb_review_style.dart';
 ///
 /// Status never depends on color alone. The badge is presentation state only:
 /// it implies nothing about mergeability or about the viewer's authorization.
-/// See `DESIGN.md` section 9.3.
+/// See `DESIGN.md` section 10.3.
 final class BirbReviewStatusBadge extends StatelessWidget {
   const BirbReviewStatusBadge({required this.status, super.key, this.label});
 

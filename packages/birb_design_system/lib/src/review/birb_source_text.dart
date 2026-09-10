@@ -4,7 +4,7 @@
 /// lives beside the review widgets rather than inside `BirbReviewStyle`, whose
 /// documented job is resolving semantic roles from the ambient theme.
 abstract final class BirbSourceText {
-  /// Display columns one tab advances to. See `DESIGN.md` section 9.1.
+  /// Display columns one tab advances to. See `DESIGN.md` section 10.1.
   static const int tabSize = 4;
 
   /// Expands tab characters in [text] to the next [columns] display column.
@@ -16,7 +16,7 @@ abstract final class BirbSourceText {
   /// multi-code-point emoji text therefore reaches a tab stop that does not
   /// match its rendered advance. Such text still renders and copies correctly;
   /// only its alignment to the four-column grid is approximate. See
-  /// `DESIGN.md` section 9.1.
+  /// `DESIGN.md` section 10.1.
   static String expandTabs(String text, {int columns = tabSize}) {
     if (columns < 1) {
       throw ArgumentError.value(columns, 'columns', 'must be positive');
