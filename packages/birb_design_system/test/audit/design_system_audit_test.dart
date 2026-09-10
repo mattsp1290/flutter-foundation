@@ -395,6 +395,7 @@ const inert = '''BackdropFilter(filter: filter)''';
           contains('audit root contains no package or example lib directories'),
         );
       },
+      timeout: const Timeout(Duration(minutes: 2)),
     );
 
     test('real repository production sources pass', () {

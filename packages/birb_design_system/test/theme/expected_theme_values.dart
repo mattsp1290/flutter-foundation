@@ -1,19 +1,8 @@
-/// Test-only snapshot of Birbparty commit
-/// 0a037dc0d696cf6ea09e006d9c7145b0ab9f8291.
-const birbpartySourceCommit = '0a037dc0d696cf6ea09e006d9c7145b0ab9f8291';
+/// Independent expected values retained after the temporary source oracle
+/// passed for Birbparty commit 0a037dc0d696cf6ea09e006d9c7145b0ab9f8291.
+const designSourceCommit = '0a037dc0d696cf6ea09e006d9c7145b0ab9f8291';
 
-const sourceFileSha256 = <String, String>{
-  'birb_theme.dart':
-      '2a94c09605094ef989193c67ee94228f19ac2b541b7f8ebc5aed2bdca915118e',
-  'birb_semantic_colors.dart':
-      '5e14ab7618e354156613962c1c5a19c0ae01829868647f877956ba468723322a',
-  'birb_tokens.dart':
-      'f7bb76c637972534aeccd11a9477548da5d93bc0a3c569f837fab803f62ec612',
-  'birb_palette.dart':
-      '6183a21ab11d3cf3651eba72997e8b32bd7592c150de4ec9028ce532ef284a95',
-};
-
-const sourcePalette = <String, int>{
+const expectedPalette = <String, int>{
   'black': 0xFF1A1C2C,
   'purple': 0xFF5D275D,
   'red': 0xFFB13E53,
@@ -32,7 +21,7 @@ const sourcePalette = <String, int>{
   'darkGray': 0xFF333C57,
 };
 
-const sourceLightScheme = <String, String>{
+const expectedLightScheme = <String, String>{
   'primary': 'blue',
   'onPrimary': 'white',
   'primaryContainer': 'darkBlue',
@@ -81,7 +70,7 @@ const sourceLightScheme = <String, String>{
   'surfaceTint': 'blue',
 };
 
-const sourceDarkScheme = <String, String>{
+const expectedDarkScheme = <String, String>{
   'primary': 'cyan',
   'onPrimary': 'black',
   'primaryContainer': 'lightBlue',
@@ -130,31 +119,7 @@ const sourceDarkScheme = <String, String>{
   'surfaceTint': 'cyan',
 };
 
-const sourceLightSemantics = <String, String>{
-  'success': 'green',
-  'onSuccess': 'black',
-  'warning': 'orange',
-  'onWarning': 'black',
-  'info': 'blue',
-  'onInfo': 'white',
-  'focus': 'darkBlue',
-  'disabled': 'gray',
-  'errorIndicator': 'purple',
-};
-
-const sourceDarkSemantics = <String, String>{
-  'success': 'lime',
-  'onSuccess': 'black',
-  'warning': 'yellow',
-  'onWarning': 'black',
-  'info': 'lightBlue',
-  'onInfo': 'black',
-  'focus': 'cyan',
-  'disabled': 'lightGray',
-  'errorIndicator': 'yellow',
-};
-
-const sourceTypography = <String, (double, int, double)>{
+const expectedTypography = <String, (double, int, double)>{
   'displayLarge': (40, 700, 1.2),
   'displayMedium': (36, 700, 1.2),
   'displaySmall': (32, 700, 1.2),
@@ -170,38 +135,4 @@ const sourceTypography = <String, (double, int, double)>{
   'labelLarge': (14, 700, 1.3),
   'labelMedium': (12, 700, 1.3),
   'labelSmall': (11, 700, 1.3),
-};
-
-const sourceBaseTheme = (
-  useMaterial3: true,
-  applyElevationOverlayColor: false,
-  materialTapTargetSize: 'padded',
-  visualDensityHorizontal: 0.0,
-  visualDensityVertical: 0.0,
-  cardRadius: 0.0,
-);
-
-const sourceLightBaseTheme = (
-  brightness: 'light',
-  textColor: 'black',
-  selectionColor: 'lightBlue',
-);
-
-const sourceDarkBaseTheme = (
-  brightness: 'dark',
-  textColor: 'white',
-  selectionColor: 'blue',
-);
-
-const sourceSpacing = <double>[4, 8, 12, 16, 24, 32, 48];
-const sourceBorders = <double>[1, 2];
-const sourceRadii = <double>[0, 2];
-const sourceMinimumInteractiveDimension = 48.0;
-const sourceDurationsMs = <int>[0, 100, 200];
-
-const sourceInputColors = <String, String>{
-  'lightEnabled': 'black',
-  'lightDisabled': 'gray',
-  'darkEnabled': 'white',
-  'darkDisabled': 'lightGray',
 };

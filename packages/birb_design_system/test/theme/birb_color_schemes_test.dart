@@ -9,25 +9,25 @@ import 'package:birb_design_system/src/foundation/birb_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../source_oracle/birbparty_foundation_oracle.dart';
+import 'expected_theme_values.dart';
 import 'theme_test_support.dart';
 
 void main() {
   for (final themeCase in <(String, ThemeData, Map<String, String>)>[
-    ('light', BirbTheme.light, sourceLightScheme),
-    ('dark', BirbTheme.dark, sourceDarkScheme),
+    ('light', BirbTheme.light, expectedLightScheme),
+    ('dark', BirbTheme.dark, expectedDarkScheme),
   ]) {
     test('${themeCase.$1} maps all active ColorScheme roles exactly', () {
       final actual = schemeColors(themeCase.$2.colorScheme);
       final expected = themeCase.$3.map(
-        (role, paletteName) => MapEntry(role, sourcePalette[paletteName]),
+        (role, paletteName) => MapEntry(role, expectedPalette[paletteName]),
       );
 
       expect(actual.keys.toSet(), birbMappedColorSchemeRoles);
       expect(
         actual.map((role, color) => MapEntry(role, color.toARGB32())),
         expected,
-        reason: birbpartySourceCommit,
+        reason: designSourceCommit,
       );
       expect(
         actual.values.toSet().difference(BirbPalette.values.toSet()),
