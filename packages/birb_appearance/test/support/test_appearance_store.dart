@@ -7,19 +7,26 @@ final class TestAppearanceStore implements AppearanceStore {
     this.value = AppearanceMode.system,
     this.readError,
     this.controlWrites = false,
+    this.onRead,
+    this.isPersisted = true,
   });
 
   AppearanceMode value;
   final Object? readError;
   final bool controlWrites;
+  final Future<AppearanceReadResult> Function()? onRead;
+  final bool isPersisted;
+  int readCount = 0;
   final List<AppearanceMode> writes = <AppearanceMode>[];
   final List<Completer<void>> _writeCompletions = <Completer<void>>[];
   Completer<void> _nextWriteStarted = Completer<void>();
 
   @override
   Future<AppearanceReadResult> read() async {
+    readCount++;
+    if (onRead case final read?) return read();
     if (readError case final error?) throw error;
-    return (mode: value, isPersisted: true);
+    return (mode: value, isPersisted: isPersisted);
   }
 
   @override

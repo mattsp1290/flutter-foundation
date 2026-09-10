@@ -4,10 +4,12 @@ import 'package:birb_appearance/birb_appearance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/test_appearance_store.dart';
+
 void main() {
   test('starts in explicit loading and system state', () {
     final controller = AppearanceController(
-      store: _ImmediateStore(AppearanceMode.dark),
+      store: TestAppearanceStore(value: AppearanceMode.dark),
     );
     addTearDown(controller.dispose);
 
@@ -19,7 +21,7 @@ void main() {
   });
 
   test('initializes once from durable storage', () async {
-    final store = _ImmediateStore(AppearanceMode.dark);
+    final store = TestAppearanceStore(value: AppearanceMode.dark);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
     var notifications = 0;
@@ -43,7 +45,7 @@ void main() {
   test('makes read failures nonfatal and observable', () async {
     final error = StateError('read failed');
     final controller = AppearanceController(
-      store: _ImmediateStore(AppearanceMode.system, readError: error),
+      store: TestAppearanceStore(readError: error),
     );
     addTearDown(controller.dispose);
 
@@ -60,7 +62,10 @@ void main() {
     tester,
   ) async {
     final read = Completer<AppearanceReadResult>();
-    final store = _ControlledStore(onRead: () => read.future);
+    final store = TestAppearanceStore(
+      controlWrites: true,
+      onRead: () => read.future,
+    );
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
 
@@ -82,7 +87,10 @@ void main() {
 
   test('a user selection wins a read race', () async {
     final read = Completer<AppearanceReadResult>();
-    final store = _ControlledStore(onRead: () => read.future);
+    final store = TestAppearanceStore(
+      controlWrites: true,
+      onRead: () => read.future,
+    );
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
 
@@ -102,7 +110,10 @@ void main() {
 
   test('a selection made before initialization invalidates the read', () async {
     final read = Completer<AppearanceReadResult>();
-    final store = _ControlledStore(onRead: () => read.future);
+    final store = TestAppearanceStore(
+      controlWrites: true,
+      onRead: () => read.future,
+    );
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
 
@@ -125,7 +136,7 @@ void main() {
   test(
     'serializes A then B and exposes the partial-failure state table',
     () async {
-      final store = _ControlledStore();
+      final store = TestAppearanceStore(controlWrites: true);
       final controller = AppearanceController(store: store);
       addTearDown(controller.dispose);
       await controller.initialize();
@@ -189,7 +200,7 @@ void main() {
   );
 
   test('an older failure cannot replace newer pending state', () async {
-    final store = _ControlledStore();
+    final store = TestAppearanceStore(controlWrites: true);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -215,7 +226,7 @@ void main() {
   });
 
   test('duplicate pending selection does not enqueue another write', () async {
-    final store = _ControlledStore();
+    final store = TestAppearanceStore(controlWrites: true);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -230,7 +241,7 @@ void main() {
   });
 
   test('a reentrant selection preserves write order', () async {
-    final store = _ControlledStore();
+    final store = TestAppearanceStore(controlWrites: true);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
     await controller.initialize();
@@ -264,7 +275,10 @@ void main() {
 
   test('disposal makes calls and in-flight completions harmless', () async {
     final read = Completer<AppearanceReadResult>();
-    final store = _ControlledStore(onRead: () => read.future);
+    final store = TestAppearanceStore(
+      controlWrites: true,
+      onRead: () => read.future,
+    );
     final controller = AppearanceController(store: store);
     var notifications = 0;
     controller.addListener(() => notifications++);
@@ -282,7 +296,7 @@ void main() {
   });
 
   test('initialization after disposal does not read storage', () async {
-    final store = _ImmediateStore(AppearanceMode.dark);
+    final store = TestAppearanceStore(value: AppearanceMode.dark);
     final controller = AppearanceController(store: store);
 
     controller.dispose();
@@ -296,7 +310,7 @@ void main() {
   test(
     'an in-flight write can finish after disposal without notifying',
     () async {
-      final store = _ControlledStore();
+      final store = TestAppearanceStore(controlWrites: true);
       final controller = AppearanceController(store: store);
       await controller.initialize();
       var notifications = 0;
@@ -315,7 +329,7 @@ void main() {
   );
 
   test('disposal drains writes accepted before disposal', () async {
-    final store = _ControlledStore();
+    final store = TestAppearanceStore(controlWrites: true);
     final controller = AppearanceController(store: store);
     await controller.initialize();
     var notifications = 0;
@@ -340,63 +354,4 @@ void main() {
     expect(store.value, AppearanceMode.dark);
     expect(notifications, 2);
   });
-}
-
-final class _ImmediateStore implements AppearanceStore {
-  _ImmediateStore(this.value, {this.readError});
-
-  AppearanceMode value;
-  final Object? readError;
-  int readCount = 0;
-
-  @override
-  Future<AppearanceReadResult> read() async {
-    readCount++;
-    if (readError case final error?) {
-      throw error;
-    }
-    return (mode: value, isPersisted: true);
-  }
-
-  @override
-  Future<void> write(AppearanceMode mode) async {
-    value = mode;
-  }
-}
-
-final class _ControlledStore implements AppearanceStore {
-  _ControlledStore({this.onRead});
-
-  final Future<AppearanceReadResult> Function()? onRead;
-  AppearanceMode value = AppearanceMode.system;
-  final List<AppearanceMode> writes = <AppearanceMode>[];
-  final List<Completer<void>> _writeCompletions = <Completer<void>>[];
-  Completer<void> _nextWriteStarted = Completer<void>();
-
-  @override
-  Future<AppearanceReadResult> read() {
-    return onRead?.call() ??
-        Future<AppearanceReadResult>.value((mode: value, isPersisted: true));
-  }
-
-  @override
-  Future<void> write(AppearanceMode mode) {
-    writes.add(mode);
-    final completion = Completer<void>();
-    _writeCompletions.add(completion);
-    _nextWriteStarted.complete();
-    _nextWriteStarted = Completer<void>();
-    return completion.future.then((_) => value = mode);
-  }
-
-  Future<void> waitForWrite(int index) async {
-    while (_writeCompletions.length <= index) {
-      await _nextWriteStarted.future;
-    }
-  }
-
-  void succeedWrite(int index) => _writeCompletions[index].complete();
-
-  void failWrite(int index, Object error) =>
-      _writeCompletions[index].completeError(error, StackTrace.current);
 }

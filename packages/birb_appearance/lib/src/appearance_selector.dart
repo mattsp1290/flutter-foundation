@@ -12,6 +12,18 @@ typedef AppearanceErrorTextBuilder = String Function(
 /// Builds localized text for the retry action.
 typedef AppearanceRetryTextBuilder = String Function(BuildContext context);
 
+/// Builds localized text for the initialization status.
+typedef AppearanceInitializingTextBuilder = String Function(
+  BuildContext context,
+);
+
+/// Builds localized text for the saving status.
+typedef AppearanceSavingTextBuilder = String Function(
+  BuildContext context,
+  AppearanceMode mode,
+  String modeLabel,
+);
+
 /// Three accessible appearance choices backed by a caller-owned controller.
 ///
 /// The selector listens to [controller] but never initializes or disposes it.
@@ -25,6 +37,8 @@ final class AppearanceSelector extends StatelessWidget {
     this.darkLabel = 'Dark',
     this.errorTextBuilder,
     this.retryTextBuilder,
+    this.initializingTextBuilder,
+    this.savingTextBuilder,
   });
 
   final AppearanceController controller;
@@ -33,23 +47,32 @@ final class AppearanceSelector extends StatelessWidget {
   final String darkLabel;
   final AppearanceErrorTextBuilder? errorTextBuilder;
   final AppearanceRetryTextBuilder? retryTextBuilder;
+  final AppearanceInitializingTextBuilder? initializingTextBuilder;
+  final AppearanceSavingTextBuilder? savingTextBuilder;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: controller,
     builder: (context, _) => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _choices(context),
         if (controller.isInitializing)
-          const _AppearanceProgress(
-            key: ValueKey<String>('appearance-initializing'),
-            label: 'Loading appearance',
+          _AppearanceProgress(
+            key: const ValueKey<String>('appearance-initializing'),
+            label:
+                initializingTextBuilder?.call(context) ?? 'Loading appearance',
           ),
         if (controller.isSavePending)
           _AppearanceProgress(
             key: const ValueKey<String>('appearance-saving'),
-            label: 'Saving ${_labelFor(controller.selectedMode)}',
+            label:
+                savingTextBuilder?.call(
+                  context,
+                  controller.selectedMode,
+                  _labelFor(controller.selectedMode),
+                ) ??
+                'Saving ${_labelFor(controller.selectedMode)}',
           ),
         if (controller.saveError case final error?)
           _error(
@@ -75,7 +98,8 @@ final class AppearanceSelector extends StatelessWidget {
       final fontSize = labelStyle?.fontSize ?? 16;
       final largeText =
           MediaQuery.textScalerOf(context).scale(fontSize) > fontSize * 1.5;
-      final stack = constraints.maxWidth < 480 || largeText;
+      final unbounded = !constraints.hasBoundedWidth;
+      final stack = unbounded || constraints.maxWidth < 480 || largeText;
       final choices = AppearanceMode.values
           .map(
             (mode) => RadioListTile<AppearanceMode>(
@@ -90,7 +114,7 @@ final class AppearanceSelector extends StatelessWidget {
             ),
           )
           .toList(growable: false);
-      return RadioGroup<AppearanceMode>(
+      final group = RadioGroup<AppearanceMode>(
         groupValue: controller.selectedMode,
         onChanged: (mode) {
           if (mode != null) controller.setMode(mode);
@@ -104,6 +128,12 @@ final class AppearanceSelector extends StatelessWidget {
                     .toList(growable: false),
               ),
       );
+      return unbounded
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: group,
+            )
+          : group;
     },
   );
 
@@ -112,24 +142,29 @@ final class AppearanceSelector extends StatelessWidget {
     required Object error,
     required String fallback,
     required bool canRetry,
-  }) => Semantics(
-    key: ValueKey<String>(
-      canRetry ? 'appearance-save-error' : 'appearance-read-error',
-    ),
-    liveRegion: true,
-    child: Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      children: <Widget>[
-        Text(errorTextBuilder?.call(context, error) ?? fallback),
-        if (canRetry)
-          TextButton(
-            onPressed: controller.retry,
-            child: Text(retryTextBuilder?.call(context) ?? 'Retry'),
-          ),
-      ],
-    ),
-  );
+  }) {
+    final message = errorTextBuilder?.call(context, error) ?? fallback;
+    return Semantics(
+      key: ValueKey<String>(
+        canRetry ? 'appearance-save-error' : 'appearance-read-error',
+      ),
+      container: true,
+      liveRegion: true,
+      label: message,
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        children: <Widget>[
+          ExcludeSemantics(child: Text(message)),
+          if (canRetry)
+            TextButton(
+              onPressed: controller.retry,
+              child: Text(retryTextBuilder?.call(context) ?? 'Retry'),
+            ),
+        ],
+      ),
+    );
+  }
 
   String _labelFor(AppearanceMode mode) => switch (mode) {
     AppearanceMode.system => systemLabel,

@@ -72,6 +72,48 @@ void main() {
     );
   });
 
+  testWidgets('keyboard can choose again while a save is pending', (
+    tester,
+  ) async {
+    final store = TestAppearanceStore(controlWrites: true);
+    final controller = await _initializedController(store);
+    addTearDown(controller.dispose);
+    await _pumpSelector(tester, controller);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    final focusedContext = tester.binding.focusManager.primaryFocus?.context;
+    expect(focusedContext, isNotNull);
+    expect(
+      find.ancestor(
+        of: find.byElementPredicate(
+          (element) => identical(element, focusedContext),
+        ),
+        matching: find.byKey(
+          const ValueKey<AppearanceMode>(AppearanceMode.system),
+        ),
+      ),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await store.waitForWrite(0);
+    await tester.pump();
+
+    expect(controller.selectedMode, AppearanceMode.light);
+    expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+
+    expect(controller.selectedMode, AppearanceMode.dark);
+    expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
+
+    store.succeedWrite(0);
+    await store.waitForWrite(1);
+    store.succeedWrite(1);
+    await tester.pump();
+    expect(store.value, AppearanceMode.dark);
+  });
+
   testWidgets('allows a newer choice while the selected save is pending', (
     tester,
   ) async {
@@ -111,15 +153,28 @@ void main() {
     final store = TestAppearanceStore(controlWrites: true);
     final controller = await _initializedController(store);
     addTearDown(controller.dispose);
+    final semantics = tester.ensureSemantics();
     await _pumpSelector(
       tester,
       controller,
       errorTextBuilder: (_, error) => 'Localized: $error',
       retryTextBuilder: (_) => 'Try again',
+      savingTextBuilder: (_, mode, label) => 'Persisting $label ($mode)',
     );
 
     await tester.tap(find.text('Dark'));
     await store.waitForWrite(0);
+    await tester.pump();
+    expect(find.textContaining('Persisting Dark'), findsOneWidget);
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey<String>('appearance-saving')),
+      ),
+      matchesSemantics(
+        label: 'Persisting Dark (AppearanceMode.dark)',
+        isLiveRegion: true,
+      ),
+    );
     store.failWrite(0, StateError('disk full'));
     await tester.pump();
 
@@ -129,6 +184,15 @@ void main() {
       find.byKey(const ValueKey<String>('appearance-save-error')),
       findsOneWidget,
     );
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey<String>('appearance-save-error')),
+      ),
+      matchesSemantics(
+        label: 'Localized: Bad state: disk full',
+        isLiveRegion: true,
+      ),
+    );
 
     await tester.tap(find.text('Try again'));
     await store.waitForWrite(1);
@@ -137,6 +201,7 @@ void main() {
 
     expect(find.text('Try again'), findsNothing);
     expect(controller.lastPersistedMode, AppearanceMode.dark);
+    semantics.dispose();
   });
 
   testWidgets('shows initialization and nonfatal read failure states', (
@@ -147,11 +212,23 @@ void main() {
       store: TestAppearanceStore(readError: error),
     );
     addTearDown(controller.dispose);
-    await _pumpSelector(tester, controller);
+    final semantics = tester.ensureSemantics();
+    await _pumpSelector(
+      tester,
+      controller,
+      initializingTextBuilder: (_) => 'Preparing theme',
+    );
 
     expect(
       find.byKey(const ValueKey<String>('appearance-initializing')),
       findsOneWidget,
+    );
+    expect(find.text('Preparing theme'), findsOneWidget);
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey<String>('appearance-initializing')),
+      ),
+      matchesSemantics(label: 'Preparing theme', isLiveRegion: true),
     );
 
     await controller.initialize();
@@ -162,6 +239,13 @@ void main() {
     );
     expect(find.text('Could not load appearance.'), findsOneWidget);
     expect(find.text('Retry'), findsNothing);
+    expect(
+      tester.getSemantics(
+        find.byKey(const ValueKey<String>('appearance-read-error')),
+      ),
+      matchesSemantics(label: 'Could not load appearance.', isLiveRegion: true),
+    );
+    semantics.dispose();
   });
 
   testWidgets('replaces and never disposes a borrowed controller', (
@@ -171,11 +255,26 @@ void main() {
     final secondStore = TestAppearanceStore(value: AppearanceMode.dark);
     final first = await _initializedController(firstStore);
     final second = await _initializedController(secondStore);
+    final selectedController = ValueNotifier<AppearanceController>(first);
     addTearDown(first.dispose);
     addTearDown(second.dispose);
+    addTearDown(selectedController.dispose);
 
-    await _pumpSelector(tester, first);
-    await _pumpSelector(tester, second);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ValueListenableBuilder<AppearanceController>(
+            valueListenable: selectedController,
+            builder: (_, controller, _) => AppearanceSelector(
+              key: const ValueKey<String>('mounted-selector'),
+              controller: controller,
+            ),
+          ),
+        ),
+      ),
+    );
+    selectedController.value = second;
+    await tester.pump();
     expect(_tile(tester, AppearanceMode.dark).selected, isTrue);
 
     await first.setMode(AppearanceMode.light);
@@ -183,9 +282,14 @@ void main() {
     expect(firstStore.writes, <AppearanceMode>[AppearanceMode.light]);
     expect(_tile(tester, AppearanceMode.dark).selected, isTrue);
 
-    await tester.pumpWidget(const SizedBox.shrink());
     await second.setMode(AppearanceMode.light);
+    await tester.pump();
     expect(secondStore.writes, <AppearanceMode>[AppearanceMode.light]);
+    expect(_tile(tester, AppearanceMode.light).selected, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await second.setMode(AppearanceMode.dark);
+    expect(secondStore.writes.last, AppearanceMode.dark);
   });
 
   testWidgets('selection preserves unrelated host state', (tester) async {
@@ -236,6 +340,33 @@ void main() {
       tester.getTopLeft(tiles.at(2)).dx,
     );
   });
+
+  testWidgets('stacks safely when its horizontal constraints are unbounded', (
+    tester,
+  ) async {
+    final controller = await _initializedController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: UnconstrainedBox(
+            alignment: Alignment.topLeft,
+            constrainedAxis: Axis.vertical,
+            child: AppearanceSelector(controller: controller),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final tiles = find.byType(RadioListTile<AppearanceMode>);
+    expect(
+      tester.getTopLeft(tiles.at(0)).dx,
+      tester.getTopLeft(tiles.at(1)).dx,
+    );
+    expect(tester.getSize(find.byType(AppearanceSelector)).width, 480);
+  });
 }
 
 Future<AppearanceController> _initializedController([
@@ -256,6 +387,8 @@ Future<void> _pumpSelector(
   AppearanceController controller, {
   AppearanceErrorTextBuilder? errorTextBuilder,
   AppearanceRetryTextBuilder? retryTextBuilder,
+  AppearanceInitializingTextBuilder? initializingTextBuilder,
+  AppearanceSavingTextBuilder? savingTextBuilder,
   double textScale = 1,
 }) => tester.pumpWidget(
   MaterialApp(
@@ -266,6 +399,8 @@ Future<void> _pumpSelector(
           controller: controller,
           errorTextBuilder: errorTextBuilder,
           retryTextBuilder: retryTextBuilder,
+          initializingTextBuilder: initializingTextBuilder,
+          savingTextBuilder: savingTextBuilder,
         ),
       ),
     ),
