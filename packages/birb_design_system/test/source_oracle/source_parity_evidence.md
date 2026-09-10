@@ -4,6 +4,12 @@ The temporary source oracle was rebuilt from Birbparty commit
 `0a037dc0d696cf6ea09e006d9c7145b0ab9f8291` and removed after the parity gate
 passed, as required by the extraction plan.
 
+The source design contract from that commit (`ui/DESIGN.md`, Git blob
+`120a3f798a1fce82d0db9347d9686afe06fd54fd`) is preserved and adapted at the
+repository root in [`DESIGN.md`](../../../../DESIGN.md). The companion
+[`design-contract-coverage.md`](../../../../docs/verification/design-contract-coverage.md)
+maps its documented families to the committed implementation and tests.
+
 - Oracle tree digest (`birbparty-source-oracle-v1`):
   `7c08acbd3ae681349d9acd617c037b1d9417713894bf825ebc4001a3de330cd1`
 - Temporary component parity test digest:
