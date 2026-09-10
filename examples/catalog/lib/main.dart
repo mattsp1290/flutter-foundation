@@ -6,10 +6,16 @@ import 'src/catalog_app.dart';
 export 'src/catalog_app.dart';
 export 'src/catalog_keys.dart';
 
-void main() => runApp(
-  CatalogApp(
-    appearanceStore: PreferencesAppearanceStore(
-      applicationNamespace: 'flutter_foundation_catalog',
+void main() {
+  final preview = CatalogThemePreview.fromEnvironment(
+    const String.fromEnvironment('BIRB_THEME_PREVIEW'),
+  );
+  runApp(
+    CatalogApp(
+      appearanceStore: PreferencesAppearanceStore(
+        applicationNamespace: 'flutter_foundation_catalog',
+      ),
+      preview: preview,
     ),
-  ),
-);
+  );
+}

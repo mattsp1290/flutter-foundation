@@ -6,6 +6,13 @@ import 'package:flutter_foundation_catalog/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('preview environment parser rejects unsupported values', () {
+    expect(
+      () => CatalogThemePreview.fromEnvironment('drak'),
+      throwsArgumentError,
+    );
+  });
+
   for (final preview in <CatalogThemePreview>[
     CatalogThemePreview.light,
     CatalogThemePreview.dark,

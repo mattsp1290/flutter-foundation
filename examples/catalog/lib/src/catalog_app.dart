@@ -11,9 +11,14 @@ enum CatalogThemePreview {
   dark;
 
   static CatalogThemePreview fromEnvironment(String value) => switch (value) {
+    '' => persisted,
     'light' => light,
     'dark' => dark,
-    _ => persisted,
+    _ => throw ArgumentError.value(
+      value,
+      'BIRB_THEME_PREVIEW',
+      'must be empty, light, or dark',
+    ),
   };
 
   ThemeMode? get themeMode => switch (this) {
@@ -23,21 +28,16 @@ enum CatalogThemePreview {
   };
 }
 
-const _environmentPreview = String.fromEnvironment('BIRB_THEME_PREVIEW');
-
 class CatalogApp extends StatefulWidget {
   const CatalogApp({
     required this.appearanceStore,
     super.key,
-    this.preview = const bool.hasEnvironment('BIRB_THEME_PREVIEW')
-        ? null
-        : CatalogThemePreview.persisted,
+    this.preview = CatalogThemePreview.persisted,
   });
 
   final AppearanceStore appearanceStore;
 
-  /// A null value reads `BIRB_THEME_PREVIEW`; tests can provide a mode.
-  final CatalogThemePreview? preview;
+  final CatalogThemePreview preview;
 
   @override
   State<CatalogApp> createState() => _CatalogAppState();
@@ -45,10 +45,6 @@ class CatalogApp extends StatefulWidget {
 
 class _CatalogAppState extends State<CatalogApp> {
   late AppearanceController _appearance;
-
-  CatalogThemePreview get _preview =>
-      widget.preview ??
-      CatalogThemePreview.fromEnvironment(_environmentPreview);
 
   @override
   void initState() {
@@ -83,9 +79,9 @@ class _CatalogAppState extends State<CatalogApp> {
       title: 'Flutter Foundation Catalog',
       theme: BirbTheme.light,
       darkTheme: BirbTheme.dark,
-      themeMode: _preview.themeMode ?? _appearance.themeMode,
+      themeMode: widget.preview.themeMode ?? _appearance.themeMode,
       themeAnimationDuration: BirbDurations.instant,
-      home: CatalogHome(controller: _appearance, preview: _preview),
+      home: CatalogHome(controller: _appearance, preview: widget.preview),
     ),
   );
 }
