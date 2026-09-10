@@ -2,5 +2,10 @@
 
 ## 0.1.0
 
-- Scaffold the package with `shared_preferences` 2.5.5 selected for the future
-  `SharedPreferencesAsync` storage adapter.
+- Add stable system, light, and dark appearance modes.
+- Add namespaced `SharedPreferencesAsync` persistence with exact parsing and
+  safe fallback behavior.
+- Add an observable controller with bounded initialization, serialized writes,
+  durable-state provenance, error reporting, retry, and safe disposal.
+- Add the accessible borrowed-controller selector with responsive layout,
+  keyboard support, live status semantics, and localizable text.

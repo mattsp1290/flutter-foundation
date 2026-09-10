@@ -1,6 +1,22 @@
-# flutter_foundation_catalog
+# Flutter Foundation catalog
 
-A new Flutter project.
+The catalog is the integration and visual-inspection host for
+`birb_design_system` and `birb_appearance`.
+
+Run the persisted appearance mode or force a deterministic preview:
+
+```sh
+flutter run -d macos
+flutter run -d macos --dart-define=BIRB_THEME_PREVIEW=light
+flutter run -d macos --dart-define=BIRB_THEME_PREVIEW=dark
+```
+
+The appearance store owns the namespace `flutter_foundation_catalog`. Forced
+preview modes leave that preference unchanged. The preview toolbar applies a
+320-logical-pixel viewport and 200-percent text scale to each catalog section.
+
+Run the catalog checks from the repository root with `./tool/verify.sh`. The
+additional macOS build gate is `flutter build macos` from this directory.
 
 ## Getting Started
 

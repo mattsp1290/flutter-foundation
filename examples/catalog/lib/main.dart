@@ -1,17 +1,15 @@
+import 'package:birb_appearance/birb_appearance.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const CatalogApp());
+import 'src/catalog_app.dart';
 
-class CatalogApp extends StatelessWidget {
-  const CatalogApp({super.key});
+export 'src/catalog_app.dart';
+export 'src/catalog_keys.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Flutter Foundation Catalog',
-      home: Scaffold(
-        body: Center(child: Text('Flutter Foundation catalog scaffold')),
-      ),
-    );
-  }
-}
+void main() => runApp(
+  CatalogApp(
+    appearanceStore: PreferencesAppearanceStore(
+      applicationNamespace: 'flutter_foundation_catalog',
+    ),
+  ),
+);
