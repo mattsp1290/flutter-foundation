@@ -21,6 +21,7 @@ void main() {
     testWidgets('${preview.name} renders every catalog section and fixture', (
       tester,
     ) async {
+      final semantics = tester.ensureSemantics();
       final store = _CatalogStore();
       await _pumpCatalog(tester, store, preview: preview);
 
@@ -51,6 +52,14 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(CatalogKeys.forcedPreview), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(find.byKey(CatalogKeys.forcedPreview))
+            .getSemanticsData()
+            .label,
+        '${preview.name} preview is forced; preference is unchanged',
+      );
+      semantics.dispose();
 
       await _selectSection(tester, CatalogSection.accessibility);
       expect(

@@ -274,10 +274,12 @@ class _AppearancePage extends StatelessWidget {
           key: CatalogKeys.forcedPreview,
           container: true,
           label: '${preview.name} preview is forced; preference is unchanged',
-          child: Text(
-            '${preview.name[0].toUpperCase()}${preview.name.substring(1)} '
-            'preview is forced by BIRB_THEME_PREVIEW. The persisted preference '
-            'is not changed.',
+          child: ExcludeSemantics(
+            child: Text(
+              '${preview.name[0].toUpperCase()}${preview.name.substring(1)} '
+              'preview is forced by BIRB_THEME_PREVIEW. The persisted '
+              'preference is not changed.',
+            ),
           ),
         ),
       const SizedBox(height: BirbSpacing.space4),
