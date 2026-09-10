@@ -1,88 +1,193 @@
+import 'package:birb_appearance/birb_appearance.dart';
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:birb_design_system/design_system_preview.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_foundation_catalog/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  void useViewport(WidgetTester tester, Size size) {
-    tester.view
-      ..physicalSize = size
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  test('preview environment parser rejects unsupported values', () {
+    expect(
+      () => CatalogThemePreview.fromEnvironment('drak'),
+      throwsArgumentError,
+    );
+  });
+
+  for (final preview in <CatalogThemePreview>[
+    CatalogThemePreview.light,
+    CatalogThemePreview.dark,
+  ]) {
+    testWidgets('${preview.name} renders every catalog section and fixture', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final store = _CatalogStore();
+      await _pumpCatalog(tester, store, preview: preview);
+
+      expect(
+        Theme.of(tester.element(find.byKey(CatalogKeys.root))).brightness,
+        preview == CatalogThemePreview.light
+            ? Brightness.light
+            : Brightness.dark,
+      );
+      for (final fixture in BirbThemeHarnessInventory.all) {
+        expect(
+          find.byKey(BirbThemeHarnessKeys.fixture(fixture)),
+          findsOneWidget,
+          reason: '${fixture.family.name}/${fixture.name}',
+        );
+      }
+
+      await _selectSection(tester, CatalogSection.codeReview);
+      expect(find.byType(BirbReviewHarness), findsOneWidget);
+      expect(
+        find.byKey(BirbReviewHarnessKeys.simulationNotice),
+        findsOneWidget,
+      );
+
+      await _selectSection(tester, CatalogSection.appearance);
+      expect(
+        find.byKey(CatalogKeys.section(CatalogSection.appearance)),
+        findsOneWidget,
+      );
+      expect(find.byKey(CatalogKeys.forcedPreview), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(find.byKey(CatalogKeys.forcedPreview))
+            .getSemanticsData()
+            .label,
+        '${preview.name} preview is forced; preference is unchanged',
+      );
+      semantics.dispose();
+
+      await _selectSection(tester, CatalogSection.accessibility);
+      expect(
+        find.byKey(CatalogKeys.section(CatalogSection.accessibility)),
+        findsOneWidget,
+      );
+      expect(find.text('Keyboard focus sample'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   }
 
-  ThemeData themeOf(WidgetTester tester) => Theme.of(
-    tester.element(find.byKey(BirbReviewHarnessKeys.simulationNotice)),
-  );
+  testWidgets('activates the catalog overlay fixtures', (tester) async {
+    await _pumpCatalog(
+      tester,
+      _CatalogStore(),
+      preview: CatalogThemePreview.light,
+      size: const Size(1000, 900),
+    );
 
-  testWidgets('opens on the code review preview with the Birb light theme', (
-    tester,
-  ) async {
-    useViewport(tester, const Size(1200, 1400));
-    await tester.pumpWidget(const CatalogApp());
+    await _tapFixture(tester, BirbHarnessFamily.overlays, 'dialogTrigger');
+    expect(find.byKey(BirbThemeHarnessKeys.dialog), findsOneWidget);
+    await tester.tap(find.byKey(BirbThemeHarnessKeys.dialogDismiss));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BirbReviewHarness), findsOneWidget);
-    expect(find.byType(BirbThemeHarness), findsNothing);
+    await _tapFixture(tester, BirbHarnessFamily.overlays, 'menuTrigger');
+    expect(find.byKey(BirbThemeHarnessKeys.menuItem), findsOneWidget);
+    await tester.tap(find.byKey(BirbThemeHarnessKeys.menuItem));
+    await tester.pumpAndSettle();
+
+    await _tapFixture(tester, BirbHarnessFamily.overlays, 'snackbarTrigger');
+    expect(find.byKey(BirbThemeHarnessKeys.snackbar), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keyboard traversal reaches a stable catalog control', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogStore());
+    final target = find.byKey(CatalogKeys.narrowToggle);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    for (var tabs = 0; tabs < 12 && !_focusIsInside(target); tabs += 1) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+
+    expect(_focusIsInside(target), isTrue);
+  });
+
+  testWidgets('keeps section selection across the navigation breakpoint', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogStore(), size: const Size(600, 900));
+
+    expect(find.byKey(CatalogKeys.navigationBar), findsOneWidget);
+    expect(find.byKey(CatalogKeys.navigationRail), findsNothing);
+    await _selectSection(tester, CatalogSection.codeReview);
+
+    tester.view.physicalSize = const Size(1000, 900);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(CatalogKeys.navigationBar), findsNothing);
+    expect(find.byKey(CatalogKeys.navigationRail), findsOneWidget);
     expect(
-      find.text('Simulated review — nothing is sent anywhere.'),
+      tester
+          .widget<NavigationRail>(find.byKey(CatalogKeys.navigationRail))
+          .selectedIndex,
+      CatalogSection.codeReview.index,
+    );
+    expect(
+      find.byKey(CatalogKeys.section(CatalogSection.codeReview)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('appearance selection keeps the selected catalog section', (
+    tester,
+  ) async {
+    final store = _CatalogStore();
+    await _pumpCatalog(tester, store);
+    await _selectSection(tester, CatalogSection.appearance);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(store.writes, <AppearanceMode>[AppearanceMode.dark]);
+    expect(
+      Theme.of(tester.element(find.byKey(CatalogKeys.root))).brightness,
+      Brightness.dark,
+    );
+    expect(
+      find.byKey(CatalogKeys.section(CatalogSection.appearance)),
       findsOneWidget,
     );
 
-    final theme = themeOf(tester);
-    expect(theme.colorScheme, BirbTheme.light.colorScheme);
-    expect(theme.extension<BirbSemanticColors>(), BirbSemanticColors.light);
-  });
-
-  testWidgets('switches between the two previews', (tester) async {
-    useViewport(tester, const Size(1200, 1400));
-    await tester.pumpWidget(const CatalogApp());
+    await tester.pumpWidget(CatalogApp(appearanceStore: store));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(CatalogKeys.themePreviewTab));
-    await tester.pumpAndSettle();
-    expect(find.byType(BirbThemeHarness), findsOneWidget);
-    expect(find.byType(BirbReviewHarness), findsNothing);
-    expect(find.text('Design system preview'), findsOneWidget);
-
-    await tester.tap(find.byKey(CatalogKeys.reviewPreviewTab));
-    await tester.pumpAndSettle();
-    expect(find.byType(BirbReviewHarness), findsOneWidget);
-    expect(find.byType(BirbThemeHarness), findsNothing);
-  });
-
-  testWidgets('switches brightness with no theme transition', (tester) async {
-    useViewport(tester, const Size(1200, 1400));
-    await tester.pumpWidget(const CatalogApp());
-    await tester.pumpAndSettle();
-
-    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(app.themeAnimationDuration, BirbDurations.instant);
-    expect(app.theme, BirbTheme.light);
-    expect(app.darkTheme, BirbTheme.dark);
-
-    await tester.tap(find.byKey(CatalogKeys.darkModeChip));
-    await tester.pump();
-    expect(themeOf(tester).colorScheme, BirbTheme.dark.colorScheme);
     expect(
-      themeOf(tester).extension<BirbSemanticColors>(),
-      BirbSemanticColors.dark,
+      find.byKey(CatalogKeys.section(CatalogSection.appearance)),
+      findsOneWidget,
     );
+    expect(find.byKey(CatalogKeys.appearanceSelector), findsOneWidget);
+  });
 
-    await tester.tap(find.byKey(CatalogKeys.lightModeChip));
+  testWidgets('preview controls apply 320 width and 200 percent text', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogStore(), size: const Size(1000, 900));
+    await _selectSection(tester, CatalogSection.codeReview);
+
+    await tester.tap(find.byKey(CatalogKeys.narrowToggle));
+    await tester.tap(find.byKey(CatalogKeys.largeTextToggle));
     await tester.pump();
-    expect(themeOf(tester).colorScheme, BirbTheme.light.colorScheme);
+
+    expect(tester.getSize(find.byKey(CatalogKeys.contentViewport)).width, 320);
+    final section = find.byKey(CatalogKeys.section(CatalogSection.codeReview));
+    expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 20);
+    expect(find.byKey(BirbReviewHarnessKeys.diff), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the review workflow runs through the public package API', (
     tester,
   ) async {
-    useViewport(tester, const Size(1200, 1400));
-    await tester.pumpWidget(const CatalogApp());
-    await tester.pumpAndSettle();
+    await _pumpCatalog(tester, _CatalogStore(), size: const Size(1200, 1400));
+    await _selectSection(tester, CatalogSection.codeReview);
 
-    // Choose a commentable line and open a new discussion.
     await tester.ensureVisible(
       find.byKey(BirbDiffViewKeys.line('modified-added-11')),
     );
@@ -93,7 +198,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('New discussion — On new line 11'), findsOneWidget);
 
-    // Reply through the composer and see the comment appear.
     final composer = find.byKey(BirbReviewHarnessKeys.newDiscussionComposer);
     await tester.enterText(
       find.descendant(of: composer, matching: find.byType(TextField)),
@@ -113,18 +217,94 @@ void main() {
     expect(find.text('You · just now'), findsOneWidget);
   });
 
-  testWidgets('renders at 320 logical pixels and 200 percent text without '
-      'overflow', (tester) async {
-    useViewport(tester, const Size(320, 900));
-    // MaterialApp rebuilds MediaQuery from the view, so the scale has to come
-    // from the platform dispatcher rather than an ambient MediaQuery.
-    tester.platformDispatcher.textScaleFactorTestValue = 2;
+  testWidgets('preserves the ambient text scale until preview overrides it', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await tester.pumpWidget(const CatalogApp());
-    await tester.pumpAndSettle();
+    await _pumpCatalog(tester, _CatalogStore());
 
-    expect(tester.takeException(), isNull);
-    expect(find.byKey(CatalogKeys.reviewPreviewTab), findsOneWidget);
-    expect(find.byKey(BirbReviewHarnessKeys.diff), findsOneWidget);
+    final section = find.byKey(CatalogKeys.section(CatalogSection.components));
+    expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 15);
+
+    await tester.tap(find.byKey(CatalogKeys.largeTextToggle));
+    await tester.pump();
+    expect(MediaQuery.textScalerOf(tester.element(section)).scale(10), 20);
   });
+
+  testWidgets('forced preview does not rewrite the persisted preference', (
+    tester,
+  ) async {
+    final store = _CatalogStore(value: AppearanceMode.dark);
+    await _pumpCatalog(tester, store, preview: CatalogThemePreview.light);
+    await _selectSection(tester, CatalogSection.appearance);
+
+    expect(find.byKey(CatalogKeys.forcedPreview), findsOneWidget);
+    expect(find.byKey(CatalogKeys.appearanceSelector), findsNothing);
+    expect(store.writes, isEmpty);
+    expect(store.value, AppearanceMode.dark);
+    expect(
+      Theme.of(tester.element(find.byKey(CatalogKeys.root))).brightness,
+      Brightness.light,
+    );
+  });
+}
+
+Future<void> _pumpCatalog(
+  WidgetTester tester,
+  AppearanceStore store, {
+  CatalogThemePreview preview = CatalogThemePreview.persisted,
+  Size size = const Size(800, 700),
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(CatalogApp(appearanceStore: store, preview: preview));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _selectSection(WidgetTester tester, CatalogSection section) async {
+  await tester.tap(find.byKey(CatalogKeys.destination(section)));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapFixture(
+  WidgetTester tester,
+  BirbHarnessFamily family,
+  String name,
+) async {
+  final fixture = find.byKey(
+    BirbThemeHarnessKeys.fixture((family: family, name: name)),
+  );
+  await tester.ensureVisible(fixture);
+  await tester.tap(fixture);
+  await tester.pumpAndSettle();
+}
+
+bool _focusIsInside(Finder finder) {
+  final context = FocusManager.instance.primaryFocus?.context;
+  if (context == null) return false;
+  return find
+      .ancestor(
+        of: find.byElementPredicate((element) => element == context),
+        matching: finder,
+      )
+      .evaluate()
+      .isNotEmpty;
+}
+
+final class _CatalogStore implements AppearanceStore {
+  _CatalogStore({this.value = AppearanceMode.system});
+
+  AppearanceMode value;
+  final List<AppearanceMode> writes = <AppearanceMode>[];
+
+  @override
+  Future<AppearanceReadResult> read() async => (mode: value, isPersisted: true);
+
+  @override
+  Future<void> write(AppearanceMode mode) async {
+    writes.add(mode);
+    value = mode;
+  }
 }

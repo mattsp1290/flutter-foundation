@@ -2,21 +2,18 @@
 
 ## 0.1.0
 
-- Scaffold the package in the Flutter Foundation workspace.
-- Add code-review components: `BirbReviewStatusBadge`, `BirbChangedFileList`,
-  `BirbDiffView`, `BirbReviewThreadView`, `BirbReviewComposer`, their
-  presentation models, and `BirbReviewStyle`.
-- Extend `BirbTextFormField` with `minLines`, `maxLines`, and `readOnly`,
-  preserving the previous single-line, writable defaults.
-- Export `BirbReviewHarness` from `design_system_preview.dart` as a simulated
-  review host with deterministic fixtures.
-- Keep the tap action on changed-file items and diff rows so assistive
-  technology can operate them, and announce the active line as a live region.
-- Restrict the source pan gesture to touch and stylus so mouse and trackpad
-  drag-to-select keeps working, and make the scrollbar's whole reserved target
-  draggable.
-- Bound the composer's activation guard to one frame and disable the action
-  while it holds, so it can neither deadlock nor be reopened by an unrelated
-  rebuild.
-- Add `BirbDiffSnapshot.contains` so hosts and widgets share one anchor
-  membership rule, and `BirbSourceText` for tab expansion.
+- Add complete light and dark Birb Material themes with semantic colors,
+  typography, component recipes, and zero-elevation surfaces.
+- Add accessible filter-chip and ledger-style text-field components.
+- Add the stable preview harness with typography, surfaces, controls, overlays,
+  statuses, navigation, and input states.
+- Add public source-audit tooling while keeping palette primitives private.
+- Add code-review components for statuses, changed files, diffs, threads,
+  composition, source text, presentation models, and review styling.
+- Extend `BirbTextFormField` with multiline and read-only support while
+  preserving its previous defaults.
+- Add a simulated `BirbReviewHarness` with deterministic fixtures and public
+  preview keys.
+- Preserve assistive-technology actions and announcements across review
+  controls, mouse and trackpad text selection, draggable scrollbars, and
+  bounded composer activation.

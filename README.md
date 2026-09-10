@@ -14,7 +14,8 @@ management framework.
   visual verification.
 
 The initial package version is `0.1.0`. Both packages use `publish_to: none`;
-there is no pub.dev release.
+there is no pub.dev artifact. Consumers resolve these packages only from the
+Git repository.
 
 Theme, component, and catalog changes follow the repository
 [design contract](DESIGN.md).
@@ -56,3 +57,75 @@ dependencies:
 
 Applications should commit their own lockfiles. Roll back by restoring both the
 previous manifest pin and application lockfile.
+
+Use the same immutable `YOUR_COMMIT_SHA` value for both subpaths. Mixing refs
+can pair incompatible package contracts even when dependency resolution
+succeeds.
+
+## Usage
+
+```dart
+import 'package:birb_appearance/birb_appearance.dart';
+import 'package:birb_design_system/birb_design_system.dart';
+import 'package:flutter/material.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final appearance = AppearanceController(
+    store: PreferencesAppearanceStore(applicationNamespace: 'my_application'),
+  );
+  await appearance.initialize();
+  runApp(FoundationApp(appearance: appearance));
+}
+
+class FoundationApp extends StatefulWidget {
+  const FoundationApp({required this.appearance, super.key});
+
+  final AppearanceController appearance;
+
+  @override
+  State<FoundationApp> createState() => _FoundationAppState();
+}
+
+class _FoundationAppState extends State<FoundationApp> {
+  @override
+  void dispose() {
+    widget.appearance.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.appearance,
+    builder: (context, child) => MaterialApp(
+      theme: BirbTheme.light,
+      darkTheme: BirbTheme.dark,
+      themeMode: widget.appearance.themeMode,
+      themeAnimationDuration: BirbDurations.instant,
+      home: AppearanceSelector(controller: widget.appearance),
+    ),
+  );
+}
+```
+
+The host owns the controller and calls `dispose`. The selector borrows it and
+reports initialization, pending saves, failures, and retry through its public
+UI contract.
+
+## Catalog
+
+The catalog integrates both public runtime barrels and the design-system
+preview barrel. It contains every preview fixture plus appearance and
+accessibility inspection sections.
+
+```sh
+cd examples/catalog
+flutter run -d macos
+flutter run -d macos --dart-define=BIRB_THEME_PREVIEW=light
+flutter run -d macos --dart-define=BIRB_THEME_PREVIEW=dark
+```
+
+Forced preview modes do not rewrite the stored appearance. The in-app controls
+can constrain the selected section to 320 logical pixels and scale its text to
+200 percent. Repository tooling imports the separate audit barrel; application
+runtime code does not.
