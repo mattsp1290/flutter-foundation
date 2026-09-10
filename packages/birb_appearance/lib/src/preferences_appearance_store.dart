@@ -20,15 +20,15 @@ final class PreferencesAppearanceStore implements AppearanceStore {
   String get storageKey => '$applicationNamespace.appearance.mode.v1';
 
   @override
-  Future<AppearanceMode> read() async {
+  Future<AppearanceReadResult> read() async {
     final value = await _preferences.getString(storageKey);
     if (value == null) {
-      return AppearanceMode.system;
+      return (mode: AppearanceMode.system, isPersisted: false);
     }
     try {
-      return AppearanceMode.parse(value);
+      return (mode: AppearanceMode.parse(value), isPersisted: true);
     } on FormatException {
-      return AppearanceMode.system;
+      return (mode: AppearanceMode.system, isPersisted: false);
     }
   }
 

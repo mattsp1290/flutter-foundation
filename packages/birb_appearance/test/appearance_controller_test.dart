@@ -59,7 +59,7 @@ void main() {
   testWidgets('times out after two seconds and ignores the late read', (
     tester,
   ) async {
-    final read = Completer<AppearanceMode>();
+    final read = Completer<AppearanceReadResult>();
     final store = _ControlledStore(onRead: () => read.future);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
@@ -72,7 +72,7 @@ void main() {
     expect(controller.lastPersistedMode, isNull);
     expect(controller.readError, isA<TimeoutException>());
 
-    read.complete(AppearanceMode.dark);
+    read.complete((mode: AppearanceMode.dark, isPersisted: true));
     await tester.pump();
     await initialization;
 
@@ -81,23 +81,45 @@ void main() {
   });
 
   test('a user selection wins a read race', () async {
-    final read = Completer<AppearanceMode>();
+    final read = Completer<AppearanceReadResult>();
     final store = _ControlledStore(onRead: () => read.future);
     final controller = AppearanceController(store: store);
     addTearDown(controller.dispose);
 
     final initialization = controller.initialize();
     final save = controller.setMode(AppearanceMode.dark);
-    await _flushEvents();
+    await store.waitForWrite(0);
     store.succeedWrite(0);
     await save;
-    read.complete(AppearanceMode.light);
+    read.complete((mode: AppearanceMode.light, isPersisted: true));
     await initialization;
 
     expect(controller.isInitialized, isTrue);
     expect(controller.selectedMode, AppearanceMode.dark);
     expect(controller.lastPersistedMode, AppearanceMode.dark);
     expect(store.value, AppearanceMode.dark);
+  });
+
+  test('a selection made before initialization invalidates the read', () async {
+    final read = Completer<AppearanceReadResult>();
+    final store = _ControlledStore(onRead: () => read.future);
+    final controller = AppearanceController(store: store);
+    addTearDown(controller.dispose);
+
+    final save = controller.setMode(AppearanceMode.dark);
+    expect(controller.selectedMode, AppearanceMode.dark);
+    expect(controller.themeMode, ThemeMode.system);
+
+    final initialization = controller.initialize();
+    await store.waitForWrite(0);
+    store.succeedWrite(0);
+    await save;
+    read.complete((mode: AppearanceMode.light, isPersisted: true));
+    await initialization;
+
+    expect(controller.selectedMode, AppearanceMode.dark);
+    expect(controller.themeMode, ThemeMode.dark);
+    expect(controller.lastPersistedMode, AppearanceMode.dark);
   });
 
   test(
@@ -109,13 +131,12 @@ void main() {
       await controller.initialize();
 
       final saveA = controller.setMode(AppearanceMode.light);
-      await _flushEvents();
+      await store.waitForWrite(0);
       expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
       expect(controller.selectedMode, AppearanceMode.light);
       expect(controller.pendingSaveGeneration, 1);
 
       final saveB = controller.setMode(AppearanceMode.dark);
-      await _flushEvents();
       expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
       expect(controller.selectedMode, AppearanceMode.dark);
       expect(controller.lastPersistedMode, AppearanceMode.system);
@@ -125,7 +146,7 @@ void main() {
 
       store.succeedWrite(0);
       await saveA;
-      await _flushEvents();
+      await store.waitForWrite(1);
       expect(store.writes, <AppearanceMode>[
         AppearanceMode.light,
         AppearanceMode.dark,
@@ -149,7 +170,7 @@ void main() {
       expect(controller.retryMode, AppearanceMode.dark);
 
       final retry = controller.retry();
-      await _flushEvents();
+      await store.waitForWrite(2);
       expect(controller.pendingSaveGeneration, 3);
       expect(controller.saveError, isNull);
       expect(controller.saveErrorGeneration, isNull);
@@ -174,12 +195,12 @@ void main() {
     await controller.initialize();
 
     final older = controller.setMode(AppearanceMode.light);
-    await _flushEvents();
+    await store.waitForWrite(0);
     final newer = controller.setMode(AppearanceMode.dark);
     final oldError = StateError('old failure');
     store.failWrite(0, oldError);
     await older;
-    await _flushEvents();
+    await store.waitForWrite(1);
 
     expect(controller.selectedMode, AppearanceMode.dark);
     expect(controller.pendingSaveGeneration, 2);
@@ -200,17 +221,49 @@ void main() {
     await controller.initialize();
 
     final first = controller.setMode(AppearanceMode.light);
-    await _flushEvents();
+    await store.waitForWrite(0);
     final duplicate = controller.setMode(AppearanceMode.light);
-    await _flushEvents();
 
     expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
     store.succeedWrite(0);
     await Future.wait(<Future<void>>[first, duplicate]);
   });
 
+  test('a reentrant selection preserves write order', () async {
+    final store = _ControlledStore();
+    final controller = AppearanceController(store: store);
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    var selectedDark = false;
+    Future<void>? saveDark;
+    controller.addListener(() {
+      if (!selectedDark && controller.selectedMode == AppearanceMode.light) {
+        selectedDark = true;
+        saveDark = controller.setMode(AppearanceMode.dark);
+      }
+    });
+
+    final saveLight = controller.setMode(AppearanceMode.light);
+    await store.waitForWrite(0);
+    expect(store.writes, <AppearanceMode>[AppearanceMode.light]);
+
+    store.succeedWrite(0);
+    await saveLight;
+    await store.waitForWrite(1);
+    expect(store.writes, <AppearanceMode>[
+      AppearanceMode.light,
+      AppearanceMode.dark,
+    ]);
+
+    store.succeedWrite(1);
+    await saveDark;
+    expect(controller.selectedMode, AppearanceMode.dark);
+    expect(controller.lastPersistedMode, AppearanceMode.dark);
+    expect(store.value, AppearanceMode.dark);
+  });
+
   test('disposal makes calls and in-flight completions harmless', () async {
-    final read = Completer<AppearanceMode>();
+    final read = Completer<AppearanceReadResult>();
     final store = _ControlledStore(onRead: () => read.future);
     final controller = AppearanceController(store: store);
     var notifications = 0;
@@ -218,7 +271,7 @@ void main() {
 
     final initialization = controller.initialize();
     controller.dispose();
-    read.complete(AppearanceMode.dark);
+    read.complete((mode: AppearanceMode.dark, isPersisted: true));
     await initialization;
     await controller.initialize();
     await controller.setMode(AppearanceMode.light);
@@ -250,7 +303,7 @@ void main() {
       controller.addListener(() => notifications++);
 
       final save = controller.setMode(AppearanceMode.dark);
-      await _flushEvents();
+      await store.waitForWrite(0);
       expect(notifications, 1);
       controller.dispose();
       store.succeedWrite(0);
@@ -260,11 +313,33 @@ void main() {
       expect(store.value, AppearanceMode.dark);
     },
   );
-}
 
-Future<void> _flushEvents() async {
-  await Future<void>.delayed(Duration.zero);
-  await Future<void>.delayed(Duration.zero);
+  test('disposal drains writes accepted before disposal', () async {
+    final store = _ControlledStore();
+    final controller = AppearanceController(store: store);
+    await controller.initialize();
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    final saveA = controller.setMode(AppearanceMode.light);
+    await store.waitForWrite(0);
+    final saveB = controller.setMode(AppearanceMode.dark);
+    expect(notifications, 2);
+    controller.dispose();
+
+    store.succeedWrite(0);
+    await saveA;
+    await store.waitForWrite(1);
+    store.succeedWrite(1);
+    await saveB;
+
+    expect(store.writes, <AppearanceMode>[
+      AppearanceMode.light,
+      AppearanceMode.dark,
+    ]);
+    expect(store.value, AppearanceMode.dark);
+    expect(notifications, 2);
+  });
 }
 
 final class _ImmediateStore implements AppearanceStore {
@@ -275,12 +350,12 @@ final class _ImmediateStore implements AppearanceStore {
   int readCount = 0;
 
   @override
-  Future<AppearanceMode> read() async {
+  Future<AppearanceReadResult> read() async {
     readCount++;
     if (readError case final error?) {
       throw error;
     }
-    return value;
+    return (mode: value, isPersisted: true);
   }
 
   @override
@@ -292,14 +367,16 @@ final class _ImmediateStore implements AppearanceStore {
 final class _ControlledStore implements AppearanceStore {
   _ControlledStore({this.onRead});
 
-  final Future<AppearanceMode> Function()? onRead;
+  final Future<AppearanceReadResult> Function()? onRead;
   AppearanceMode value = AppearanceMode.system;
   final List<AppearanceMode> writes = <AppearanceMode>[];
   final List<Completer<void>> _writeCompletions = <Completer<void>>[];
+  Completer<void> _nextWriteStarted = Completer<void>();
 
   @override
-  Future<AppearanceMode> read() {
-    return onRead?.call() ?? Future<AppearanceMode>.value(value);
+  Future<AppearanceReadResult> read() {
+    return onRead?.call() ??
+        Future<AppearanceReadResult>.value((mode: value, isPersisted: true));
   }
 
   @override
@@ -307,7 +384,15 @@ final class _ControlledStore implements AppearanceStore {
     writes.add(mode);
     final completion = Completer<void>();
     _writeCompletions.add(completion);
+    _nextWriteStarted.complete();
+    _nextWriteStarted = Completer<void>();
     return completion.future.then((_) => value = mode);
+  }
+
+  Future<void> waitForWrite(int index) async {
+    while (_writeCompletions.length <= index) {
+      await _nextWriteStarted.future;
+    }
   }
 
   void succeedWrite(int index) => _writeCompletions[index].complete();

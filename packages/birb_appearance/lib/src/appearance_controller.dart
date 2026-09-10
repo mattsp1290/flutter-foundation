@@ -6,6 +6,11 @@ import 'appearance_mode.dart';
 import 'appearance_store.dart';
 
 /// Coordinates immediate appearance selection with serialized persistence.
+///
+/// Call [initialize] once during startup. Until it completes, [themeMode]
+/// remains [ThemeMode.system], even if [selectedMode] has changed. Storage
+/// failures are exposed through [readError] and [saveError]; save futures
+/// complete after an attempt and do not throw those failures.
 final class AppearanceController extends ChangeNotifier {
   factory AppearanceController({
     required AppearanceStore store,
@@ -29,17 +34,25 @@ final class AppearanceController extends ChangeNotifier {
   AppearanceMode? _retryMode;
   int? _pendingSaveGeneration;
   int? _saveErrorGeneration;
-  int _operationGeneration = 0;
+  bool _initialReadIsAuthoritative = true;
   int _nextSaveGeneration = 0;
   Future<void>? _initialization;
   Future<void> _writeTail = Future<void>.value();
   bool _isDisposed = false;
 
+  /// The mode selected in memory, which may differ from durable storage.
   AppearanceMode get selectedMode => _selectedMode;
+
+  /// The last mode known to be durable, or null when no valid value is known.
   AppearanceMode? get lastPersistedMode => _lastPersistedMode;
-  ThemeMode get themeMode => _selectedMode.themeMode;
+
+  /// The selected theme after initialization, and system mode before it.
+  ThemeMode get themeMode =>
+      _isInitialized ? _selectedMode.themeMode : ThemeMode.system;
   bool get isInitialized => _isInitialized;
   bool get isInitializing => !_isInitialized;
+
+  /// The retained error from the one initialization attempt, if any.
   Object? get readError => _readError;
   StackTrace? get readErrorStackTrace => _readErrorStackTrace;
   bool get isSavePending => _pendingSaveGeneration != null;
@@ -58,9 +71,8 @@ final class AppearanceController extends ChangeNotifier {
   }
 
   Future<void> _initialize() async {
-    final readGeneration = _operationGeneration;
     try {
-      final storedMode = await _store.read().timeout(
+      final result = await _store.read().timeout(
         _initializationTimeout,
         onTimeout: () => throw TimeoutException(
           'Appearance initialization exceeded $_initializationTimeout.',
@@ -70,9 +82,9 @@ final class AppearanceController extends ChangeNotifier {
       if (_isDisposed) {
         return;
       }
-      if (_operationGeneration == readGeneration) {
-        _selectedMode = storedMode;
-        _lastPersistedMode = storedMode;
+      if (_initialReadIsAuthoritative) {
+        _selectedMode = result.mode;
+        _lastPersistedMode = result.isPersisted ? result.mode : null;
       }
     } catch (error, stackTrace) {
       if (_isDisposed) {
@@ -81,7 +93,7 @@ final class AppearanceController extends ChangeNotifier {
       _readError = error;
       _readErrorStackTrace = stackTrace;
       if (error is TimeoutException) {
-        _operationGeneration++;
+        _initialReadIsAuthoritative = false;
       }
     }
     if (_isDisposed) {
@@ -92,6 +104,9 @@ final class AppearanceController extends ChangeNotifier {
   }
 
   /// Selects [mode] immediately and queues its persistence operation.
+  ///
+  /// The returned future completes after the write attempt. A failure is
+  /// reported through [saveError] and retained for [retry].
   Future<void> setMode(AppearanceMode mode) {
     if (_isDisposed) {
       return Future<void>.value();
@@ -105,12 +120,15 @@ final class AppearanceController extends ChangeNotifier {
       return Future<void>.value();
     }
 
-    _operationGeneration++;
+    _initialReadIsAuthoritative = false;
     _selectedMode = mode;
     return _enqueueSave(mode);
   }
 
   /// Retries the latest failed selection, if one exists.
+  ///
+  /// The returned future completes after the write attempt; failures remain
+  /// observable through [saveError].
   Future<void> retry() {
     if (_isDisposed || _retryMode == null || isSavePending) {
       return Future<void>.value();
@@ -125,8 +143,6 @@ final class AppearanceController extends ChangeNotifier {
     _saveErrorStackTrace = null;
     _saveErrorGeneration = null;
     _retryMode = mode;
-    notifyListeners();
-
     final completion = Completer<void>();
     _writeTail = _writeTail.then((_) async {
       try {
@@ -158,9 +174,11 @@ final class AppearanceController extends ChangeNotifier {
         }
       }
     });
+    notifyListeners();
     return completion.future;
   }
 
+  /// Stops notifications while allowing already accepted writes to drain.
   @override
   void dispose() {
     _isDisposed = true;

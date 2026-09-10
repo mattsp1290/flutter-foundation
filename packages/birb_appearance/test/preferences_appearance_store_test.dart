@@ -45,7 +45,10 @@ void main() {
       );
 
       expect(store.storageKey, 'birb_party.appearance.mode.v1');
-      expect(await store.read(), AppearanceMode.system);
+      expect(await store.read(), (
+        mode: AppearanceMode.system,
+        isPersisted: false,
+      ));
 
       await store.write(AppearanceMode.dark);
 
@@ -69,7 +72,10 @@ void main() {
         preferences: preferences,
       );
 
-      expect(await store.read(), AppearanceMode.system);
+      expect(await store.read(), (
+        mode: AppearanceMode.system,
+        isPersisted: false,
+      ));
       expect(await preferences.getString(key), 'sepia');
     });
 
@@ -81,8 +87,40 @@ void main() {
 
       for (final mode in AppearanceMode.values) {
         await store.write(mode);
-        expect(await store.read(), mode);
+        expect(await store.read(), (mode: mode, isPersisted: true));
       }
+    });
+
+    test('reports durable provenance to the controller', () async {
+      const key = 'controller.appearance.mode.v1';
+      final preferences = SharedPreferencesAsync();
+      final store = PreferencesAppearanceStore(
+        applicationNamespace: 'controller',
+        preferences: preferences,
+      );
+
+      Future<AppearanceController> initializeController() async {
+        final controller = AppearanceController(store: store);
+        await controller.initialize();
+        return controller;
+      }
+
+      var controller = await initializeController();
+      expect(controller.selectedMode, AppearanceMode.system);
+      expect(controller.lastPersistedMode, isNull);
+      controller.dispose();
+
+      await preferences.setString(key, 'sepia');
+      controller = await initializeController();
+      expect(controller.selectedMode, AppearanceMode.system);
+      expect(controller.lastPersistedMode, isNull);
+      controller.dispose();
+
+      await preferences.setString(key, 'system');
+      controller = await initializeController();
+      expect(controller.selectedMode, AppearanceMode.system);
+      expect(controller.lastPersistedMode, AppearanceMode.system);
+      controller.dispose();
     });
   });
 }
