@@ -174,14 +174,15 @@ for contrast tests and the theme harness. “All surfaces” means `surface`,
 | semantic `disabled` | `surface`, `surfaceBright`, `surfaceContainerLowest`, `surfaceContainerLow` | All surfaces |
 | `errorIndicator` | All surfaces | All surfaces |
 
-Exhaustive contrast and component tests cover input error and focused-error
-states on all surfaces. The preview harness renders representative enabled,
-error, and disabled inputs. Disabled boundaries are permitted only on the
-semantic `disabled` row's assigned surfaces because `gray` is not a 3:1
-boundary against `lightGray`. Other component/state fixtures use the row for
-the foreground or boundary under test. Adding a surface role or permitting a
-state on another background requires updating this table and its exhaustive
-contrast rows first.
+Contrast tests exhaustively verify every assigned foreground/background pair.
+Component tests verify error and focused-error border resolution, while widget
+tests render representative field states on standard theme surfaces. The
+preview harness renders representative enabled, error, and disabled inputs.
+Disabled boundaries are permitted only on the semantic `disabled` row's
+assigned surfaces because `gray` is not a 3:1 boundary against `lightGray`.
+Other component/state fixtures use the row for the foreground or boundary
+under test. Adding a surface role or permitting a state on another background
+requires updating this table and its exhaustive contrast rows first.
 
 Status widgets combine color with a label, icon, border pattern, or shape.
 Examples include success + check + “Live,” warning + triangle + “Degraded,”
@@ -200,6 +201,11 @@ technology:
   region; and
 - native checked, selected, toggled, enabled, and value semantics remain
   intact.
+
+The preview loading fixture uses its excluded spinner as a decorative status
+glyph and exposes the meaningful label “Loading”; it does not represent a
+measured product-progress value. Product progress that is determinate must
+expose its current value as required above.
 
 ## 5. Foundation tokens
 
@@ -295,7 +301,7 @@ rule above.
 | divider | n/a | `outline` | 1 px |
 | navigation bar/rail, unselected | `surface` | `onSurfaceVariant` | Divider where separated |
 | navigation bar/rail, selected | `primaryContainer` | `onPrimaryContainer` | Square indicator plus icon/label-weight cue |
-| text selection/cursor/handle | `lightBlue` under light text; `blue` under dark text | Selected text remains `black`/`white` | Cursor and handle use `primary` |
+| text selection/cursor/handle | Light mode: `lightBlue` under `black`; dark mode: `blue` under `white` | Selected text remains `black`/`white` | Cursor and handle use `primary` |
 
 Cards use boundaries only for real grouped objects. Chips are for filters,
 selection, or compact status. Labels never rely on placeholders. Navigation
@@ -394,19 +400,22 @@ reason. Sources checked for this contract on 2026-08-28:
 - Normal text reaches 4.5:1; large text reaches 3:1; meaningful non-text
   boundaries and states reach 3:1; focus is visibly distinguishable.
 - Status, error, selection, and progress retain a color-independent cue.
-- Harness and component semantics tests assert labels, live-region updates,
-  progress values, and native checked/selected/toggled/enabled/value flags in
-  both modes.
+- Harness and component tests cover representative labels, progress labels,
+  and native checked/selected/toggled/enabled/value flags. Live-region behavior
+  is implemented by the reusable error component and remains a required direct
+  assertion when dynamic status components are added.
 - Layout remains readable at the largest supported text scale and at narrow
   mobile widths.
 - Controls remain semantic Material controls with accessible labels, not
   painted-pixel replacements.
 - Keyboard access and focus order remain intact on web and desktop.
-- Android 48×48 and iOS 44×44 target guidance is tested; implementation uses
-  the stricter 48×48 token.
+- Implementation uses the stricter 48×48 token and direct target assertions,
+  which also exceed the iOS 44×44 guidance.
 
-The committed theme harness exercises these requirements in light and dark
-modes. If an automated guideline cannot evaluate an unpainted or disabled
+The committed theme harness exercises layout and rendering in light and dark
+modes. Focused behavior, semantics, keyboard, and target tests use
+representative fixtures where brightness does not change the platform
+semantics. If an automated guideline cannot evaluate an unpainted or disabled
 state, retain the direct token/component and rendered-state assertion and name
 the scanner limitation in the test. Do not remove the contract to satisfy a
 scanner limitation.

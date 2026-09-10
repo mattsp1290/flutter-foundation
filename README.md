@@ -16,6 +16,9 @@ management framework.
 The initial package version is `0.1.0`. Both packages use `publish_to: none`;
 there is no pub.dev release.
 
+Theme, component, and catalog changes follow the repository
+[design contract](DESIGN.md).
+
 ## Toolchain
 
 Use Flutter 3.47.1 and the bundled Dart 3.13.1 SDK. Run the complete portable

@@ -7,8 +7,7 @@ pinned Birbparty source commit
 `120a3f798a1fce82d0db9347d9686afe06fd54fd`). The semantic color tables,
 component recipes, accessibility rules, and contribution checks remain part of
 the contract. Repository-specific authority paths and verification wording are
-adapted to this workspace. The adapted contract's SHA-256 is
-`3753ac0b7cb5f28df0e269015033e14e636f4e92be0fcf3260d28a30c221b555`.
+adapted to this workspace.
 
 The committed test suite provides the following implementation evidence:
 
@@ -28,6 +27,6 @@ The committed test suite provides the following implementation evidence:
 | Semantic-role consumption boundary | `lib/src/audit/design_system_audit.dart` | `test/audit/design_system_audit_test.dart` |
 
 [`source_parity_evidence.md`](../../packages/birb_design_system/test/source_oracle/source_parity_evidence.md)
-records the temporary source-oracle comparison. The contract test verifies
-that this matrix continues to cover every documented component family and
-that every referenced implementation and evidence file exists.
+records the temporary source-oracle comparison. The contract test treats this
+matrix and the current component and mechanism tables as closed inventories,
+and verifies that every referenced implementation and evidence file exists.
