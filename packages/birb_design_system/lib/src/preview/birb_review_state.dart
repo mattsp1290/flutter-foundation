@@ -50,11 +50,12 @@ final class BirbReviewDemoState {
     this.status = BirbReviewStatus.pending,
     this.loadState = BirbReviewLoadState.ready,
     this.selectedAnchor,
-    this.pending,
+    this.pending = const <String, BirbReviewSubmission>{},
     this.submissionError,
     this.failedDraftKey,
-    this.threadUpdateId,
+    this.updatingThreadIds = const <String>{},
     this.threadError,
+    this.failedThreadId,
     this.staleResultMessage,
     this.nextOutcome = BirbReviewOutcome.succeeds,
   });
@@ -66,13 +67,20 @@ final class BirbReviewDemoState {
   final BirbReviewStatus status;
   final BirbReviewLoadState loadState;
   final BirbDiffAnchor? selectedAnchor;
-  final BirbReviewSubmission? pending;
+
+  /// Submissions in flight, keyed by draft. Each draft completes on its own.
+  final Map<String, BirbReviewSubmission> pending;
   final String? submissionError;
 
   /// Which draft the visible [submissionError] belongs to.
   final String? failedDraftKey;
-  final String? threadUpdateId;
+
+  /// Threads whose resolved state the host is currently applying.
+  final Set<String> updatingThreadIds;
   final String? threadError;
+
+  /// Which thread the visible [threadError] belongs to.
+  final String? failedThreadId;
 
   /// A visible message when a late completion no longer matches the content.
   final String? staleResultMessage;
@@ -80,8 +88,26 @@ final class BirbReviewDemoState {
 
   BirbDiffSnapshot get selectedSnapshot => snapshots[selectedFileId]!;
 
-  /// The threads that belong to the selected file's current revision, plus
-  /// every general discussion.
+  /// Throws when a fixture file has no snapshot, or the selection is unknown.
+  ///
+  /// Adding a file without its snapshot would otherwise fail with a null-check
+  /// error inside a build or a timer callback.
+  void debugAssertConsistent() {
+    for (final file in files) {
+      if (!snapshots.containsKey(file.id)) {
+        throw StateError('fixture file ${file.id} has no snapshot');
+      }
+    }
+    if (!snapshots.containsKey(selectedFileId)) {
+      throw StateError('selected file $selectedFileId has no snapshot');
+    }
+  }
+
+  /// The threads shown beside the selected file.
+  ///
+  /// Every general discussion is included, as is any thread anchored to this
+  /// file — including one anchored to a superseded revision, which stays
+  /// visible and outdated rather than silently reattaching.
   List<BirbReviewThread> get visibleThreads {
     final snapshot = selectedSnapshot;
     return <BirbReviewThread>[
@@ -106,14 +132,13 @@ final class BirbReviewDemoState {
     BirbReviewLoadState? loadState,
     BirbDiffAnchor? selectedAnchor,
     bool clearSelectedAnchor = false,
-    BirbReviewSubmission? pending,
-    bool clearPending = false,
+    Map<String, BirbReviewSubmission>? pending,
     String? submissionError,
     String? failedDraftKey,
     bool clearSubmissionError = false,
-    String? threadUpdateId,
-    bool clearThreadUpdate = false,
+    Set<String>? updatingThreadIds,
     String? threadError,
+    String? failedThreadId,
     bool clearThreadError = false,
     String? staleResultMessage,
     bool clearStaleResult = false,
@@ -129,17 +154,18 @@ final class BirbReviewDemoState {
       selectedAnchor: clearSelectedAnchor
           ? null
           : selectedAnchor ?? this.selectedAnchor,
-      pending: clearPending ? null : pending ?? this.pending,
+      pending: pending ?? this.pending,
       submissionError: clearSubmissionError
           ? null
           : submissionError ?? this.submissionError,
       failedDraftKey: clearSubmissionError
           ? null
           : failedDraftKey ?? this.failedDraftKey,
-      threadUpdateId: clearThreadUpdate
-          ? null
-          : threadUpdateId ?? this.threadUpdateId,
+      updatingThreadIds: updatingThreadIds ?? this.updatingThreadIds,
       threadError: clearThreadError ? null : threadError ?? this.threadError,
+      failedThreadId: clearThreadError
+          ? null
+          : failedThreadId ?? this.failedThreadId,
       staleResultMessage: clearStaleResult
           ? null
           : staleResultMessage ?? this.staleResultMessage,

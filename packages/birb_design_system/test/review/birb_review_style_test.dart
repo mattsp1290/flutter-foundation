@@ -73,6 +73,13 @@ void main() {
       expect(failures, isEmpty);
     });
 
+    test('$name hunk heading carries the documented top boundary', () {
+      expect(
+        BirbReviewStyle.hunkHeadingBorder(theme),
+        Border(top: BirbReviewStyle.objectSide(theme)),
+      );
+    });
+
     test('$name active row uses focus at 2 px and outline at 1 px', () {
       expect(
         BirbReviewStyle.activeRowSide(theme, focused: true),
@@ -97,9 +104,14 @@ void main() {
         expect(code.height, body.height);
         expect(code.fontWeight, body.fontWeight);
         expect(code.color, colors.onSurface);
-        expect(code.fontFamilyFallback, BirbReviewStyle.codeFontFamilyFallback);
-        expect(BirbReviewStyle.codeFontFamilyFallback, contains('monospace'));
-        expect(code.fontFamily, isNotNull);
+        // The intended family resolves first and the generic one last, so a
+        // platform with a real monospace face never falls through to it early.
+        expect(code.fontFamily, BirbReviewStyle.codeFontFamilyFallback.first);
+        expect(<String>[
+          code.fontFamily!,
+          ...code.fontFamilyFallback!,
+        ], BirbReviewStyle.codeFontFamilyFallback);
+        expect(BirbReviewStyle.codeFontFamilyFallback.last, 'monospace');
       },
     );
   }

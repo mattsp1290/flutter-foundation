@@ -42,6 +42,32 @@ final class BirbReviewThreadLabels {
   final String pendingLabel;
   final String emptyText;
   final BirbThreadAnchorLabel anchorLabel;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbReviewThreadLabels &&
+      other.generalDiscussion == generalDiscussion &&
+      other.resolvedLabel == resolvedLabel &&
+      other.unresolvedLabel == unresolvedLabel &&
+      other.outdatedLabel == outdatedLabel &&
+      other.resolveAction == resolveAction &&
+      other.reopenAction == reopenAction &&
+      other.pendingLabel == pendingLabel &&
+      other.emptyText == emptyText &&
+      other.anchorLabel == anchorLabel;
+
+  @override
+  int get hashCode => Object.hash(
+    generalDiscussion,
+    resolvedLabel,
+    unresolvedLabel,
+    outdatedLabel,
+    resolveAction,
+    reopenAction,
+    pendingLabel,
+    emptyText,
+    anchorLabel,
+  );
 }
 
 /// One host-controlled review conversation.
@@ -151,23 +177,22 @@ final class BirbReviewThreadView extends StatelessWidget {
                           ),
                         )
                       : Icon(thread.resolved ? Icons.replay : Icons.check),
-                  label: Text(
-                    isUpdating
-                        ? labels.pendingLabel
-                        : thread.resolved
-                        ? labels.reopenAction
-                        : labels.resolveAction,
+                  // The visible label is the live region, so progress is
+                  // announced once and stays navigable, instead of duplicating
+                  // it in a zero-area shadow node.
+                  label: Semantics(
+                    key: BirbReviewThreadKeys.pendingStatus,
+                    liveRegion: isUpdating,
+                    child: Text(
+                      isUpdating
+                          ? labels.pendingLabel
+                          : thread.resolved
+                          ? labels.reopenAction
+                          : labels.resolveAction,
+                    ),
                   ),
                 ),
               ),
-              if (isUpdating)
-                Semantics(
-                  key: BirbReviewThreadKeys.pendingStatus,
-                  container: true,
-                  liveRegion: true,
-                  label: labels.pendingLabel,
-                  child: const SizedBox.shrink(),
-                ),
             ],
             if (error != null) ...<Widget>[
               const SizedBox(height: BirbSpacing.space1),
@@ -211,6 +236,8 @@ abstract final class BirbReviewThreadKeys {
   static const ValueKey<String> resolutionAction = ValueKey<String>(
     'birb-review-thread-resolution',
   );
+
+  /// The action label, which becomes the live progress region while pending.
   static const ValueKey<String> pendingStatus = ValueKey<String>(
     'birb-review-thread-pending',
   );

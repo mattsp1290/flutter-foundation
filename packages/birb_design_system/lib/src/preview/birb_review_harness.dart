@@ -141,9 +141,16 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     setState(() {
       _state = _state.copyWith(loadState: BirbReviewLoadState.loading);
     });
+    // Loading honours the same outcome toggle as every other request, so the
+    // host-owned failure and retry path is reachable rather than dead code.
+    final outcome = _state.nextOutcome;
     _schedule(() {
       setState(() {
-        _state = _state.copyWith(loadState: BirbReviewLoadState.ready);
+        _state = _state.copyWith(
+          loadState: outcome == BirbReviewOutcome.fails
+              ? BirbReviewLoadState.failed
+              : BirbReviewLoadState.ready,
+        );
       });
     });
   }
@@ -152,11 +159,16 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     final revisionId = _state.selectedSnapshot.revisionId;
     setState(() {
       _state = _state.copyWith(
-        pending: BirbReviewSubmission(
-          draftKey: draftKey,
-          revisionId: revisionId,
-          text: text,
-        ),
+        // Each draft has its own in-flight entry, so a second reply never
+        // discards a first that is still running.
+        pending: <String, BirbReviewSubmission>{
+          ..._state.pending,
+          draftKey: BirbReviewSubmission(
+            draftKey: draftKey,
+            revisionId: revisionId,
+            text: text,
+          ),
+        },
         clearSubmissionError: true,
         clearStaleResult: true,
       );
@@ -164,12 +176,15 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
 
     final outcome = _state.nextOutcome;
     _schedule(() {
-      final pending = _state.pending;
-      if (pending == null || pending.draftKey != draftKey) return;
+      final submission = _state.pending[draftKey];
+      if (submission == null) return;
+      final remaining = <String, BirbReviewSubmission>{..._state.pending}
+        ..remove(draftKey);
+
       if (outcome == BirbReviewOutcome.fails) {
         setState(() {
           _state = _state.copyWith(
-            clearPending: true,
+            pending: remaining,
             submissionError:
                 'The simulated host rejected this reply. Your draft is kept.',
             failedDraftKey: draftKey,
@@ -177,10 +192,10 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
         });
         return;
       }
-      if (pending.revisionId != _state.selectedSnapshot.revisionId) {
+      if (submission.revisionId != _state.selectedSnapshot.revisionId) {
         setState(() {
           _state = _state.copyWith(
-            clearPending: true,
+            pending: remaining,
             staleResultMessage:
                 'A reply completed for an earlier revision and was not '
                 'attached to the current content.',
@@ -190,12 +205,10 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
       }
 
       final comment = BirbReviewComment(
-        id:
-            'comment-${DateTime.fromMillisecondsSinceEpoch(0)}-$draftKey-'
-            '${_threadSequence++}',
+        id: 'comment-$draftKey-${_threadSequence++}',
         author: 'You',
         timestamp: 'just now',
-        body: pending.text,
+        body: submission.text,
       );
       setState(() {
         final threadId = draftKey.startsWith('thread:')
@@ -205,7 +218,7 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
             (anchor == null
                     ? _state.withComment(threadId, comment)
                     : _state.withNewThread(threadId, anchor, comment))
-                .copyWith(clearPending: true, clearSubmissionError: true);
+                .copyWith(pending: remaining, clearSubmissionError: true);
       });
       // Only the successful draft is cleared, and only by the host.
       _drafts[draftKey]?.clear();
@@ -215,21 +228,26 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
   void _requestResolution(String threadId, {required bool resolved}) {
     setState(() {
       _state = _state.copyWith(
-        threadUpdateId: threadId,
+        updatingThreadIds: <String>{..._state.updatingThreadIds, threadId},
         clearThreadError: true,
       );
     });
     final outcome = _state.nextOutcome;
     _schedule(() {
+      final remaining = <String>{..._state.updatingThreadIds}..remove(threadId);
       setState(() {
         _state = outcome == BirbReviewOutcome.fails
             ? _state.copyWith(
-                clearThreadUpdate: true,
+                updatingThreadIds: remaining,
                 threadError: 'The simulated host could not change this thread.',
+                failedThreadId: threadId,
               )
             : _state
                   .withResolved(threadId, resolved: resolved)
-                  .copyWith(clearThreadUpdate: true, clearThreadError: true);
+                  .copyWith(
+                    updatingThreadIds: remaining,
+                    clearThreadError: true,
+                  );
       });
     });
   }
@@ -433,10 +451,10 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
           BirbReviewThreadView(
             key: BirbReviewHarnessKeys.thread(thread.id),
             thread: thread,
-            isUpdating: _state.threadUpdateId == thread.id,
-            errorText: _state.threadUpdateId == thread.id
-                ? null
-                : _state.threadError,
+            isUpdating: _state.updatingThreadIds.contains(thread.id),
+            errorText: _state.failedThreadId == thread.id
+                ? _state.threadError
+                : null,
             onResolutionRequested: _requestResolution,
           ),
           const SizedBox(height: BirbSpacing.space2),
@@ -454,8 +472,7 @@ class _BirbReviewHarnessState extends State<BirbReviewHarness> {
     required String draftKey,
     BirbDiffAnchor? anchor,
   }) {
-    final pending = _state.pending;
-    final isSubmitting = pending != null && pending.draftKey == draftKey;
+    final isSubmitting = _state.pending.containsKey(draftKey);
     return BirbReviewComposer(
       key: key,
       controller: _draftFor(draftKey),

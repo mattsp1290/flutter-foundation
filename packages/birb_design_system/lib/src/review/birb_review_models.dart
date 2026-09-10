@@ -211,11 +211,19 @@ final class BirbDiffSnapshot {
     required this.file,
     required this.revisionId,
     required List<BirbDiffHunk> hunks,
-  }) : hunks = List<BirbDiffHunk>.unmodifiable(hunks) {
+  }) : hunks = List<BirbDiffHunk>.unmodifiable(hunks),
+       _lineIds = _validatedLineIds(file, revisionId, hunks);
+
+  /// Validates identities once and returns the line index used for anchoring.
+  static Set<String> _validatedLineIds(
+    BirbReviewFile file,
+    String revisionId,
+    List<BirbDiffHunk> hunks,
+  ) {
     _requireIdentity(revisionId, 'BirbDiffSnapshot.revisionId');
     final hunkIds = <String>{};
     final lineIds = <String>{};
-    for (final hunk in this.hunks) {
+    for (final hunk in hunks) {
       if (!hunkIds.add(hunk.id)) {
         throw ArgumentError.value(
           hunk.id,
@@ -234,14 +242,14 @@ final class BirbDiffSnapshot {
       }
     }
     if (file.content != BirbReviewContentAvailability.text &&
-        this.hunks.isNotEmpty) {
+        hunks.isNotEmpty) {
       throw ArgumentError.value(
         file.content.name,
         'hunks',
         'only text content may supply diff hunks',
       );
     }
-    _lineIds = lineIds;
+    return Set<String>.unmodifiable(lineIds);
   }
 
   final BirbReviewFile file;
@@ -249,7 +257,7 @@ final class BirbDiffSnapshot {
   final List<BirbDiffHunk> hunks;
 
   /// Validated line identities, used for constant-time anchor membership.
-  late final Set<String> _lineIds;
+  final Set<String> _lineIds;
 
   /// Every displayed line in document order.
   Iterable<BirbDiffLine> get lines => hunks.expand((hunk) => hunk.lines);
@@ -431,12 +439,29 @@ void _requireIdentity(String value, String name) {
   }
 }
 
+/// Bidi overrides and isolates, which can make one path render as another.
+const Set<int> _forbiddenDisplayRunes = <int>{
+  0x200E, 0x200F, // LRM, RLM
+  0x202A, 0x202B, 0x202C, 0x202D, 0x202E, // embeddings and overrides
+  0x2066, 0x2067, 0x2068, 0x2069, // isolates
+};
+
 void _requireDisplayText(String value, String name) {
   if (value.trim().isEmpty) {
     throw ArgumentError.value(value, name, 'must not be blank');
   }
-  if (value.contains('\n') || value.contains('\r')) {
-    throw ArgumentError.value(value, name, 'must be a single display line');
+  for (final rune in value.runes) {
+    if (rune == 0x0A || rune == 0x0D) {
+      throw ArgumentError.value(value, name, 'must be a single display line');
+    }
+    if (_forbiddenDisplayRunes.contains(rune)) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'must not contain a bidirectional override, which could make one '
+        'path render as another',
+      );
+    }
   }
 }
 

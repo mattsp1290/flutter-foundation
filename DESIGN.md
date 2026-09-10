@@ -447,18 +447,27 @@ fetched, so an unavailable family degrades to the next entry. OS text scaling
 is preserved; code text is never shrunk to fit. The exception applies to source
 lines and hunk headings only, never to labels, comment bodies, or metadata.
 
-Because the code column is monospace, the widest displayed row is the row with
-the most displayed characters. Only that one row is laid out to measure the
-column's pixel width, so snapshot preparation stays O(total source text) while
-row construction stays O(visible rows). Font-metric or text-scale changes
-invalidate the measurement and it is recomputed.
+A rune count only approximates display width, so snapshot preparation keeps the
+several longest rows as candidates and lays out all of them to find the true
+column width. Snapshot preparation therefore stays O(total source text) with a
+bounded number of text layouts, while row construction stays O(visible rows).
+Font-metric or text-scale changes invalidate the measurement and it is
+recomputed.
+
+Tab stops and that candidate ranking count one Unicode code point as one
+column. Fullwidth, combining, and multi-code-point emoji text renders and
+copies correctly, but its alignment to the four-column grid is approximate.
+Measuring several candidates rather than one is what keeps a wide-glyph row from
+being clipped with no scroll extent left to reach it.
 
 Tabs expand for display to the next four-column stop. `Copy source line`
 always copies the original text with real tab characters, no line numbers, no
 change sign, and no trailing newline; it remains available when commenting is
 disabled. Native text selection copies what is displayed, which means the
-spaces expanded from a tab. Both behaviors are documented in the package
-README, in the preview, and here. Cross-row continuous selection is deferred.
+spaces expanded from a tab. Both behaviors are documented in the package README
+and here. The source column is one selection region that excludes line numbers
+and change signs, so a selection may span rows and still yields displayed source
+text only.
 
 ### 9.2 Diff row roles
 
@@ -472,6 +481,10 @@ README, in the preview, and here. Cross-row continuous selection is deferred.
 | active row, region unfocused | Base row fill | Base row foreground | `outline` 1 px box |
 | hunk heading | `surfaceContainerLow` | `onSurfaceVariant` | Top `outline` 1 px |
 | file/thread boundary | `surface` | `onSurface` | `outline` 1 px, radius 0 |
+
+A row that ends a file without a trailing newline appends the caller-supplied
+no-final-newline marker to its line description, which is both announced and
+visible in the stacked layout and in the action area.
 
 Change markers are compact non-interactive cells, never full-row tinted
 backgrounds, because a translucent red or green row fill would need an authored
@@ -509,6 +522,11 @@ diff navigation region as well as with the labeled horizontal scrollbar. Below
 row stacks its metadata above its source text instead of shrinking text or
 overflowing.
 
+The horizontal offset is reachable four ways: `Left`/`Right` from the
+navigation region, a horizontal drag anywhere over the source rows, the labelled
+scrollbar below them — whose hit area is a full interaction target even though
+the thumb is thin — and its scroll semantics actions.
+
 `BirbDiffView` is a bounded-height, finite-width widget; the host supplies
 finite constraints. Loading, failure, and retry belong to the host around the
 diff, not to asynchronous work inside it. Empty text, binary, and unavailable
@@ -527,6 +545,12 @@ and no per-row tab stops. While the navigation region owns focus:
   platform copy shortcut then operate on that text.
 - `Escape` returns focus to the navigation region and preserves the active
   line identity.
+
+A pointer tap or an assistive-technology activation on a row also makes it the
+active line and gives the navigation region focus, so the next arrow key
+continues from there. The active-line description is a live region, so that
+change is announced. A row announces its kind and both line numbers once,
+followed by its source text; the gutter repeats neither.
 
 `Tab` advances from the navigation region to the action area and then out of
 the diff; `Shift+Tab` reverses it. There is no focus trap. The same key list is

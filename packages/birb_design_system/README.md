@@ -99,7 +99,8 @@ not no copy controls.
 
 Native text selection copies what is displayed, which means the spaces a tab
 expanded into (four display columns). The source column is one selection region;
-line numbers and change signs are excluded from it.
+line numbers and change signs are excluded from it, so a selection that spans
+rows still yields source text only.
 
 ### Keyboard
 
@@ -110,6 +111,11 @@ line's native selectable text with the caret at the start, and `Escape` returns
 to the navigation region with the active line preserved. The same list is
 visible on screen.
 
+A row is also activatable by pointer and by assistive technology; either takes
+the navigation region's focus, so the next arrow key continues from there. The
+active-line description is a live region. The source column additionally pans
+with a horizontal drag and through the labelled scrollbar's scroll actions.
+
 ### Limitations
 
 Unified diffs only — side-by-side layout is deferred, as are raw patch parsing,
@@ -117,8 +123,13 @@ provider adapters and authentication, syntax highlighting, Markdown comment
 bodies, cross-row continuous selection, editable suggestions, review submission
 and merge, complete pull-request timelines, and persisted drafts. Comment bodies
 are plain text; an HTML-like string appears literally. Large snapshots build
-lazily — snapshot preparation is O(total source text) and row construction is
-O(visible rows) — but no arbitrary repository size is claimed.
+lazily — snapshot preparation is O(total source text) with a bounded number of
+text layouts, and row construction is O(visible rows) — but no arbitrary
+repository size is claimed.
+
+Tab stops and the measured column width count one Unicode code point as one
+display column. Fullwidth, combining, and multi-code-point emoji source renders
+and copies correctly, but does not align exactly to the four-column grid.
 
 ### Preview
 

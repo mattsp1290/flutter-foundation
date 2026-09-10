@@ -116,6 +116,10 @@ void main() {
   testWidgets('renders at 320 logical pixels and 200 percent text without '
       'overflow', (tester) async {
     useViewport(tester, const Size(320, 900));
+    // MaterialApp rebuilds MediaQuery from the view, so the scale has to come
+    // from the platform dispatcher rather than an ambient MediaQuery.
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(const CatalogApp());
     await tester.pumpAndSettle();
 

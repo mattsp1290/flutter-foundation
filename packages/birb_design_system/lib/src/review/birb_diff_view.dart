@@ -65,6 +65,46 @@ final class BirbDiffViewLabels {
   final String deletions;
   final BirbDiffLineLabelBuilder commentAction;
   final BirbDiffLineLabelBuilder activeLine;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbDiffViewLabels &&
+      other.emptyText == emptyText &&
+      other.binaryText == binaryText &&
+      other.unavailableText == unavailableText &&
+      other.navigationLabel == navigationLabel &&
+      other.keyboardHelp == keyboardHelp &&
+      other.horizontalScrollLabel == horizontalScrollLabel &&
+      other.copyActionLabel == copyActionLabel &&
+      other.selectSourceActionLabel == selectSourceActionLabel &&
+      other.noActiveLineText == noActiveLineText &&
+      other.sourceSelectionLabel == sourceSelectionLabel &&
+      other.noFinalNewlineText == noFinalNewlineText &&
+      other.renamedFrom == renamedFrom &&
+      other.additions == additions &&
+      other.deletions == deletions &&
+      other.commentAction == commentAction &&
+      other.activeLine == activeLine;
+
+  @override
+  int get hashCode => Object.hashAll(<Object?>[
+    emptyText,
+    binaryText,
+    unavailableText,
+    navigationLabel,
+    keyboardHelp,
+    horizontalScrollLabel,
+    copyActionLabel,
+    selectSourceActionLabel,
+    noActiveLineText,
+    sourceSelectionLabel,
+    noFinalNewlineText,
+    renamedFrom,
+    additions,
+    deletions,
+    commentAction,
+    activeLine,
+  ]);
 }
 
 /// Stable lookup keys for [BirbDiffView] regions, rows, and actions.
@@ -172,6 +212,9 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   static const double _stripHeight = BirbSpacing.space3;
   static const double _selectionCueWidth = BirbSpacing.space4;
 
+  /// How many of the longest rows are laid out to find the true column width.
+  static const int _widthCandidateCount = 8;
+
   final FocusNode _navigationFocus = FocusNode(
     debugLabel: 'BirbDiffView navigation',
   );
@@ -192,8 +235,9 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   List<_DiffRow> _rows = const <_DiffRow>[];
   Map<String, int> _rowIndexByLineId = const <String, int>{};
   List<BirbDiffLine> _lines = const <BirbDiffLine>[];
-  String _widestDisplayText = '';
+  List<String> _widthCandidates = const <String>[];
   String _widestGutterText = '';
+  int _numberDigits = 1;
 
   List<double> _extents = const <double>[];
   List<double> _offsets = const <double>[];
@@ -202,6 +246,9 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   double _charWidth = 0;
   double _lineHeight = 0;
   double _gutterWidth = 0;
+
+  /// Horizontal space reserved before the source column in the current layout.
+  double _codeInset = 0;
   double _numberWidth = 0;
   double _markerWidth = 0;
   double _stackedGutterHeight = 0;
@@ -234,8 +281,9 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       return;
     }
     if (widget.labels != oldWidget.labels) {
+      final previous = _widestGutterText;
       _computeWidestGutterText();
-      _metricsKey = null;
+      if (previous != _widestGutterText) _metricsKey = null;
     }
     if (widget.selectedAnchor != oldWidget.selectedAnchor) {
       _adoptSelectedAnchor();
@@ -275,7 +323,12 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     final rows = <_DiffRow>[];
     final indexByLineId = <String, int>{};
     final lines = <BirbDiffLine>[];
-    var widest = '';
+    // A rune count only approximates display width, so keep several of the
+    // longest rows as candidates and measure them all. Otherwise one wide-glyph
+    // line among narrow ones would under-measure the column and be clipped with
+    // no scroll extent left to reach it.
+    final candidates = <String>[];
+    var digits = 1;
     for (final hunk in widget.snapshot.hunks) {
       if (hunk.heading != null) {
         rows.add(_DiffRow.heading(hunk));
@@ -284,16 +337,23 @@ class _BirbDiffViewState extends State<BirbDiffView> {
         indexByLineId[line.id] = rows.length;
         rows.add(_DiffRow.line(line));
         lines.add(line);
-        final displayed = BirbReviewStyle.expandTabs(line.text);
-        if (displayed.runes.length > widest.runes.length) {
-          widest = displayed;
-        }
+        final oldDigits = line.oldNumber?.toString().length ?? 1;
+        final newDigits = line.newNumber?.toString().length ?? 1;
+        if (oldDigits > digits) digits = oldDigits;
+        if (newDigits > digits) digits = newDigits;
+        _considerWidthCandidate(
+          candidates,
+          BirbReviewStyle.expandTabs(line.text),
+        );
       }
     }
     _rows = List<_DiffRow>.unmodifiable(rows);
     _rowIndexByLineId = Map<String, int>.unmodifiable(indexByLineId);
     _lines = List<BirbDiffLine>.unmodifiable(lines);
-    _widestDisplayText = widest;
+    _widthCandidates = List<String>.unmodifiable(candidates);
+    _numberDigits = digits;
+    _extents = const <double>[];
+    _offsets = const <double>[];
     _computeWidestGutterText();
     _metricsKey = null;
     _sourceSelectionLineId = null;
@@ -305,6 +365,28 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     });
   }
 
+  /// Keeps [_widthCandidateCount] rows that could plausibly be the widest.
+  ///
+  /// Candidates stay ordered longest-first by rune count; every one of them is
+  /// laid out later, so a wide-glyph row that loses on rune count can still win
+  /// on pixels.
+  static void _considerWidthCandidate(List<String> candidates, String text) {
+    if (text.isEmpty) return;
+    final length = text.runes.length;
+    if (candidates.length >= _widthCandidateCount &&
+        length <= candidates.last.runes.length) {
+      return;
+    }
+    var index = 0;
+    while (index < candidates.length &&
+        candidates[index].runes.length >= length) {
+      if (candidates[index] == text) return;
+      index += 1;
+    }
+    candidates.insert(index, text);
+    if (candidates.length > _widthCandidateCount) candidates.removeLast();
+  }
+
   /// Finds the longest accessible line description once, not per row build.
   ///
   /// A stacked row renders that description as wrapping metadata, so one
@@ -312,7 +394,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   void _computeWidestGutterText() {
     var widest = '';
     for (final line in _lines) {
-      final description = widget.labels.activeLine(line);
+      final description = _activeLineDescription(line);
       if (description.runes.length > widest.runes.length) {
         widest = description;
       }
@@ -354,15 +436,19 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     final theme = Theme.of(context);
     final scaler = MediaQuery.textScalerOf(context);
     final codeStyle = BirbReviewStyle.codeTextStyle(theme);
-    final key = Object.hashAll(<Object?>[
+    final gutterStyle = BirbReviewStyle.gutterTextStyle(theme);
+    final headingStyle = BirbReviewStyle.hunkHeadingTextStyle(theme);
+    // A record compares by value, so an unlucky hash can never reuse stale
+    // geometry the way a hashed key could.
+    final key = (
       width,
       scaler,
-      codeStyle.fontSize,
-      codeStyle.height,
-      codeStyle.fontFamily,
+      codeStyle,
+      gutterStyle,
+      headingStyle,
       _rows.length,
       widget.snapshot.revisionId,
-    ]);
+    );
     if (_metricsKey == key) return;
     _metricsKey = key;
 
@@ -370,12 +456,7 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _charWidth = sample.width / 10;
     _lineHeight = sample.height;
 
-    final digits = _lines.fold<int>(1, (widest, line) {
-      final oldDigits = line.oldNumber?.toString().length ?? 1;
-      final newDigits = line.newNumber?.toString().length ?? 1;
-      return [widest, oldDigits, newDigits].reduce((a, b) => a > b ? a : b);
-    });
-    _numberWidth = _charWidth * digits + BirbSpacing.space1;
+    _numberWidth = _charWidth * _numberDigits + BirbSpacing.space1;
     _markerWidth = _charWidth * 2;
     final inlineGutterWidth =
         _selectionCueWidth +
@@ -392,8 +473,12 @@ class _BirbDiffViewState extends State<BirbDiffView> {
         scaledFontSize > baseFontSize * _maximumInlineCodeScale ||
         width - inlineGutterWidth < _charWidth * 12;
     _gutterWidth = _stacked ? 0 : inlineGutterWidth;
+    // A stacked row still reserves the selection cue and the change marker
+    // beside the source cell, so the code viewport is narrower than the row.
+    _codeInset = _stacked
+        ? _selectionCueWidth + _markerWidth + BirbSpacing.space1
+        : _gutterWidth;
 
-    final gutterStyle = BirbReviewStyle.gutterTextStyle(theme);
     _stackedGutterHeight = _stacked && _widestGutterText.isNotEmpty
         ? _measure(
             _widestGutterText,
@@ -406,22 +491,18 @@ class _BirbDiffViewState extends State<BirbDiffView> {
           ).height
         : 0;
 
-    final codeViewport = (width - _gutterWidth).clamp(0.0, double.infinity);
-    final widest = _widestDisplayText.isEmpty
-        ? 0.0
-        : _measure(_widestDisplayText, codeStyle, scaler).width;
-    final estimated = _charWidth * _widestDisplayText.runes.length;
-    _codeWidth = [
-      codeViewport,
-      widest,
-      estimated,
-    ].reduce((a, b) => a > b ? a : b);
-    _contentWidth = _gutterWidth + _codeWidth;
+    final codeViewport = (width - _codeInset).clamp(0.0, double.infinity);
+    var measured = 0.0;
+    for (final candidate in _widthCandidates) {
+      final candidateWidth = _measure(candidate, codeStyle, scaler).width;
+      if (candidateWidth > measured) measured = candidateWidth;
+    }
+    _codeWidth = measured > codeViewport ? measured : codeViewport;
+    _contentWidth = _codeInset + _codeWidth;
 
     final rowExtent =
         (_stacked ? _stackedGutterHeight + _lineHeight : _lineHeight) +
         _rowPadding * 2;
-    final headingStyle = BirbReviewStyle.hunkHeadingTextStyle(theme);
     final extents = <double>[];
     final offsets = <double>[];
     var running = 0.0;
@@ -464,6 +545,11 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   double get _horizontalOffset =>
       _horizontal.hasClients ? _horizontal.offset : 0;
 
+  bool get _canScrollSource =>
+      _charWidth > 0 &&
+      _horizontal.hasClients &&
+      _horizontal.position.maxScrollExtent > 0;
+
   void _scrollSource(double delta) {
     if (!_horizontal.hasClients) return;
     final position = _horizontal.position;
@@ -485,13 +571,19 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     _setActive(_lines[next].id);
   }
 
-  void _setActive(String lineId) {
+  void _setActive(String lineId, {bool takeFocus = false}) {
     setState(() {
       _activeLineId = lineId;
       if (_sourceSelectionLineId != null && _sourceSelectionLineId != lineId) {
         _sourceSelectionLineId = null;
       }
     });
+    // Without this a pointer or assistive-technology activation would leave
+    // primary focus outside the region, so the next arrow key would be spent
+    // on directional traversal instead of moving the active line.
+    if (takeFocus && _sourceSelectionLineId == null) {
+      _navigationFocus.requestFocus();
+    }
     _revealActive();
   }
 
@@ -560,24 +652,31 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowDown:
+        if (_lines.isEmpty) return KeyEventResult.ignored;
         _moveActive(1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowUp:
+        if (_lines.isEmpty) return KeyEventResult.ignored;
         _moveActive(-1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.home:
-        if (_lines.isNotEmpty) _setActive(_lines.first.id);
+        if (_lines.isEmpty) return KeyEventResult.ignored;
+        _setActive(_lines.first.id);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.end:
-        if (_lines.isNotEmpty) _setActive(_lines.last.id);
+        if (_lines.isEmpty) return KeyEventResult.ignored;
+        _setActive(_lines.last.id);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowRight:
+        if (!_canScrollSource) return KeyEventResult.ignored;
         _scrollSource(_charWidth * 8);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft:
+        if (!_canScrollSource) return KeyEventResult.ignored;
         _scrollSource(-_charWidth * 8);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.f2:
+        if (_activeLine == null) return KeyEventResult.ignored;
         _enterSourceSelection();
         return KeyEventResult.handled;
     }
@@ -714,9 +813,11 @@ class _BirbDiffViewState extends State<BirbDiffView> {
                   hint: widget.labels.keyboardHelp,
                   child: SelectionArea(
                     focusNode: _selectionRegionFocus,
-                    child: AnimatedBuilder(
-                      animation: _horizontal,
-                      builder: (context, _) => ListView.builder(
+                    child: GestureDetector(
+                      excludeFromSemantics: true,
+                      onHorizontalDragUpdate: (details) =>
+                          _scrollSource(-details.delta.dx),
+                      child: ListView.builder(
                         controller: _vertical,
                         itemCount: _rows.length,
                         itemBuilder: (context, index) => SizedBox(
@@ -736,20 +837,27 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     );
   }
 
+  /// The shared horizontal offset control for the source column.
+  ///
+  /// The thumb stays thin but its hit area is a full interaction target, the
+  /// scroll actions stay in semantics, and a horizontal drag anywhere over the
+  /// source rows moves the same offset.
   Widget _horizontalStrip(ThemeData theme, double width) {
+    final scrollable = _contentWidth > width;
     return Semantics(
       key: BirbDiffViewKeys.horizontalScroll,
       container: true,
       label: widget.labels.horizontalScrollLabel,
-      child: ExcludeSemantics(
-        child: SizedBox(
-          height: _stripHeight,
+      child: SizedBox(
+        height: BirbSizes.minimumInteractiveDimension,
+        child: Align(
           child: Scrollbar(
             controller: _horizontal,
-            thumbVisibility: _contentWidth > width,
+            thumbVisibility: scrollable,
             child: SingleChildScrollView(
               controller: _horizontal,
               scrollDirection: Axis.horizontal,
+              physics: scrollable ? null : const NeverScrollableScrollPhysics(),
               child: SizedBox(width: _contentWidth, height: _stripHeight),
             ),
           ),
@@ -766,12 +874,15 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            line == null
-                ? widget.labels.noActiveLineText
-                : widget.labels.activeLine(line),
-            key: BirbDiffViewKeys.activeLineDescription,
-            style: theme.textTheme.labelLarge,
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              line == null
+                  ? widget.labels.noActiveLineText
+                  : _activeLineDescription(line),
+              key: BirbDiffViewKeys.activeLineDescription,
+              style: theme.textTheme.labelLarge,
+            ),
           ),
           const SizedBox(height: BirbSpacing.space1),
           Wrap(
@@ -810,6 +921,12 @@ class _BirbDiffViewState extends State<BirbDiffView> {
     );
   }
 
+  /// The active line's description, including the no-final-newline marker.
+  String _activeLineDescription(BirbDiffLine line) => line.hasNoFinalNewline
+      ? '${widget.labels.activeLine(line)} · '
+            '${widget.labels.noFinalNewlineText}'
+      : widget.labels.activeLine(line);
+
   Widget _buildRow(ThemeData theme, int index) {
     final row = _rows[index];
     final hunk = row.hunk;
@@ -820,16 +937,23 @@ class _BirbDiffViewState extends State<BirbDiffView> {
   Widget _heading(ThemeData theme, BirbDiffHunk hunk) {
     return SelectionContainer.disabled(
       key: BirbDiffViewKeys.heading(hunk.id),
-      child: Container(
-        color: BirbReviewStyle.hunkHeadingBackground(theme),
-        padding: const EdgeInsets.symmetric(
-          horizontal: BirbSpacing.space2,
-          vertical: _rowPadding,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BirbReviewStyle.hunkHeadingBackground(theme),
+          border: BirbReviewStyle.hunkHeadingBorder(theme),
         ),
-        alignment: AlignmentDirectional.centerStart,
-        child: Text(
-          hunk.heading!,
-          style: BirbReviewStyle.hunkHeadingTextStyle(theme),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: BirbSpacing.space2,
+            vertical: _rowPadding,
+          ),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              hunk.heading!,
+              style: BirbReviewStyle.hunkHeadingTextStyle(theme),
+            ),
+          ),
         ),
       ),
     );
@@ -843,11 +967,12 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       key: BirbDiffViewKeys.line(line.id),
       excludeFromSemantics: true,
       behavior: HitTestBehavior.opaque,
-      onTap: () => _setActive(line.id),
+      onTap: () => _setActive(line.id, takeFocus: true),
       child: Semantics(
         container: true,
         selected: selected,
-        label: widget.labels.activeLine(line),
+        onTap: () => _setActive(line.id, takeFocus: true),
+        label: _activeLineDescription(line),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: selected
@@ -885,33 +1010,37 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       children: <Widget>[
         SizedBox(
           width: _gutterWidth,
-          child: SelectionContainer.disabled(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _selectionCue(theme, selected: selected),
-                SizedBox(
-                  width: _numberWidth,
-                  child: Text(
-                    line.oldNumber?.toString() ?? '',
-                    style: gutterStyle,
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
+          // The row label already announces the kind and both line numbers, so
+          // the gutter would only repeat them.
+          child: ExcludeSemantics(
+            child: SelectionContainer.disabled(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _selectionCue(theme, selected: selected),
+                  SizedBox(
+                    width: _numberWidth,
+                    child: Text(
+                      line.oldNumber?.toString() ?? '',
+                      style: gutterStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                    ),
                   ),
-                ),
-                SizedBox(
-                  width: _numberWidth,
-                  child: Text(
-                    line.newNumber?.toString() ?? '',
-                    style: gutterStyle,
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
+                  SizedBox(
+                    width: _numberWidth,
+                    child: Text(
+                      line.newNumber?.toString() ?? '',
+                      style: gutterStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                    ),
                   ),
-                ),
-                const SizedBox(width: BirbSpacing.space1),
-                _changeMarker(theme, line),
-                const SizedBox(width: BirbSpacing.space1),
-              ],
+                  const SizedBox(width: BirbSpacing.space1),
+                  _changeMarker(theme, line),
+                  const SizedBox(width: BirbSpacing.space1),
+                ],
+              ),
             ),
           ),
         ),
@@ -934,16 +1063,18 @@ class _BirbDiffViewState extends State<BirbDiffView> {
       children: <Widget>[
         SizedBox(
           height: _stackedGutterHeight,
-          child: SelectionContainer.disabled(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: BirbSpacing.space2,
-              ),
-              child: Align(
-                alignment: AlignmentDirectional.topStart,
-                child: Text(
-                  widget.labels.activeLine(line),
-                  style: BirbReviewStyle.gutterTextStyle(theme),
+          child: ExcludeSemantics(
+            child: SelectionContainer.disabled(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: BirbSpacing.space2,
+                ),
+                child: Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: Text(
+                    _activeLineDescription(line),
+                    style: BirbReviewStyle.gutterTextStyle(theme),
+                  ),
                 ),
               ),
             ),
@@ -954,14 +1085,16 @@ class _BirbDiffViewState extends State<BirbDiffView> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              SelectionContainer.disabled(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _selectionCue(theme, selected: selected),
-                    _changeMarker(theme, line),
-                    const SizedBox(width: BirbSpacing.space1),
-                  ],
+              ExcludeSemantics(
+                child: SelectionContainer.disabled(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      _selectionCue(theme, selected: selected),
+                      _changeMarker(theme, line),
+                      const SizedBox(width: BirbSpacing.space1),
+                    ],
+                  ),
                 ),
               ),
               Expanded(child: _source(theme, line)),
@@ -1024,8 +1157,12 @@ class _BirbDiffViewState extends State<BirbDiffView> {
         alignment: Alignment.topLeft,
         minWidth: _codeWidth,
         maxWidth: _codeWidth,
-        child: Transform.translate(
-          offset: Offset(-_horizontalOffset, 0),
+        child: AnimatedBuilder(
+          animation: _horizontal,
+          builder: (context, child) => Transform.translate(
+            offset: Offset(-_horizontalOffset, 0),
+            child: child,
+          ),
           child: content,
         ),
       ),

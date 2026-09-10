@@ -26,6 +26,28 @@ final class BirbChangedFileListLabels {
   final String binary;
   final String unavailable;
   final String selected;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbChangedFileListLabels &&
+      other.empty == empty &&
+      other.additions == additions &&
+      other.deletions == deletions &&
+      other.renamedFrom == renamedFrom &&
+      other.binary == binary &&
+      other.unavailable == unavailable &&
+      other.selected == selected;
+
+  @override
+  int get hashCode => Object.hash(
+    empty,
+    additions,
+    deletions,
+    renamedFrom,
+    binary,
+    unavailable,
+    selected,
+  );
 }
 
 /// A controlled list of the files changed in a review.
@@ -128,13 +150,13 @@ class _ChangedFileItem extends StatelessWidget {
       ?availability,
     ].join(', ');
 
-    return Semantics(
-      container: true,
-      selected: selected,
-      button: true,
-      enabled: onPressed != null,
-      label: semanticLabel,
-      child: ExcludeSemantics(
+    // Merge rather than exclude: excluding the button would drop its tap
+    // action, leaving a node that advertises an operable button no assistive
+    // technology can activate. Only the redundant visible strings are excluded.
+    return MergeSemantics(
+      child: Semantics(
+        selected: selected,
+        label: semanticLabel,
         child: OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
@@ -144,40 +166,42 @@ class _ChangedFileItem extends StatelessWidget {
               vertical: BirbSpacing.space2,
             ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Icon(
-                selected ? Icons.check : Icons.insert_drive_file_outlined,
-                size: BirbSpacing.space4,
-              ),
-              const SizedBox(width: BirbSpacing.space2),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      file.path,
-                      style: selected
-                          ? theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            )
-                          : theme.textTheme.bodyMedium,
-                    ),
-                    if (renameNote != null)
-                      Text(renameNote, style: theme.textTheme.bodySmall),
-                    Text(
-                      selected
-                          ? '$kind · $counts · ${labels.selected}'
-                          : '$kind · $counts',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    if (availability != null)
-                      Text(availability, style: theme.textTheme.bodySmall),
-                  ],
+          child: ExcludeSemantics(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(
+                  selected ? Icons.check : Icons.insert_drive_file_outlined,
+                  size: BirbSpacing.space4,
                 ),
-              ),
-            ],
+                const SizedBox(width: BirbSpacing.space2),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        file.path,
+                        style: selected
+                            ? theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              )
+                            : theme.textTheme.bodyMedium,
+                      ),
+                      if (renameNote != null)
+                        Text(renameNote, style: theme.textTheme.bodySmall),
+                      Text(
+                        selected
+                            ? '$kind · $counts · ${labels.selected}'
+                            : '$kind · $counts',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (availability != null)
+                        Text(availability, style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

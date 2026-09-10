@@ -377,6 +377,111 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a load failure is reachable and retry recovers', (tester) async {
+    useViewport(tester, const Size(1200, 1400));
+    await tester.pumpWidget(host(delay: const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.failNextToggle));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.retryLoad));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(BirbReviewHarnessKeys.loadErrorNotice), findsOneWidget);
+    expect(find.byKey(BirbReviewHarnessKeys.diff), findsNothing);
+
+    await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.failNextToggle));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Try again'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(BirbReviewHarnessKeys.loadErrorNotice), findsNothing);
+    expect(find.byKey(BirbReviewHarnessKeys.diff), findsOneWidget);
+  });
+
+  testWidgets('a failed resolve shows its error on that thread only', (
+    tester,
+  ) async {
+    useViewport(tester, const Size(1200, 1400));
+    await tester.pumpWidget(host(delay: const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, find.byKey(BirbReviewHarnessKeys.failNextToggle));
+    await tester.pumpAndSettle();
+    await tapVisible(
+      tester,
+      find.descendant(
+        of: find.byKey(
+          BirbReviewHarnessKeys.thread(BirbReviewFixtures.lineThread),
+        ),
+        matching: find.byKey(BirbReviewThreadKeys.resolutionAction),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(BirbReviewThreadKeys.errorStatus), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(
+          BirbReviewHarnessKeys.thread(BirbReviewFixtures.lineThread),
+        ),
+        matching: find.byKey(BirbReviewThreadKeys.errorStatus),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('two overlapping submissions both complete', (tester) async {
+    useViewport(tester, const Size(1200, 1400));
+    await tester.pumpWidget(host(delay: const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+
+    Future<void> startReply(Key composerKey, String text) async {
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(composerKey),
+          matching: find.byType(TextField),
+        ),
+        text,
+      );
+      await tester.pump();
+      // Activate directly: settling would let the fake clock complete the
+      // first submission before the second starts.
+      tester
+          .widget<FilledButton>(
+            find.descendant(
+              of: find.byKey(composerKey),
+              matching: find.byKey(BirbReviewComposerKeys.submitAction),
+            ),
+          )
+          .onPressed!();
+      await tester.pump();
+    }
+
+    await startReply(
+      BirbReviewHarnessKeys.replyComposer(BirbReviewFixtures.lineThread),
+      'Reply to the line thread',
+    );
+    await startReply(
+      BirbReviewHarnessKeys.replyComposer(BirbReviewFixtures.generalThread),
+      'Reply to the general thread',
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reply to the line thread'), findsOneWidget);
+    expect(find.text('Reply to the general thread'), findsOneWidget);
+    expect(find.text('You · just now'), findsNWidgets(2));
+  });
+
+  test('every fixture file has a snapshot', () {
+    expect(birbReviewFixtureState().debugAssertConsistent, returnsNormally);
+  });
+
   testWidgets('host loading and retry surround the diff', (tester) async {
     useViewport(tester, const Size(1200, 1400));
     await tester.pumpWidget(host(delay: const Duration(seconds: 1)));
@@ -464,7 +569,7 @@ void main() {
     }
   });
 
-  testWidgets('keyboard traversal reaches the diff and the composer', (
+  testWidgets('keyboard traversal reaches the diff navigation region', (
     tester,
   ) async {
     useViewport(tester, const Size(1200, 1400));

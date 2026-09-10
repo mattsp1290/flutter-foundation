@@ -40,8 +40,8 @@ abstract final class BirbReviewStyle {
     final body = theme.textTheme.bodyMedium ?? const TextStyle();
     return body.copyWith(
       color: theme.colorScheme.onSurface,
-      fontFamily: codeFontFamilyFallback.last,
-      fontFamilyFallback: codeFontFamilyFallback,
+      fontFamily: codeFontFamilyFallback.first,
+      fontFamilyFallback: codeFontFamilyFallback.sublist(1),
       fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
     );
   }
@@ -164,6 +164,10 @@ abstract final class BirbReviewStyle {
         BirbReviewFileChange.renamed => 'Renamed',
       };
 
+  /// The 1 px top boundary above a hunk heading. See `DESIGN.md` section 9.2.
+  static Border hunkHeadingBorder(ThemeData theme) =>
+      Border(top: objectSide(theme));
+
   /// The boundary around one meaningful grouped object.
   static BorderSide objectSide(ThemeData theme) =>
       BorderSide(color: theme.colorScheme.outline, width: BirbBorders.thin);
@@ -172,6 +176,12 @@ abstract final class BirbReviewStyle {
   ///
   /// Flutter does not lay tabs out as columns, so display text is expanded
   /// while `Copy source line` keeps the original characters.
+  ///
+  /// A column is counted as one Unicode code point. Fullwidth, combining, and
+  /// multi-code-point emoji text therefore reaches a tab stop that does not
+  /// match its rendered advance. Such text still renders and copies correctly;
+  /// only its alignment to the four-column grid is approximate. See
+  /// `DESIGN.md` section 9.1.
   static String expandTabs(String text, {int tabSize = codeTabSize}) {
     if (tabSize < 1) {
       throw ArgumentError.value(tabSize, 'tabSize', 'must be positive');

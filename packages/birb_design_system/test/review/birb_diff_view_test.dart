@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
@@ -215,6 +215,78 @@ void main() {
         ),
       );
       expect(find.byIcon(BirbReviewStyle.selectedRowIcon), findsNothing);
+    });
+  });
+
+  group('assistive technology', () {
+    testWidgets('a row is activatable and moves the active line', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpDiff(
+        tester,
+        snapshot: modifiedSnapshot(),
+        onCommentRequested: (_) {},
+      );
+
+      final row = find.semantics.byPredicate(
+        (node) => node.label.startsWith('Added new line 11'),
+      );
+      expect(
+        row.evaluate().single.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+
+      tester.semantics.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment on added line 11'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('a row label states the kind and numbers once', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpDiff(tester, snapshot: modifiedSnapshot());
+
+      final label = tester
+          .getSemantics(
+            find
+                .descendant(
+                  of: find.byKey(BirbDiffViewKeys.line('line-context-10')),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          )
+          .getSemanticsData()
+          .label;
+      expect(label, startsWith('Unchanged old line 10, new line 10'));
+      // The gutter must not repeat the numbers or read the sign glyph aloud.
+      expect('10'.allMatches(label).length, 2);
+      expect(label, isNot(contains('+')));
+      handle.dispose();
+    });
+
+    testWidgets('the no-final-newline marker is rendered, not just modelled', (
+      tester,
+    ) async {
+      await pumpDiff(tester, snapshot: modifiedSnapshot());
+      await tester.tap(find.byKey(BirbDiffViewKeys.line('line-context-13')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Unchanged old line 12, new line 13 · No newline at end of file',
+        ),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('the active line description is a live region', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpDiff(tester, snapshot: modifiedSnapshot());
+      final data = tester
+          .getSemantics(find.byKey(BirbDiffViewKeys.activeLineDescription))
+          .getSemanticsData();
+      expect(data.flagsCollection.isLiveRegion, isTrue);
+      handle.dispose();
     });
   });
 
@@ -489,6 +561,27 @@ void main() {
       );
     });
 
+    testWidgets('a tap focuses the navigation region so arrows keep working', (
+      tester,
+    ) async {
+      await pumpDiff(
+        tester,
+        snapshot: modifiedSnapshot(),
+        onCommentRequested: (_) {},
+      );
+
+      await tester.tap(find.byKey(BirbDiffViewKeys.line('line-deleted-11')));
+      await tester.pumpAndSettle();
+      expect(
+        focusIsInside(find.byKey(BirbDiffViewKeys.navigationRegion)),
+        isTrue,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment on added line 11'), findsOneWidget);
+    });
+
     testWidgets('Left and Right scroll the source column', (tester) async {
       await pumpDiff(tester, snapshot: largeSnapshot(lineCount: 40));
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
@@ -748,6 +841,59 @@ void main() {
       );
       expect(strip.controller!.position.maxScrollExtent, greaterThan(1000));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the source can scroll to the end of the widest line in '
+        'both layouts', (tester) async {
+      for (final layout in <({Size size, double scale})>[
+        (size: const Size(800, 600), scale: 1),
+        (size: const Size(320, 600), scale: 2),
+      ]) {
+        tester.view
+          ..physicalSize = layout.size
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpDiff(
+          tester,
+          key: ValueKey<String>('layout-${layout.size.width}'),
+          snapshot: largeSnapshot(lineCount: 20),
+          textScale: layout.scale,
+        );
+
+        // The visible width of one row's clipped source viewport.
+        final viewport = tester
+            .getSize(
+              find
+                  .descendant(
+                    of: find.byKey(BirbDiffViewKeys.line('large-line-1')),
+                    matching: find.byType(ClipRect),
+                  )
+                  .first,
+            )
+            .width;
+        final strip = tester.widget<Scrollable>(
+          find.descendant(
+            of: find.byKey(BirbDiffViewKeys.horizontalScroll),
+            matching: find.byType(Scrollable),
+          ),
+        );
+
+        // Recomputed independently: the whole widest line must be reachable.
+        final painter = TextPainter(
+          text: TextSpan(
+            text: 'x' * 2000,
+            style: BirbReviewStyle.codeTextStyle(BirbTheme.light),
+          ),
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.linear(layout.scale),
+        )..layout();
+
+        expect(
+          strip.controller!.position.maxScrollExtent + viewport,
+          greaterThanOrEqualTo(painter.width - 0.5),
+          reason: 'layout ${layout.size} at ${layout.scale}x',
+        );
+      }
     });
 
     testWidgets('focus returns to the navigation region when pointer '

@@ -21,6 +21,26 @@ final class BirbReviewComposerLabels {
   final String cancelAction;
   final String pendingLabel;
   final String blankDraftError;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BirbReviewComposerLabels &&
+      other.caption == caption &&
+      other.hint == hint &&
+      other.submitAction == submitAction &&
+      other.cancelAction == cancelAction &&
+      other.pendingLabel == pendingLabel &&
+      other.blankDraftError == blankDraftError;
+
+  @override
+  int get hashCode => Object.hash(
+    caption,
+    hint,
+    submitAction,
+    cancelAction,
+    pendingLabel,
+    blankDraftError,
+  );
 }
 
 /// Stable lookup keys for [BirbReviewComposer].
@@ -35,6 +55,8 @@ abstract final class BirbReviewComposerKeys {
   static const ValueKey<String> cancelAction = ValueKey<String>(
     'birb-review-composer-cancel',
   );
+
+  /// The submit label, which becomes the live progress region while pending.
   static const ValueKey<String> pendingStatus = ValueKey<String>(
     'birb-review-composer-pending',
   );
@@ -124,9 +146,15 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
       widget.controller.addListener(_handleDraftChange);
       _rejectedBlankDraft = false;
     }
-    // Any host rebuild acknowledges the pending activation, whether the host
-    // accepted the submission or rejected it.
-    _awaitingHostRebuild = false;
+    // Only an observable acknowledgement re-arms submission — an unrelated
+    // ancestor rebuild must not reopen the guard.
+    if (widget.isSubmitting != oldWidget.isSubmitting ||
+        widget.errorText != oldWidget.errorText ||
+        widget.enabled != oldWidget.enabled ||
+        widget.onSubmit != oldWidget.onSubmit ||
+        widget.controller != oldWidget.controller) {
+      _awaitingHostRebuild = false;
+    }
   }
 
   @override
@@ -194,14 +222,20 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
                       dimension: BirbSpacing.space4,
                       child: CircularProgressIndicator(
                         strokeWidth: BirbBorders.strong,
-                        color: theme.disabledColor,
+                        color: theme.colorScheme.onSurface,
                       ),
                     )
                   : const Icon(Icons.send_outlined),
-              label: Text(
-                widget.isSubmitting
-                    ? widget.labels.pendingLabel
-                    : widget.labels.submitAction,
+              // The visible label is the live region, so progress is announced
+              // once and stays navigable.
+              label: Semantics(
+                key: BirbReviewComposerKeys.pendingStatus,
+                liveRegion: widget.isSubmitting,
+                child: Text(
+                  widget.isSubmitting
+                      ? widget.labels.pendingLabel
+                      : widget.labels.submitAction,
+                ),
               ),
             ),
             if (widget.onCancel != null)
@@ -215,14 +249,6 @@ class _BirbReviewComposerState extends State<BirbReviewComposer> {
               ),
           ],
         ),
-        if (widget.isSubmitting)
-          Semantics(
-            key: BirbReviewComposerKeys.pendingStatus,
-            container: true,
-            liveRegion: true,
-            label: widget.labels.pendingLabel,
-            child: const SizedBox.shrink(),
-          ),
       ],
     );
   }

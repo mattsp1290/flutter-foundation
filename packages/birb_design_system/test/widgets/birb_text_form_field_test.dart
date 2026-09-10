@@ -388,6 +388,9 @@ void main() {
       expect(editor.minLines, 3);
       expect(editor.maxLines, 8);
       expect(editor.readOnly, isFalse);
+
+      await _pumpMultilineField(tester, readOnly: true);
+      expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
     });
 
     testWidgets('a multiline draft wraps and grows to maxLines then scrolls', (
@@ -447,6 +450,7 @@ void main() {
           .getSemantics(find.byType(TextField))
           .getSemanticsData();
       expect(readOnlyData.flagsCollection.isEnabled, isNot(Tristate.isFalse));
+      expect(readOnlyData.flagsCollection.isReadOnly, isTrue);
 
       await _pumpMultilineField(tester, enabled: false);
       final disabledData = tester
@@ -462,8 +466,12 @@ void main() {
       await _pumpMultilineField(tester, errorText: 'Reply is too long');
       expect(find.text('Reply is too long'), findsOneWidget);
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Error: Reply is too long')),
-        isNotNull,
+        tester
+            .getSemantics(find.bySemanticsLabel('Error: Reply is too long'))
+            .getSemanticsData()
+            .flagsCollection
+            .isLiveRegion,
+        isTrue,
       );
     });
 

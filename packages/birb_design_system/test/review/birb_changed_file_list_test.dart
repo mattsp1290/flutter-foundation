@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
@@ -79,6 +79,54 @@ void main() {
         )
         .getSemanticsData();
     expect(unselectedData.flagsCollection.isSelected, Tristate.isFalse);
+    handle.dispose();
+  });
+
+  testWidgets('an item is activatable by assistive technology', (tester) async {
+    final handle = tester.ensureSemantics();
+    final chosen = <String>[];
+    await tester.pumpWidget(
+      themedHost(
+        SingleChildScrollView(
+          child: BirbChangedFileList(
+            files: <BirbReviewFile>[textFile, addedFile],
+            onFileSelected: chosen.add,
+          ),
+        ),
+      ),
+    );
+
+    final item = find.semantics.byPredicate(
+      (node) => node.label.startsWith('${textFile.path},'),
+    );
+    expect(
+      item.evaluate().single.getSemanticsData().hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+
+    tester.semantics.tap(item);
+    await tester.pumpAndSettle();
+    expect(chosen, <String>[textFile.id]);
+    handle.dispose();
+  });
+
+  testWidgets('a disabled item advertises no tap action', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      themedHost(
+        SingleChildScrollView(
+          child: BirbChangedFileList(files: <BirbReviewFile>[textFile]),
+        ),
+      ),
+    );
+
+    final data = tester
+        .getSemantics(
+          find.bySemanticsLabel(RegExp('^${RegExp.escape(textFile.path)},')),
+        )
+        .getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isFalse);
+    expect(data.flagsCollection.isEnabled, Tristate.isFalse);
     handle.dispose();
   });
 
