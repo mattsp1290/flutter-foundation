@@ -6,7 +6,7 @@ flutter_bin=${FLUTTER_BIN:-flutter}
 flutter_root=$($flutter_bin --version --machine | sed -n \
   's/^[[:space:]]*"flutterRoot":[[:space:]]*"\([^"]*\)",*$/\1/p')
 [ -n "$flutter_root" ] || { echo 'unable to locate Flutter SDK root' >&2; exit 1; }
-dart_bin=${DART_BIN:-"$flutter_root/bin/cache/dart-sdk/bin/dart"}
+dart_bin="$flutter_root/bin/cache/dart-sdk/bin/dart"
 [ -x "$dart_bin" ] || { echo 'Flutter bundled Dart is unavailable' >&2; exit 1; }
 command -v chromedriver >/dev/null
 command -v timeout >/dev/null
