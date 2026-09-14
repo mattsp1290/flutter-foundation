@@ -38,6 +38,5 @@ address=$(cat "$ready_file")
 
 cd "$root/examples/generic_ag_ui"
 timeout 600 "$flutter_bin" test -d chrome \
-  --web-browser-flag=--disable-gpu \
   integration_test/session_flow_test.dart \
   --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"
