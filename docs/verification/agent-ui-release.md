@@ -9,11 +9,13 @@ feature branch. F1 was resolved, analyzed, and tested by a clean Git consumer
 with Flutter 3.47.1 / bundled Dart 3.13.1. Browser acceptance requires Chrome
 and Chromedriver and is not evidence of iOS, Android, Rook, or Benchy delivery.
 
-F3 started at `7ddc4edfa3e1732c1114797fdc88e89976b47dfb` and composes the
-published F1/F2 descriptors with the unchanged public Birb design-system API.
-The current branch also contains its follow-up source-reference and design-audit
-fixes. The final release commit is recorded only after the final root gate and
-fresh full-tuple consumer complete; no pub.dev release is claimed.
+F3 is `6bf9c31f4262176c23257036c605b15800510c43`. It composes the published
+F1/F2 descriptors and pins the unchanged public Birb design-system API to the
+reachable Git commit `6482d5bdd5f8e61d66264db274fb2b3c3d36bfc0`; it does not
+assume a pub.dev release. A fresh temporary consumer declared only F3 from its
+Git URL/path and, with Flutter 3.47.1 / bundled Dart 3.13.1, successfully ran
+`flutter pub get` and resolved F3, F2, F1, AG-UI, and Birb design system.
+The final release commit is recorded only after the final root gate completes.
 
 Local evidence uses Flutter 3.47.1 and its bundled Dart 3.13.1. It includes
 static-fixture hash/privacy/bounds/lifecycle tests, package and example tests,
