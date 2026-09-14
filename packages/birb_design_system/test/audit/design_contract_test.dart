@@ -16,7 +16,8 @@ void main() {
       matches(
         RegExp(
           r'governs authored user-interface work under\s+'
-          r'`packages/birb_design_system/` and `examples/catalog/`',
+          r'`packages/birb_design_system/`, `packages/birb_ag_ui_widgets/`,\s+'
+          r'`examples/catalog/`, and `examples/benchy_contract/`',
         ),
       ),
     );
@@ -75,6 +76,8 @@ void main() {
       'Semantic-role consumption boundary',
       'Code review components',
       'Simulated review host',
+      'Birb agent conversation shell, transcript/source states, composer/stop, persistent host action, and error live region',
+      'Synthetic host-authority fixture',
     });
     expect(_tableFirstColumn(contract, 'Component/state'), <String>{
       'scaffold',
