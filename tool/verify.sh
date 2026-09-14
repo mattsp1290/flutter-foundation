@@ -41,6 +41,12 @@ run_step 'Test birb_appearance scaffold' \
   run_package_tests packages/birb_appearance
 run_step 'Test ag_ui_view_state' \
   sh -c 'cd packages/ag_ui_view_state && "$0" test' "$flutter_dart"
+run_step 'Test ag_ui_widgets' run_package_tests packages/ag_ui_widgets
+run_step 'Test birb_ag_ui_widgets' run_package_tests packages/birb_ag_ui_widgets
+run_step 'Test generic AG-UI example' run_package_tests examples/generic_ag_ui
+run_step 'Build generic AG-UI web runner' sh -c \
+  'cd examples/generic_ag_ui && flutter build web'
+run_step 'Test Benchy contract fixture' run_package_tests examples/benchy_contract
 run_step 'Test catalog scaffold' run_package_tests examples/catalog
 run_step 'Build catalog web runner' sh -c \
   'cd examples/catalog && flutter build web'
