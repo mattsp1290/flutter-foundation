@@ -43,7 +43,10 @@ sleep 1
 kill -0 "$driver_pid" 2>/dev/null || { cat "$temp_dir/chromedriver.log" >&2; exit 1; }
 
 cd "$root/examples/generic_ag_ui"
-timeout 600 "$flutter_bin" drive -d chrome --headless \
+if ! timeout 600 "$flutter_bin" drive -d chrome --headless \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/session_flow_test.dart \
-  --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"
+  --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"; then
+  cat "$temp_dir/chromedriver.log" >&2
+  exit 1
+fi
