@@ -70,8 +70,7 @@ final class _SourceReferenceTile extends StatelessWidget {
                   SelectionArea(
                     child: Text(
                       _numberedPassage(reference),
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(fontFamily: 'monospace'),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                   if (reference.availability !=

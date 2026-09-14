@@ -18,16 +18,8 @@ final class GenericExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Generic AG-UI example',
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-    ),
-    darkTheme: ThemeData(
-      brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.indigo,
-        brightness: Brightness.dark,
-      ),
-    ),
+    theme: ThemeData.light(),
+    darkTheme: ThemeData.dark(),
     home: const _GenericHome(),
   );
 }
