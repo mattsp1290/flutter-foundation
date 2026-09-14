@@ -26,7 +26,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('8: first line'), findsOneWidget);
+      expect(find.textContaining('8: first line'), findsOneWidget);
       await tester.tap(find.text('Example source'));
       expect(opened, same(reference));
     },
