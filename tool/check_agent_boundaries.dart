@@ -36,8 +36,10 @@ void main(List<String> arguments) {
       return value != null && (value.startsWith('/') || value.contains('..'));
     });
     if (hasLocalPath ||
-        RegExp(r'^\s*dependency_overrides:', multiLine: true)
-            .hasMatch(manifestText)) {
+        RegExp(
+          r'^\s*dependency_overrides:',
+          multiLine: true,
+        ).hasMatch(manifestText)) {
       failures.add('$package must not use path dependencies or overrides');
     }
     final library = Directory('${packageDirectory.path}/lib');
