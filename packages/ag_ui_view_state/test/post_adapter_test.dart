@@ -136,6 +136,22 @@ void main() {
     await adapter.start(const SimpleRunAgentInput());
     expect(adapter.isBusy, isFalse);
   });
+
+  test('a disposed controller does not leave the adapter busy', () async {
+    final controller = AgentViewController();
+    await controller.dispose();
+    final adapter = AgUiPostAdapter(
+      controller: controller,
+      transport: _ThrowingTransport(),
+      endpoint: Uri.parse('https://example.invalid/run'),
+    );
+
+    await expectLater(
+      adapter.start(const SimpleRunAgentInput()),
+      throwsStateError,
+    );
+    expect(adapter.isBusy, isFalse);
+  });
 }
 
 final class _FakeTransport implements RequestTransport {

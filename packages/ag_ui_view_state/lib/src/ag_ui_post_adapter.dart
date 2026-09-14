@@ -57,8 +57,8 @@ final class AgUiPostAdapter {
       return;
     }
 
-    _busy = true;
     final generation = controller.beginRequest();
+    _busy = true;
     SseRequestSession? session;
     final done = Completer<void>();
     var terminal = false;
