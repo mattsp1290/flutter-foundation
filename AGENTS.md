@@ -8,9 +8,11 @@ packages and one catalog application.
 - `packages/birb_design_system/`: design tokens, themes, components, preview
   fixtures, and source-audit APIs.
 - `packages/birb_appearance/`: appearance storage, controller, and selector.
+- `packages/ag_ui_view_state/`: pure-Dart bounded AG-UI presentation state.
 - `examples/catalog/`: web and macOS integration and visual verification app.
 - `docs/`: source provenance, release evidence, and package guidance.
 - `tool/`: repository validation entry points.
+- `testdata/ag_ui/`: static generic AG-UI decoder and privacy fixtures.
 - `.agents/plans/`: implementation-plan inputs. Do not stage these files as
   implementation output unless a queue contract explicitly includes them.
 

@@ -7,7 +7,9 @@ environment:
 workspace:
   - packages/birb_design_system
   - packages/birb_appearance
+  - packages/ag_ui_view_state
   - examples/catalog
 
 dev_dependencies:
+  crypto: ^3.0.7
   flutter_lints: ^6.0.0

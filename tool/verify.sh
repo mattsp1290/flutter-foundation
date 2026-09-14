@@ -33,11 +33,14 @@ run_step 'Check Dart formatting' \
   "$flutter_dart" format --output=none --set-exit-if-changed .
 run_step 'Audit design-system source' \
   "$flutter_dart" run packages/birb_design_system/bin/check_design_system.dart .
+run_step 'Verify AG-UI fixtures' "$flutter_dart" run tool/verify_agent_fixtures.dart
 run_step 'Analyze workspace' flutter analyze
 run_step 'Test birb_design_system scaffold' \
   run_package_tests packages/birb_design_system
 run_step 'Test birb_appearance scaffold' \
   run_package_tests packages/birb_appearance
+run_step 'Test ag_ui_view_state' \
+  sh -c 'cd packages/ag_ui_view_state && "$0" test' "$flutter_dart"
 run_step 'Test catalog scaffold' run_package_tests examples/catalog
 run_step 'Build catalog web runner' sh -c \
   'cd examples/catalog && flutter build web'

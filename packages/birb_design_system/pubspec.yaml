@@ -17,7 +17,9 @@ dependencies:
     sdk: flutter
 
 dev_dependencies:
-  analyzer: ^14.3.0
+  # Flutter 3.47.1's flutter_test pins test_api 0.7.12, whose compatible
+  # package-test release requires analyzer <14.
+  analyzer: '>=8.0.0 <14.0.0'
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
