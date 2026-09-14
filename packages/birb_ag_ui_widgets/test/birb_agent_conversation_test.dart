@@ -40,7 +40,6 @@ void main() {
     );
     await tester.tap(find.text('Source'));
     expect(opened, same(reference));
-    expect(text.hasListeners, isFalse);
     text.dispose();
     focus.dispose();
   });

@@ -65,8 +65,8 @@ final class BirbAgentConversation extends StatelessWidget {
       ),
       child: Column(
         children: [
-          if (header != null) header!,
-          if (persistentHostAction != null) persistentHostAction!,
+          ?header,
+          ?persistentHostAction,
           Expanded(
             child: TranscriptView(
               messages: state.messages,
@@ -77,7 +77,7 @@ final class BirbAgentConversation extends StatelessWidget {
             ),
           ),
           ToolActivityList(tools: state.tools, runPhase: state.runPhase),
-          if (approval != null) approval!,
+          ?approval,
           if (state.failure case final failure?)
             Semantics(
               liveRegion: true,
@@ -96,7 +96,7 @@ final class BirbAgentConversation extends StatelessWidget {
               interruptLabel: labels.stop,
             ),
           ),
-          if (footer != null) footer!,
+          ?footer,
         ],
       ),
     );

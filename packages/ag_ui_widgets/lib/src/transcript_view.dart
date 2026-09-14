@@ -1,6 +1,8 @@
 import 'package:ag_ui_view_state/ag_ui_view_state.dart';
 import 'package:flutter/material.dart';
 
+import 'source_reference_list.dart';
+
 final class TranscriptView extends StatefulWidget {
   const TranscriptView({
     required this.messages,
@@ -127,7 +129,6 @@ final class _MessageRow extends StatelessWidget {
   const _MessageRow({
     required this.message,
     required this.liveUnavailableLabel,
-    super.key,
   });
 
   final MessageView message;
