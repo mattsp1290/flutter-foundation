@@ -8,15 +8,14 @@ flutter_root=$($flutter_bin --version --machine | sed -n \
 [ -n "$flutter_root" ] || { echo 'unable to locate Flutter SDK root' >&2; exit 1; }
 dart_bin="$flutter_root/bin/cache/dart-sdk/bin/dart"
 [ -x "$dart_bin" ] || { echo 'Flutter bundled Dart is unavailable' >&2; exit 1; }
-command -v chromedriver >/dev/null
+command -v google-chrome >/dev/null
 command -v timeout >/dev/null
 
 temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/generic-ag-ui.XXXXXX")
 ready_file="$temp_dir/server-address"
 server_pid=''
-driver_pid=''
 cleanup() {
-  for pid in "$driver_pid" "$server_pid"; do
+  for pid in "$server_pid"; do
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
       kill "$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
@@ -37,13 +36,8 @@ while [ ! -s "$ready_file" ]; do
 done
 address=$(cat "$ready_file")
 
-chromedriver --port=4444 --url-base=/wd/hub >"$temp_dir/chromedriver.log" 2>&1 &
-driver_pid=$!
-sleep 1
-kill -0 "$driver_pid" 2>/dev/null || { cat "$temp_dir/chromedriver.log" >&2; exit 1; }
-
 cd "$root/examples/generic_ag_ui"
-timeout 180 "$flutter_bin" drive -d web-server \
+timeout 600 "$flutter_bin" drive -d chrome --headless \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/session_flow_test.dart \
   --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"
