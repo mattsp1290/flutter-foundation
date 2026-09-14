@@ -37,6 +37,7 @@ done
 address=$(cat "$ready_file")
 
 cd "$root/examples/generic_ag_ui"
-timeout 600 "$flutter_bin" test -d chrome \
-  integration_test/session_flow_test.dart \
+timeout 600 "$flutter_bin" drive -d chrome --headless \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/session_flow_test.dart \
   --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"
