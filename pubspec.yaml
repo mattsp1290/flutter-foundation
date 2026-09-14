@@ -9,8 +9,10 @@ workspace:
   - packages/birb_appearance
   - packages/ag_ui_view_state
   - packages/ag_ui_widgets
+  - packages/birb_ag_ui_widgets
   - examples/catalog
   - examples/generic_ag_ui
+  - examples/benchy_contract
 
 dev_dependencies:
   crypto: ^3.0.7

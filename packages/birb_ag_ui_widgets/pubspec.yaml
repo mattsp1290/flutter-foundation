@@ -1,0 +1,29 @@
+name: birb_ag_ui_widgets
+description: Birb design-system composition for controlled AG-UI widgets.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.13.1 <4.0.0'
+  flutter: '>=3.47.1'
+
+dependencies:
+  ag_ui_view_state:
+    git:
+      url: https://github.com/mattsp1290/flutter-foundation.git
+      ref: 3f29e39177f9201dfb503643a3fe4c21fb755989
+      path: packages/ag_ui_view_state
+  ag_ui_widgets:
+    git:
+      url: https://github.com/mattsp1290/flutter-foundation.git
+      ref: b27b7ff6273a2e65e4267f078a86e281323400ce
+      path: packages/ag_ui_widgets
+  birb_design_system: ^0.1.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
