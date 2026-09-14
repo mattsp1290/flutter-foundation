@@ -160,6 +160,10 @@ final class AgentViewController {
     _ensureMutable();
     _state = next;
     if (_notifying) return;
+    _notifyListeners();
+  }
+
+  void _notifyListeners() {
     _notifying = true;
     var listenerFailed = false;
     try {
@@ -174,10 +178,13 @@ final class AgentViewController {
     } finally {
       _notifying = false;
     }
-    if (listenerFailed && !_disposed) {
+    if (listenerFailed &&
+        !_disposed &&
+        _state.failure?.kind != ViewFailureKind.hostCallbackFailed) {
       _state = _state.copyWith(
         failure: const ViewFailure(ViewFailureKind.hostCallbackFailed),
       );
+      _notifyListeners();
     }
   }
 

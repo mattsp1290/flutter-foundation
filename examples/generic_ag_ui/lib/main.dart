@@ -125,7 +125,7 @@ final class _GenericHomeState extends State<_GenericHome> {
     _canonicalHistory.add(UserMessage(id: 'user-$_turn', content: text));
     await _adapter.start(
       SimpleRunAgentInput(
-        threadId: 'generic-example',
+        threadId: 'browser-thread',
         runId: 'run-$_turn',
         messages: List.unmodifiable(_canonicalHistory),
       ),

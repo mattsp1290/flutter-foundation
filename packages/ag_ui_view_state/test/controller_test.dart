@@ -35,4 +35,16 @@ void main() {
     expect(controller.state.toSafeJson().toString(), isNot(contains('canary')));
     expect(generation, controller.generation);
   });
+
+  test('surviving listeners receive a host callback failure state', () {
+    final controller = AgentViewController();
+    final received = <AgentViewState>[];
+    controller.addListener((_) => throw StateError('host listener failed'));
+    controller.addListener(received.add);
+
+    controller.beginRequest();
+
+    expect(received, hasLength(2));
+    expect(received.last.failure?.kind, ViewFailureKind.hostCallbackFailed);
+  });
 }

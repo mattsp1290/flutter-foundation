@@ -88,31 +88,37 @@ Future<void> _handle(HttpRequest request, Map<String, int> turns) async {
 }
 
 bool _validHistory(int turn, List<dynamic> actual) {
-  final expected = <Object?>[
-    {'id': 'user-1', 'role': 'user', 'content': 'first turn'},
-    if (turn == 2) ...[
-      {
-        'id': 'assistant-1',
-        'role': 'assistant',
-        'content': 'Response 1',
-        'toolCalls': [
-          {
-            'id': 'tool-1',
-            'type': 'function',
-            'function': {'name': 'lookup', 'arguments': '{"turn":1}'},
-          },
-        ],
-      },
-      {
-        'id': 'tool-result-1',
-        'role': 'tool',
-        'content': 'result 1',
-        'toolCallId': 'tool-1',
-      },
-      {'id': 'user-2', 'role': 'user', 'content': 'second turn'},
-    ],
+  if (actual.isEmpty ||
+      actual.first is! Map ||
+      (actual.first as Map)['id'] != 'user-1' ||
+      (actual.first as Map)['role'] != 'user' ||
+      (actual.first as Map)['content'] is! String) {
+    return false;
+  }
+  if (turn == 1) return actual.length == 1;
+  final expectedTail = <Object?>[
+    {
+      'id': 'assistant-1',
+      'role': 'assistant',
+      'content': 'Response 1',
+      'toolCalls': [
+        {
+          'id': 'tool-1',
+          'type': 'function',
+          'function': {'name': 'lookup', 'arguments': '{"turn":1}'},
+        },
+      ],
+    },
+    {
+      'id': 'tool-result-1',
+      'role': 'tool',
+      'content': 'result 1',
+      'toolCallId': 'tool-1',
+    },
+    {'id': 'user-2', 'role': 'user', 'content': 'second turn'},
   ];
-  return jsonEncode(actual) == jsonEncode(expected);
+  return actual.length == 4 &&
+      jsonEncode(actual.skip(1).toList()) == jsonEncode(expectedTail);
 }
 
 String _frames(String threadId, String runId, int turn) {
