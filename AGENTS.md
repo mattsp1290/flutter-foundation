@@ -1,7 +1,7 @@
 # Flutter Foundation agent guide
 
-This repository is a Dart Pub workspace containing two reusable Flutter
-packages and one catalog application.
+This repository is a Dart Pub workspace containing reusable Flutter packages,
+one pure-Dart projection package, and catalog/contract applications.
 
 ## Repository map
 
@@ -9,7 +9,12 @@ packages and one catalog application.
   fixtures, and source-audit APIs.
 - `packages/birb_appearance/`: appearance storage, controller, and selector.
 - `packages/ag_ui_view_state/`: pure-Dart bounded AG-UI presentation state.
+- `packages/ag_ui_widgets/`: controlled generic Material agent widgets.
+- `packages/birb_ag_ui_widgets/`: thin Birb composition over the generic
+  agent widgets.
 - `examples/catalog/`: web and macOS integration and visual verification app.
+- `examples/generic_ag_ui/`: local deterministic POST/SSE browser fixture.
+- `examples/benchy_contract/`: synthetic host-authority consumer fixture.
 - `docs/`: source provenance, release evidence, and package guidance.
 - `tool/`: repository validation entry points.
 - `testdata/ag_ui/`: static generic AG-UI decoder and privacy fixtures.
@@ -33,6 +38,10 @@ Run the portable gate from the repository root:
 ```sh
 ./tool/verify.sh
 ```
+
+The gate requires `chromedriver`, `timeout`, and Chrome/Chromium because its
+generic browser POST/SSE integration is mandatory. CI installs these tools;
+local environments must do the same before running the full gate.
 
 For changes to generated macOS runner files, also run:
 

@@ -3,7 +3,10 @@
 ## 1. Purpose and authority
 
 This document governs authored user-interface work under
-`packages/birb_design_system/` and `examples/catalog/`. When two
+`packages/birb_design_system/`, `packages/birb_ag_ui_widgets/`,
+`examples/catalog/`, and `examples/benchy_contract/`. The latter two agent
+surfaces compose public APIs and consume semantic theme roles; they do not add
+new palette or component-token authority. When two
 directions conflict, use this order of authority:
 
 1. Accessibility requirements and platform semantics.
