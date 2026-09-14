@@ -9,6 +9,7 @@ flutter_root=$($flutter_bin --version --machine | sed -n \
 dart_bin="$flutter_root/bin/cache/dart-sdk/bin/dart"
 [ -x "$dart_bin" ] || { echo 'Flutter bundled Dart is unavailable' >&2; exit 1; }
 command -v chromedriver >/dev/null
+chromium_bin=$(command -v chromium 2>/dev/null || command -v google-chrome)
 command -v timeout >/dev/null
 
 temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/generic-ag-ui.XXXXXX")
@@ -44,6 +45,7 @@ kill -0 "$driver_pid" 2>/dev/null || { cat "$temp_dir/chromedriver.log" >&2; exi
 
 cd "$root/examples/generic_ag_ui"
 if ! timeout 600 "$flutter_bin" drive -d chrome --headless \
+  --chrome-binary="$chromium_bin" \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/session_flow_test.dart \
   --dart-define="AG_UI_ENDPOINT=http://$address/generic/run"; then
