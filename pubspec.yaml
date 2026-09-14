@@ -8,7 +8,9 @@ workspace:
   - packages/birb_design_system
   - packages/birb_appearance
   - packages/ag_ui_view_state
+  - packages/ag_ui_widgets
   - examples/catalog
+  - examples/generic_ag_ui
 
 dev_dependencies:
   crypto: ^3.0.7
