@@ -29,7 +29,6 @@ void main() {
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     BirbCodeTheme? selected;
     await tester.pumpWidget(
       MaterialApp(
@@ -55,6 +54,7 @@ void main() {
     await tester.tap(find.text('Dracula'));
     await tester.pumpAndSettle();
     expect(selected, BirbCodeTheme.dracula);
+    semantics.dispose();
   });
   testWidgets('gutter follows native wrapping at caret-width boundaries', (
     tester,
