@@ -20,6 +20,7 @@ class BirbChatMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
+    explicitChildNodes: true,
     label: author,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),

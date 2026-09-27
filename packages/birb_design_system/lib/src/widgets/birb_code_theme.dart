@@ -87,17 +87,21 @@ class BirbCodeThemeSelector extends StatelessWidget {
   final BirbCodeTheme value;
   final ValueChanged<BirbCodeTheme> onChanged;
   @override
-  Widget build(BuildContext context) => PopupMenuButton<BirbCodeTheme>(
-    tooltip: 'Editor theme',
-    initialValue: value,
-    onSelected: onChanged,
-    itemBuilder: (_) => [
-      for (final theme in BirbCodeTheme.values)
-        PopupMenuItem(value: theme, child: Text(theme.label)),
-    ],
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Text('Editor theme: ${value.label}'),
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    button: true,
+    child: PopupMenuButton<BirbCodeTheme>(
+      tooltip: 'Editor theme',
+      initialValue: value,
+      onSelected: onChanged,
+      itemBuilder: (_) => [
+        for (final theme in BirbCodeTheme.values)
+          PopupMenuItem(value: theme, child: Text(theme.label)),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('Editor theme: ${value.label}'),
+      ),
     ),
   );
 }

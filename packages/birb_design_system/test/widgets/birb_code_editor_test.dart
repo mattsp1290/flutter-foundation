@@ -25,6 +25,37 @@ void main() {
       });
     }
   }
+  testWidgets('preset trigger has its own button semantics and opens choices', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
+    BirbCodeTheme? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BirbTheme.light,
+        home: Scaffold(
+          body: Wrap(
+            children: [
+              BirbCodeThemeSelector(
+                value: BirbCodeTheme.foundation,
+                onChanged: (value) => selected = value,
+              ),
+              TextButton(onPressed: () {}, child: const Text('Other control')),
+            ],
+          ),
+        ),
+      ),
+    );
+    final node = tester.getSemantics(find.byType(BirbCodeThemeSelector));
+    expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+    expect(node.rect.width, lessThan(400));
+    await tester.tap(find.text('Editor theme: Foundation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dracula'));
+    await tester.pumpAndSettle();
+    expect(selected, BirbCodeTheme.dracula);
+  });
   testWidgets('gutter follows native wrapping at caret-width boundaries', (
     tester,
   ) async {
