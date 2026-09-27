@@ -35,6 +35,8 @@ run_step 'Audit design-system source' \
   "$flutter_dart" run packages/birb_design_system/bin/check_design_system.dart .
 run_step 'Verify AG-UI fixtures' "$flutter_dart" run tool/verify_agent_fixtures.dart
 run_step 'Audit AG-UI package boundaries' "$flutter_dart" run tool/check_agent_boundaries.dart
+run_step 'Audit editor package boundaries' "$flutter_dart" run tool/check_editor_boundaries.dart
+run_step 'Test isolated editor harness' python3 -m unittest tool.test.test_editor_harness
 run_step 'Analyze workspace' flutter analyze
 run_step 'Qualify birb_code_editor engine' \
   run_package_tests packages/birb_code_editor

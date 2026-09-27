@@ -1,0 +1,140 @@
+import 'package:birb_code_editor/birb_code_editor.dart';
+// DESIGN_IMPORT
+import 'package:flutter/material.dart';
+
+const fixtureSource =
+    'package main\r\n\r\nfunc main() {\n\tprintln("hello", 42)\r}\n';
+
+void main() => runApp(const EditorFixture());
+
+class EditorFixture extends StatefulWidget {
+  const EditorFixture({super.key});
+  @override
+  State<EditorFixture> createState() => EditorFixtureState();
+}
+
+class EditorFixtureState extends State<EditorFixture> {
+  final controller = BirbEditorController(
+    documentId: 'fixture',
+    source: fixtureSource,
+  );
+  final second = BirbEditorController(
+    documentId: 'independent',
+    source: 'package second\n',
+  );
+  final focus = FocusNode();
+  String recovered = fixtureSource;
+  bool dark = false;
+  bool attached = true;
+  bool providers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.addTextListener((snapshot) {
+      recovered = snapshot.source;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    focus.dispose();
+    controller.dispose();
+    second.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    /* DESIGN_THEME */
+    themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+    home: Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Wrap(
+              children: [
+                TextButton(
+                  onPressed: () => setState(() => dark = !dark),
+                  child: const Text('Theme'),
+                ),
+                TextButton(
+                  onPressed: () => setState(
+                    () => controller.setReadOnly(!controller.snapshot.readOnly),
+                  ),
+                  child: const Text('Readonly'),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => providers = !providers),
+                  child: const Text('Providers'),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => attached = !attached),
+                  child: const Text('Attach'),
+                ),
+                TextButton(
+                  onPressed: () => controller.replaceDocument(
+                    documentId: 'fixture',
+                    source: recovered,
+                  ),
+                  child: const Text('Reload recovery'),
+                ),
+              ],
+            ),
+            Text(
+              'Recovery: ${recovered.length}; generation: ${controller.snapshot.generation}',
+              key: const ValueKey('recovery'),
+            ),
+            Expanded(
+              child: attached
+                  ? BirbSourceEditor(
+                      controller: controller,
+                      focusNode: focus,
+                      label: 'Primary source',
+                      provider: providers ? const FixtureProvider() : null,
+                    )
+                  : const Text('Detached'),
+            ),
+            SizedBox(
+              height: 180,
+              child: BirbSourceEditor(
+                controller: second,
+                label: 'Independent source',
+              ),
+            ),
+            TextButton(onPressed: () {}, child: const Text('Outside editor')),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class FixtureProvider implements BirbEditorProvider {
+  const FixtureProvider();
+  @override
+  Future<List<BirbEditorCompletion>> complete(BirbEditorRequest request) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    return [
+      BirbEditorCompletion(
+        label: 'println',
+        edit: BirbEditorEdit(
+          range: TextRange.collapsed(request.position),
+          text: 'println',
+        ),
+      ),
+    ];
+  }
+
+  @override
+  Future<BirbEditorHover?> hover(BirbEditorRequest request) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    return const BirbEditorHover(text: 'Deterministic fixture hover');
+  }
+
+  @override
+  Future<List<BirbEditorDiagnostic>> diagnose(
+    BirbEditorRequest request,
+  ) async => const [];
+}

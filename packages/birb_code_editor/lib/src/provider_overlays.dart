@@ -112,6 +112,10 @@ class EditorCompletionList extends StatelessWidget {
     itemExtent: rowHeight(context),
     itemBuilder: (context, index) {
       final item = items[index];
+      final theme = Theme.of(context);
+      final foreground = index == selected
+          ? theme.colorScheme.onSecondaryContainer
+          : theme.colorScheme.onSurface;
       return Semantics(
         selected: index == selected,
         button: true,
@@ -131,13 +135,17 @@ class EditorCompletionList extends StatelessWidget {
                     item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: foreground,
+                    ),
                   ),
                   Text(
                     item.detail,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground,
+                    ),
                   ),
                 ],
               ),

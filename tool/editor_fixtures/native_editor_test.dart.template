@@ -1,0 +1,144 @@
+import 'dart:ui' show PointerDeviceKind;
+
+import 'package:birb_editor_platform_check/main.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('isolated consumer native input, recovery, clipboard and state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const EditorFixture());
+    await tester.pumpAndSettle();
+    final host = tester.state<EditorFixtureState>(find.byType(EditorFixture));
+    final modifier = defaultTargetPlatform == TargetPlatform.macOS
+        ? LogicalKeyboardKey.metaLeft
+        : LogicalKeyboardKey.controlLeft;
+    Future<void> shortcut(LogicalKeyboardKey key, {bool shift = false}) async {
+      await tester.sendKeyDownEvent(modifier);
+      if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(key);
+      if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(modifier);
+      await tester.pump();
+    }
+
+    // Pointer focuses the rendered source; keyboard and platform input perform edits.
+    final source = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics && widget.properties.label == 'Primary source',
+    );
+    await tester.tapAt(
+      tester.getTopLeft(source) + const Offset(160, 20),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    expect(host.focus.hasFocus, isTrue);
+    await shortcut(LogicalKeyboardKey.keyA);
+    await delta(tester, 'package main', 'package edited', 0, 12, 14);
+    expect(host.recovered, 'package edited');
+    expect(host.controller.snapshot.source, host.recovered);
+    await Future<void>.microtask(
+      () => expect(host.recovered, 'package edited'),
+    );
+    await delta(
+      tester,
+      'package edited',
+      '中',
+      8,
+      14,
+      9,
+      composing: const TextRange(start: 8, end: 9),
+    );
+    expect(host.recovered, 'package 中');
+    await delta(tester, 'package 中', '中文', 8, 9, 10);
+    expect(host.recovered, 'package 中文');
+    await shortcut(LogicalKeyboardKey.keyZ);
+    expect(host.recovered, 'package edited');
+    await shortcut(LogicalKeyboardKey.keyZ);
+    expect(host.recovered, fixtureSource);
+    await shortcut(LogicalKeyboardKey.keyZ, shift: true);
+    expect(host.recovered, 'package edited');
+    await shortcut(LogicalKeyboardKey.keyA);
+    await shortcut(LogicalKeyboardKey.keyC);
+    await tester.runAsync(() async {
+      expect(
+        (await Clipboard.getData(Clipboard.kTextPlain))?.text,
+        'package edited',
+      );
+      await Clipboard.setData(const ClipboardData(text: 'package pasted\r\n'));
+    });
+    await shortcut(LogicalKeyboardKey.keyV);
+    await tester.pumpAndSettle();
+    expect(host.recovered, 'package pasted\r\n');
+    final selected = host.controller.snapshot.selection;
+    final generation = host.controller.snapshot.generation;
+    await tester.tap(find.text('Theme'));
+    await tester.pumpAndSettle();
+    expect(host.controller.snapshot.generation, generation);
+    expect(host.controller.snapshot.selection, selected);
+    await tester.tap(find.text('Attach'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Attach'));
+    await tester.pumpAndSettle();
+    expect(host.controller.snapshot.source, 'package pasted\r\n');
+    host.focus.requestFocus();
+    await tester.pump();
+    await shortcut(LogicalKeyboardKey.keyZ);
+    expect(host.recovered, 'package edited');
+    await tester.tap(find.text('Readonly'));
+    await tester.pump();
+    host.focus.requestFocus();
+    await tester.pump();
+    await shortcut(LogicalKeyboardKey.keyV);
+    await shortcut(LogicalKeyboardKey.keyZ);
+    expect(host.recovered, 'package edited');
+    expect(host.second.snapshot.source, 'package second\n');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(host.focus.hasFocus, isFalse);
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
+    // CI must observe this marker as well as the driver's successful exit.
+    debugPrint('EDITOR_NATIVE_SUITE_PASS');
+  });
+}
+
+Future<void> delta(
+  WidgetTester tester,
+  String old,
+  String text,
+  int start,
+  int end,
+  int selection, {
+  TextRange composing = TextRange.empty,
+}) => tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+  SystemChannels.textInput.name,
+  const JSONMethodCodec().encodeMethodCall(
+    MethodCall('TextInputClient.updateEditingStateWithDeltas', [
+      -1,
+      {
+        'deltas': [
+          {
+            'oldText': old,
+            'deltaText': text,
+            'deltaStart': start,
+            'deltaEnd': end,
+            'selectionBase': selection,
+            'selectionExtent': selection,
+            'selectionAffinity': 'TextAffinity.downstream',
+            'selectionIsDirectional': false,
+            'composingBase': composing.start,
+            'composingExtent': composing.end,
+          },
+        ],
+      },
+    ]),
+  ),
+  (_) {},
+);
