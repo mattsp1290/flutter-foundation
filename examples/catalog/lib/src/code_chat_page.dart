@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
@@ -116,7 +118,13 @@ class _CodeChatPageState extends State<CodeChatPage> {
           ),
         ],
       ),
-      Text('Recovery: ${_recovery.length} UTF-16 units'),
+      Semantics(
+        label: const bool.fromEnvironment('BIRB_EDITOR_ACCEPTANCE')
+            ? 'Editor observation ${jsonEncode({'units': _recovery.codeUnits, 'length': _recovery.length, 'generation': _editor.snapshot.generation})}'
+            : null,
+        excludeSemantics: const bool.fromEnvironment('BIRB_EDITOR_ACCEPTANCE'),
+        child: Text('Recovery: ${_recovery.length} UTF-16 units'),
+      ),
       SizedBox(
         height: 520,
         child: BirbSourceEditor(

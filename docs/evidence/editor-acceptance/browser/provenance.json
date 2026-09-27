@@ -1,0 +1,10 @@
+{
+  "observed_at": "2026-09-27T21:20:51.186321+00:00",
+  "foundation_base": "16972fde41234fc309583301b0147d15492e1ba5",
+  "foundation_state": "W4 accessible-input working tree committed alongside this evidence",
+  "engine_ref": "44095948df411c1033e2f68f822e64ee9f07042d",
+  "flutter": "3.47.1",
+  "dart": "3.13.1",
+  "command": "./tool/run_editor_browser_integration.sh",
+  "scope": "Real ChromeDriver key/pointer events, local release assets; physical OS IME/screen reader not established"
+}

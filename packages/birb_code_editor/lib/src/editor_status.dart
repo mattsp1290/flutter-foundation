@@ -25,7 +25,7 @@ class EditorStatusBar extends StatelessWidget {
     final position = BirbSourceCoordinates(snapshot.source)
         .positionAt(snapshot.selection.extentOffset);
     final modifier = Theme.of(context).platform == TargetPlatform.macOS
-        ? '⌘'
+        ? 'Cmd'
         : 'Ctrl';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

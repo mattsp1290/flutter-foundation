@@ -1,0 +1,42 @@
+[
+  {
+    "editor_ready_ms_including_driver_and_semantics": 267.2000000178814,
+    "edited_generation": 15,
+    "external_origin_probe": "blocked",
+    "checks": [
+      "visible-input",
+      "same-source-recovery",
+      "empty-recovery",
+      "readonly",
+      "completion",
+      "undo",
+      "redo",
+      "offline-assets"
+    ],
+    "base_path": "/",
+    "device_pixel_ratio": 1,
+    "browser": "153.0.8010.53",
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "result": "pass"
+  },
+  {
+    "editor_ready_ms_including_driver_and_semantics": 279.89999997615814,
+    "edited_generation": 15,
+    "external_origin_probe": "blocked",
+    "checks": [
+      "visible-input",
+      "same-source-recovery",
+      "empty-recovery",
+      "readonly",
+      "completion",
+      "undo",
+      "redo",
+      "offline-assets"
+    ],
+    "base_path": "/",
+    "device_pixel_ratio": 2,
+    "browser": "153.0.8010.53",
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "result": "pass"
+  }
+]

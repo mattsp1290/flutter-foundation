@@ -1,7 +1,7 @@
 # Native editor engine qualification
 
-Status: executable W1 feasibility probes pass with the owned fork. W2 may build
-the production contract on these hooks. W1 is not a complete product, release,
+Status: executable W1 probes pass with the owned fork; the controller and
+production view are implemented and W4 acceptance is in progress. This is not a release,
 physical-IME certification or four-platform delivery claim.
 
 ## Production-view checkpoint
@@ -24,9 +24,22 @@ also passed. Final release visual/platform/performance evidence remains W4.
 
 ## Current owned candidate
 
+W4's blocked-origin Chrome tests exposed two accessibility issues that the
+earlier feasibility probe did not cover. The product view now supplies an
+editable semantic field (the web engine needs it to create a DOM input when
+accessibility is enabled). The pinned Flutter SDK's semantic input path omits
+the `beforeinput` hook needed by delta mode. The owned fork therefore translates
+full web editing values through its existing delta/pairing/composition pipeline
+in exact-source mode; native input retains delta mode. Selection-only messages
+cannot replace a multiline selection with unchanged base-line text. Two new
+fork regression tests cover exact undo, pairing, deletion and composition.
+Real ChromeDriver typing now passes with accessibility enabled, with local
+release assets at both root and nested paths and pixel ratios 1 and 2. This
+does not establish physical screen-reader or IME behavior.
+
 The maintainer supplied `git@github.com:mattsp1290/re-editor.git` and confirmed
 `~/git/re-editor` as the fork checkout. Foundation resolves the public HTTPS URL
-at immutable commit `e6f40f5a24db6a9ab9bb1a61a1837f9d6aa99375`, branch
+at immutable commit `44095948df411c1033e2f68f822e64ee9f07042d`, branch
 `birb/exact-source-0.10.0`; remote and local SHAs match. The fork starts at
 upstream `0a2a7d832011431d123b1b9391a481171cb4b849`, whose library is identical
 to the publisher archive. `BIRB_PATCH.md` in the fork records ownership,
@@ -48,7 +61,7 @@ the upstream implementations. `preserveLineBreaks: true` is an opt-in public
 engine option; Foundation's internal adapter enables it and selects the first
 existing separator as the Enter convention (LF for a document without one).
 
-The fork's 158 tests pass on Flutter 3.47.1. Its W1 baseline and current analyzer
+The fork's 160 tests pass on Flutter 3.47.1. Its W1 baseline and current analyzer
 both report the same 15 upstream diagnostics; this is not reported as a passing
 fork analysis gate. Foundation's W1 workspace analysis passed. The original
 16 engine/view/provider qualification tests still pass, covering exact source,
@@ -98,7 +111,7 @@ contain counts and tool/platform versions, without VM-service credentials.
 | Exact load/edit/copy, CRLF/CR/mixed/Unicode, nested folds, 64 KiB | Fork `exact_source_test.dart`; Foundation `engine_qualification_test.dart` and 64 KiB paragraph test | Pass with owned patch |
 | Synchronous source before recovery task, no fold/selection text event | `EngineAdapter` listener; adapter recovery test; native delta/composition callback test | Pass |
 | Atomic edits and exact history/selection; raw folded offsets | `runRevocableOp`, `unfoldLineSelection`, per-line serialization; Foundation transaction and raw-offset probes | Pass with owned patch |
-| Async completion, hover, diagnostic ranges/list, stale-result rejection | Exported `CodeIndicatorValueNotifier`/`CodeLineRenderParagraph`; provider UI probe and scroll/wrap geometry test | Feasible through public hooks; final bounded coordinator and product UI remain W2/W3 |
+| Async completion, hover, diagnostic ranges/list, stale-result rejection | Exported `CodeIndicatorValueNotifier`/`CodeLineRenderParagraph`; bounded coordinator and product widget tests | Implemented and tested; final platform matrix remains W4 |
 | Offline Go and visible absolute lines, nested asset path, long-line rendering | Explicit `langGo`/`CodeHighlightTheme`, `DefaultCodeLineNumber`; Chrome screenshots/network observation and 64 KiB view test | Pass for W1; W4 actively blocked-origin/performance matrix remains |
 | Theme/remount/two-controller state and owned resource disposal | Repeated highlighted-view subscription test; native worker VM samples and detach/input tests | Pass with owned timer fixes |
 
@@ -106,7 +119,7 @@ contain counts and tool/platform versions, without VM-service credentials.
 upstream search tests. Provider UI uses exported paragraph geometry directly;
 it need not force asynchronous providers through the upstream synchronous
 `CodeAutocomplete` prompt builder. No separate text renderer or private runtime
-import is required. Selection toolbar and finished search UI are W3 composition.
+import is required. Selection toolbar and search UI now compose the public engine.
 
 `PATH="/tmp/birb-editor-tools:$PATH" ./tool/verify.sh` passes, including source and
 boundary audits, workspace analysis, all package/example tests, mandatory
@@ -221,7 +234,7 @@ licenses, use an immutable Git ref without overrides, record its diff from
 0.10.0, and document ownership and upgrade/removal conditions. Upgrades rerun
 the complete qualification suite; remove the patch only when upstream passes it.
 
-## Dependency and license boundary
+## Historical dependency and license boundary (original scaffold)
 
 The scaffold pins design system dependency A to
 `3cccfc448de0306b036f93deb4409280266baa9f`, URL

@@ -71,6 +71,8 @@ void main() {
         'package edited',
       );
       await Clipboard.setData(const ClipboardData(text: 'package pasted\r\n'));
+      final readback = await Clipboard.getData(Clipboard.kTextPlain);
+      debugPrint('EDITOR_CLIPBOARD_READBACK ${readback?.text?.codeUnits}');
     });
     await shortcut(LogicalKeyboardKey.keyV);
     await tester.pumpAndSettle();

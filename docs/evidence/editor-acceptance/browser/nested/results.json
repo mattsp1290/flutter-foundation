@@ -1,0 +1,42 @@
+[
+  {
+    "editor_ready_ms_including_driver_and_semantics": 247.30000001192093,
+    "edited_generation": 15,
+    "external_origin_probe": "blocked",
+    "checks": [
+      "visible-input",
+      "same-source-recovery",
+      "empty-recovery",
+      "readonly",
+      "completion",
+      "undo",
+      "redo",
+      "offline-assets"
+    ],
+    "base_path": "/editor-check/",
+    "device_pixel_ratio": 1,
+    "browser": "153.0.8010.53",
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "result": "pass"
+  },
+  {
+    "editor_ready_ms_including_driver_and_semantics": 284.60000002384186,
+    "edited_generation": 15,
+    "external_origin_probe": "blocked",
+    "checks": [
+      "visible-input",
+      "same-source-recovery",
+      "empty-recovery",
+      "readonly",
+      "completion",
+      "undo",
+      "redo",
+      "offline-assets"
+    ],
+    "base_path": "/editor-check/",
+    "device_pixel_ratio": 2,
+    "browser": "153.0.8010.53",
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "result": "pass"
+  }
+]

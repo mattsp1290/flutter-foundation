@@ -26,9 +26,7 @@ jobs:
           flutter-version: 3.47.1
           cache: true
       - name: Install browser integration dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes chromium-chromedriver
+        run: python3 tool/install_ci_browser.py --output "$RUNNER_TEMP/editor-browser"
       - name: Verify workspace
         run: ./tool/verify.sh
 

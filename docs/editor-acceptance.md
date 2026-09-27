@@ -13,7 +13,7 @@ independent controllers are supported. Recovery listeners receive exact source
 in the same call stack as a committed mutation, before a queued reload/frame.
 
 The qualified fork is `mattsp1290/re-editor` at
-`e6f40f5a24db6a9ab9bb1a61a1837f9d6aa99375`, derived from 0.10.0.
+`44095948df411c1033e2f68f822e64ee9f07042d`, derived from 0.10.0.
 Highlighter `re_highlight` is 0.0.3; native workers resolve `isolate_manager`
 4.1.5+1 and `isolate_contactor` 4.1.0. These four MIT dependencies retain their
 notices under [licenses](licenses/). Patch details and historical evidence are
@@ -79,22 +79,39 @@ until the run and evidence collection finish, then remove that owned directory.
 
 | Area | Evidence | Status |
 | --- | --- | --- |
-| Exact source/history | Fork 158 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
+| Exact source/history | Fork 160 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
 | Recovery/input | Catalog macOS framework keyboard and composing deltas; immediate host recovery assertions | Pass; physical IME pending |
 | Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
 | Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | Pass for tested fixture; full preset matrix pending |
 | Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Recorded pass](evidence/editor-qualification/production-native-workers.json) |
 | Standalone dependency closure | B `9986536`, exact A; editor-only and coexistence | Early published checkpoint pass; candidate/final B pending |
 | macOS external native suite | B `9986536`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
-| Linux / Windows | Required desktop CI jobs authored | Not yet run |
-| Browser assets and real input | Local nested-path visual inspection at B `9986536`; visible gutter/Go tokens and completion popup | Automated blocked-origin/root/high-DPI matrix pending |
+| Linux / Windows | [CI run 36350365422](https://github.com/mattsp1290/flutter-foundation/actions/runs/36350365422), B `16972fd` | Windows and macOS pass; Linux clipboard CRLF check failed; readback probe pending |
+| Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
 | Performance | 64 KiB / 2,000-line fixture, 100 warmed edits, p95 ≤50 ms; cold ready ≤3 s | Not yet measured |
 | Review gauntlet | Two independent reviews, fixes, then pinned Cursor maintainability rubric | Not yet run |
 
 The selected completion row's foreground was corrected after browser inspection;
-the final screenshot matrix must include that correction. The current
+the new [completion screenshot](evidence/editor-acceptance/browser/nested/dpr-1/completion-popup.png)
+includes the semantic foreground correction. The original
 [dark browser screenshot](evidence/editor-qualification/production-chrome-dark.png)
 is an early product checkpoint, not final acceptance.
+
+The browser acceptance runner uses a fixture-only compile definition to expose
+exact source code units in the catalog's semantics. Normal catalog builds do not
+include that observation label. `./tool/run_editor_browser_integration.sh` builds
+local assets for `/` and `/editor-check/`, runs both device pixel ratios, rejects
+console errors, and records screenshots and requested paths. Its local proxy
+denies all external origins, including a deliberate HTTPS probe. The command is
+also part of the portable gate. The `Cmd` shortcut label avoids an otherwise
+undeclared web fallback-font download for the platform command symbol.
+
+The first portable CI attempt could not launch snap-based Chromium. CI now
+installs Chrome for Testing and ChromeDriver together at 153.0.8010.52; that
+change still needs a successful CI run. The Linux native failure remains open:
+the fixture wrote CRLF to the system clipboard and pasted LF. A readback probe
+will distinguish platform clipboard conversion from an editor mutation before
+any acceptance decision changes.
 
 ## Physical release checklist
 

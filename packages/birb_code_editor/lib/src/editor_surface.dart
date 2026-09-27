@@ -14,6 +14,7 @@ import 'provider_coordinator.dart';
 import 'provider_overlays.dart';
 import 'snapshot.dart';
 import 'selection_toolbar.dart';
+import 'source_semantics.dart';
 
 class EditorSurface extends StatefulWidget {
   const EditorSurface({
@@ -261,7 +262,9 @@ class _EditorSurfaceState extends State<EditorSurface> {
                     if (anchor != null) setState(() => _toolbarAnchor = anchor);
                   },
                 },
-                child: Semantics(
+                child: EditorSourceSemantics(
+                  controller: widget.controller,
+                  focus: widget.focus,
                   label: widget.label,
                   child: CodeEditor(
                     controller: widget.engine,

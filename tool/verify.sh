@@ -57,3 +57,4 @@ run_step 'Test Benchy contract fixture' run_package_tests examples/benchy_contra
 run_step 'Test catalog scaffold' run_package_tests examples/catalog
 run_step 'Build catalog web runner' sh -c \
   'cd examples/catalog && flutter build web'
+run_step 'Run editor release browser acceptance' ./tool/run_editor_browser_integration.sh

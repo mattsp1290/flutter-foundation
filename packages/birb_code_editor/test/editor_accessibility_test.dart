@@ -4,6 +4,55 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
+    'source exposes an editable semantic field and guards readonly actions',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final controller = BirbEditorController(
+        documentId: 'semantic',
+        source: 'package main\r\n',
+      );
+      final focus = FocusNode();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BirbSourceEditor(controller: controller, focusNode: focus),
+          ),
+        ),
+      );
+      focus.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      final source = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == 'Go source',
+      );
+      var data = tester.getSemantics(source).getSemanticsData();
+      expect(data.flagsCollection.isTextField, isTrue);
+      expect(data.value, 'package main\r\n');
+      final properties = tester.widget<Semantics>(source).properties;
+      properties.onSetText!('package changed\r\n');
+      expect(controller.snapshot.source, 'package changed\r\n');
+      controller.undo();
+      expect(controller.snapshot.source, 'package main\r\n');
+      controller.setReadOnly(true);
+      // Even a semantic callback captured before the readonly frame is guarded.
+      properties.onSetText!('stale mutation');
+      expect(controller.snapshot.source, 'package main\r\n');
+      await tester.pump();
+      await tester.pump();
+      data = tester.getSemantics(source).getSemanticsData();
+      expect(data.flagsCollection.isReadOnly, isTrue);
+      expect(tester.widget<Semantics>(source).properties.onSetText, isNull);
+      await tester.pumpWidget(const SizedBox());
+      semantics.dispose();
+      focus.dispose();
+      controller.dispose();
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({TargetPlatform.linux}),
+  );
+
+  testWidgets(
     '320 pixel editor at 200 percent text keeps source and controls reachable',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 480));

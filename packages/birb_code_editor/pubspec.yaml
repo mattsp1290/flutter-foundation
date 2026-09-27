@@ -1,5 +1,5 @@
 name: birb_code_editor
-description: Native source editor qualification for the Birb design system.
+description: Native Go source editor with exact-source recovery and host-provided language tools.
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -14,7 +14,7 @@ dependencies:
   re_editor:
     git:
       url: https://github.com/mattsp1290/re-editor.git
-      ref: e6f40f5a24db6a9ab9bb1a61a1837f9d6aa99375
+      ref: 44095948df411c1033e2f68f822e64ee9f07042d
   re_highlight: 0.0.3
   birb_design_system:
     git:
