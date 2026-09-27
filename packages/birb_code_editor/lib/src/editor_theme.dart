@@ -6,11 +6,14 @@ import 'package:re_highlight/languages/go.dart';
 CodeEditorStyle editorStyle(
   ThemeData theme,
   BirbCodeTheme preset,
-  double fontScale,
-) {
+  double fontScale, {
+  TextScaler textScaler = TextScaler.noScaling,
+}) {
   final colors = preset.resolve(theme);
   return CodeEditorStyle(
-    fontSize: (BirbReviewStyle.codeTextStyle(theme).fontSize ?? 14) * fontScale,
+    fontSize: textScaler.scale(
+      (BirbReviewStyle.codeTextStyle(theme).fontSize ?? 14) * fontScale,
+    ),
     fontFamily: BirbReviewStyle.codeTextStyle(theme).fontFamily,
     fontFamilyFallback: BirbReviewStyle.codeTextStyle(theme).fontFamilyFallback,
     textColor: colors.foreground,

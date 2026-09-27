@@ -47,6 +47,7 @@ class EditorProviderCoordinator extends ChangeNotifier {
 
   List<BirbEditorCompletion> get completions => _completion.value ?? const [];
   BirbEditorHover? get hover => _hover.value;
+  int? get hoverPosition => _hover.acceptedRequest?.position;
   List<BirbEditorDiagnostic> get diagnostics => _diagnostics.value ?? const [];
   BirbEditorProviderStatus get completionStatus => _provider == null
       ? BirbEditorProviderStatus.unavailable

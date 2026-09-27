@@ -9,19 +9,25 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('native qualification input, recovery and undo', (tester) async {
-    var recovered = '';
+    const initial =
+        'package main\r\n\r\n// Mixed separators remain exact.\r'
+        'func main() {\n\tprintln("hello", 42)\r\n}\n';
+    final controller = BirbEditorController(
+      documentId: 'native-qualification',
+      source: initial,
+    );
+    final focus = FocusNode();
+    var recovered = initial;
+    controller.addTextListener((snapshot) => recovered = snapshot.source);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: BirbEditorQualification(
-            onSourceChanged: (source) => recovered = source,
-          ),
+          body: BirbSourceEditor(controller: controller, focusNode: focus),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    // Tap visible source. Keyboard events go through the mounted focus tree.
-    await tester.tapAt(const Offset(160, 100));
+    focus.requestFocus();
     await tester.pump();
     final modifier = defaultTargetPlatform == TargetPlatform.macOS
         ? LogicalKeyboardKey.metaLeft
@@ -56,7 +62,7 @@ void main() {
     );
     expect(recovered, 'package native');
     await tester.pump();
-    expect(find.text('Recovery: 14 UTF-16 units'), findsOneWidget);
+    expect(controller.snapshot.source, 'package native');
     await _sendDelta(
       tester,
       oldText: 'package native',
@@ -77,13 +83,15 @@ void main() {
     );
     expect(recovered, 'package 中文');
     await Future<void>.microtask(() => expect(recovered, 'package 中文'));
-    await tester.tap(find.text('Probe undo'));
+    await tester.tap(find.byTooltip('Undo'));
     await tester.pump();
     expect(recovered, 'package native');
-    await tester.tap(find.text('Probe undo'));
+    await tester.tap(find.byTooltip('Undo'));
     await tester.pump();
-    expect(find.text('Recovery: 89 UTF-16 units'), findsOneWidget);
+    expect(recovered, initial);
     await tester.pumpWidget(const SizedBox());
+    focus.dispose();
+    controller.dispose();
     expect(tester.takeException(), isNull);
   });
 }

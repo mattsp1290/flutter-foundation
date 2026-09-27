@@ -1,7 +1,9 @@
-import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/qualification_view.dart';
+
 import 'package:re_editor/re_editor.dart';
 import 'package:re_highlight/languages/go.dart';
 

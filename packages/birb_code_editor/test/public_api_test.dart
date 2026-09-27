@@ -204,7 +204,15 @@ void main() {
     );
     final focus = FocusNode();
     double scrollOffset() => tester
-        .stateList<ScrollableState>(find.byType(Scrollable))
+        .stateList<ScrollableState>(
+          find.descendant(
+            of: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics && widget.properties.label == 'Go source',
+            ),
+            matching: find.byType(Scrollable),
+          ),
+        )
         .where((state) => state.axisDirection == AxisDirection.down)
         .single
         .position

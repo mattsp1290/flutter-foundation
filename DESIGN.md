@@ -3,8 +3,8 @@
 ## 1. Purpose and authority
 
 This document governs authored user-interface work under
-`packages/birb_design_system/`, `packages/birb_ag_ui_widgets/`,
-`examples/catalog/`, and `examples/benchy_contract/`. The latter two agent
+`packages/birb_design_system/`, `packages/birb_ag_ui_widgets/`, `packages/birb_code_editor/`,
+`examples/catalog/`, and `examples/benchy_contract/`. Product and example
 surfaces compose public APIs and consume semantic theme roles; they do not add
 new palette or component-token authority. When two
 directions conflict, use this order of authority:
@@ -668,3 +668,34 @@ BirbTextFormField's ledger layout. Pending submission blocks duplicate sends
 but leaves newer drafting enabled; explicit readOnly is separate. Shared
 widgets never clear or persist drafts. Enter is multiline input; send is an
 explicit button with a same-frame double-activation guard.
+
+### 11.3 Production source editor
+
+`birb_code_editor` composes the native engine and shares `BirbCodeColors` and
+`BirbReviewStyle.codeTextStyle`; it receives no new palette or font exception.
+It uses a bundled Go grammar, exact raw UTF-16 document coordinates and a
+host-owned controller. Legacy `BirbCodeEditor` behavior remains section 11's
+contract; adopting `BirbSourceEditor` is explicit.
+
+The production view defaults to no wrap and two-axis scrolling. Code and gutter
+metrics include the ambient text scaler and user font adjustment. The gutter is
+excluded from source semantics. A source focus border uses the existing cursor
+role. Tab indents; Escape closes an overlay first, otherwise enables focus
+traversal. The next Tab/Shift+Tab leaves the entire editor. The visible status
+control restores indentation. Header and status areas scroll within bounds at
+320 logical pixels and 200 percent text so the source retains a viewport.
+
+Completion and hover are plain-text, bounded popups contained in the source
+surface. They use ambient `surfaceContainer`/text roles; selected completion
+uses `secondaryContainer`. Their close controls remain outside scrollable
+payloads. Diagnostics use the code foreground role for contrast over every
+preset: errors have solid underlines, warnings dashed, information/hints dotted.
+The companion list names severity with text and an icon, and navigates exact
+ranges. Provider status and Tab mode have scoped live semantics; source changes
+do not repeatedly announce the full document. All command targets are at least
+48 logical pixels. No animation is required for editor overlays or navigation.
+
+Manual review must include each preset, app light/dark, 320-pixel width, 200
+percent text, keyboard escape and focus, scrolled/wrapped provider overlays,
+diagnostic range placement, and native screen-reader behavior. Automated
+geometry and semantics tests complement these checks, not replace them.

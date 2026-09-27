@@ -6,7 +6,9 @@ import 'package:re_editor/re_editor.dart';
 
 import 'edit_transaction.dart';
 import 'engine_adapter.dart';
-import 'editor_theme.dart';
+import 'editor_surface.dart';
+import 'editor_status.dart';
+import 'diagnostics_panel.dart';
 import 'editor_chrome.dart';
 import 'find_model.dart';
 import 'find_panel.dart';

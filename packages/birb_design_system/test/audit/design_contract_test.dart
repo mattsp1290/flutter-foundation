@@ -17,6 +17,7 @@ void main() {
         RegExp(
           r'governs authored user-interface work under\s+'
           r'`packages/birb_design_system/`, `packages/birb_ag_ui_widgets/`,\s+'
+          r'`packages/birb_code_editor/`,\s+'
           r'`examples/catalog/`, and `examples/benchy_contract/`',
         ),
       ),

@@ -14,14 +14,21 @@ void main() {
     debugPrint('EDITOR_WORKERS baseline');
     await Future<void>.delayed(const Duration(milliseconds: 500));
     for (var cycle = 0; cycle < 20; cycle++) {
+      final controller = BirbEditorController(
+        documentId: 'worker-$cycle',
+        source: 'package main\nfunc main() { println("hello", 42) }\n',
+      );
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: BirbEditorQualification())),
+        MaterialApp(
+          home: Scaffold(body: BirbSourceEditor(controller: controller)),
+        ),
       );
       await tester.pumpAndSettle();
       await Future<void>.delayed(const Duration(milliseconds: 500));
       debugPrint('EDITOR_WORKERS mounted $cycle');
       await Future<void>.delayed(const Duration(milliseconds: 500));
       await tester.pumpWidget(const SizedBox());
+      controller.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 500));
       debugPrint('EDITOR_WORKERS detached $cycle');
       await Future<void>.delayed(const Duration(milliseconds: 500));

@@ -1,13 +1,12 @@
 # Birb code editor
 
-This package is under development. Engine feasibility is qualified; the complete
-editor UI and four-platform delivery gates are pending.
-It does not replace the legacy design-system editor yet.
+This package is under development. Engine feasibility and the core native UI
+have automated coverage; four-platform delivery and manual accessibility gates
+are pending. Adoption is opt-in; legacy design-system APIs remain available.
 
-The temporary `BirbEditorQualification` export is solely a catalog probe and
-has no stable API. The production view will replace it in W2/W3.
+The temporary W1 probe is test-only and is no longer a public export.
 
-`BirbSourceEditor(controller: controller)` now provides the native view shell.
+`BirbSourceEditor(controller: controller)` provides the native Go source view.
 Supply finite width/height. It enforces one attached view per controller; detach
 before disposing the controller. Sequential remounts preserve source, history,
 selection and scroll. An optional focus node is borrowed and remains host-owned.
@@ -17,11 +16,40 @@ obsolete input until their old views detach.
 
 The command menu exposes editing, clipboard, folding, wrap and font controls.
 Find supports case/whole-word/regex search and literal replacement, with
-replace-all as one undo transaction. Escape closes find first; otherwise it
-enables Tab traversal. The next Tab or Shift+Tab leaves the whole editor. Use
-the visible status control to restore indentation mode. Provider presentation,
-selection toolbar, full accessibility/viewport checks and catalog migration
-remain W3 work; the shell is not a completed product release.
+replace-all as one undo transaction. Escape closes find/provider/diagnostic UI
+first; otherwise it enables Tab traversal. The next Tab or Shift+Tab leaves the
+whole editor. Use the visible status control to restore indentation mode.
+Right-click or Shift+F10 opens copy/cut/paste/select-all. Standard Command/Control
+editing shortcuts work only inside source focus. Ctrl+Space requests completion;
+Command+K on macOS or Ctrl+K elsewhere requests hover. Completion uses arrows
+and Enter; Escape dismisses it. The command menu offers the same actions.
+
+Provider popups stay inside the source surface and follow paragraph geometry
+through scroll/wrap changes. Diagnostic underlines use solid, dashed or dotted
+patterns and have a separate navigable severity list. Provider failures expose
+a neutral status and explicit retry. Code/gutter fonts respect system text
+scaling and user size controls. The catalog includes two independent editors,
+deterministic provider fixtures, readonly/theme controls and the legacy API.
+
+```dart
+final controller = BirbEditorController(
+  documentId: 'main.go',
+  source: 'package main\r\n',
+);
+var recoverySource = controller.snapshot.source;
+controller.addTextListener((snapshot) {
+  // Capture exact source synchronously in the host's recovery state.
+  recoverySource = snapshot.source;
+});
+
+// Inside a widget with finite constraints:
+SizedBox(height: 520, child: BirbSourceEditor(controller: controller));
+// Dispose the controller after that view is detached.
+```
+
+Migration does not convert a legacy controller in place. Capture its current
+text, construct a new controller with explicit identity, and replace the view
+at a host-controlled boundary. The new model owns its own engine history.
 
 ## Host-owned document
 
@@ -75,7 +103,8 @@ ranges, overlapping completion edits and invalid resulting selections are also
 rejected. Collections presented by the coordinator are immutable.
 
 Each provider channel permits one active logical request and one latest pending
-request. The default timeout is five seconds, configurable to a positive duration.
+request. The default timeout is five seconds, configurable through the view's
+`providerTimeout` to a positive duration.
 Timed-out transport futures cannot publish later. Source/reload/provider/readonly
 changes invalidate results; selection invalidates completion and hover. Detaching
 the view closes its coordinator. Acceptance revalidates the document transaction.

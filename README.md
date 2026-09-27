@@ -10,10 +10,12 @@ management framework.
   themes, accessible components, preview fixtures, and design-source audits.
 - `packages/birb_appearance`: system/light/dark selection and namespaced local
   persistence through a small `Listenable` API.
+- `packages/birb_code_editor`: native Go source editor, exact-source controller,
+  and host-supplied language-provider contracts (platform delivery pending).
 - `examples/catalog`: web and macOS catalog used for package integration and
   visual verification.
 
-The initial package version is `0.1.0`. Both packages use `publish_to: none`;
+The initial package version is `0.1.0`. These packages use `publish_to: none`;
 there is no pub.dev artifact. Consumers resolve these packages only from the
 Git repository.
 
@@ -38,7 +40,8 @@ flutter build macos
 
 ## Git dependencies
 
-Consumers pin both package subpaths to the same immutable commit. Replace
+Consumers of the independent design-system and appearance packages pin those
+two subpaths to the same immutable commit. Replace
 `YOUR_COMMIT_SHA` with a reviewed commit from this repository.
 
 ```yaml
@@ -61,6 +64,15 @@ previous manifest pin and application lockfile.
 Use the same immutable `YOUR_COMMIT_SHA` value for both subpaths. Mixing refs
 can pair incompatible package contracts even when dependency resolution
 succeeds.
+
+The new editor has an explicit dependency pin map instead: editor revision B
+depends on design-system revision A, currently
+`3cccfc448de0306b036f93deb4409280266baa9f`. A consumer adding the editor at a
+reviewed B must use that exact A if it also directly declares the design system.
+Do not substitute B for A or add dependency overrides. The editor's manifest
+also pins the owned `re_editor` fork to a full Git SHA. Platform acceptance and
+the final immutable delivery revision B are still pending; see the
+[editor package guide](packages/birb_code_editor/README.md) before adoption.
 
 ## Usage
 

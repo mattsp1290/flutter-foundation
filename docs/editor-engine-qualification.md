@@ -4,6 +4,24 @@ Status: executable W1 feasibility probes pass with the owned fork. W2 may build
 the production contract on these hooks. W1 is not a complete product, release,
 physical-IME certification or four-platform delivery claim.
 
+## Production-view checkpoint
+
+The W2 controller and W3 production view now replace the temporary catalog
+probe. Provider completion, pointer/keyboard hover, diagnostic markers and
+navigation, find/replace, selection toolbar and focus exit have automated
+coverage. The catalog retains the legacy API alongside two independent native
+editors and deterministic provider fixtures. The qualification-only widget is
+now test support, not a public package export.
+
+On 2026-09-27, the native input/composition/recovery test passed using the
+production `BirbSourceEditor` with fork `e6f40f5`. The production worker probe
+also passed all twenty cycles: one baseline isolate, three mounted, one after
+every detach. [Production samples](evidence/editor-qualification/production-native-workers.json)
+record the working-tree provenance. Neither result establishes physical IME or
+screen-reader behavior. The portable workspace gate passed after updating its
+design-contract scope assertion; a subsequent pointer-hover regression test
+also passed. Final release visual/platform/performance evidence remains W4.
+
 ## Current owned candidate
 
 The maintainer supplied `git@github.com:mattsp1290/re-editor.git` and confirmed

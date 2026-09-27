@@ -45,10 +45,14 @@ extension _EditorCommands on _SourceEditorState {
           }
         }
       case EditorCommand.complete:
+        _focus.requestFocus();
         _providers.requestCompletion();
       case EditorCommand.hover:
+        _focus.requestFocus();
         _providers.requestHover();
       case EditorCommand.diagnostics:
+        _diagnosticsOpen = true;
+        _changed();
         _providers.requestDiagnostics();
     }
   }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:re_editor/re_editor.dart';
 import 'package:re_highlight/languages/go.dart';
 
-import 'engine_adapter.dart';
+import 'package:birb_code_editor/src/engine_adapter.dart';
 
 /// Temporary interactive W1 probe; not the production editor API.
 class BirbEditorQualification extends StatefulWidget {

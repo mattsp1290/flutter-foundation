@@ -11,6 +11,7 @@ class BirbSourceEditor extends StatefulWidget {
     this.label = 'Go source',
     this.codeTheme = BirbCodeTheme.foundation,
     this.onProviderError,
+    this.providerTimeout = BirbEditorProviderLimits.timeout,
   });
 
   final BirbEditorController controller;
@@ -19,6 +20,7 @@ class BirbSourceEditor extends StatefulWidget {
   final String label;
   final BirbCodeTheme codeTheme;
   final ValueChanged<BirbEditorProviderStatus>? onProviderError;
+  final Duration providerTimeout;
 
   @override
   State<BirbSourceEditor> createState() => _SourceEditorState();
@@ -37,6 +39,7 @@ class _SourceEditorState extends State<BirbSourceEditor> {
   bool _rebuildScheduled = false;
   bool _restoreFocus = false;
   bool _findOpen = false;
+  bool _diagnosticsOpen = false;
   bool _tabTraversal = false;
   late EditorFindModel _find;
   final _boundary = FocusNode(
@@ -93,9 +96,11 @@ class _SourceEditorState extends State<BirbSourceEditor> {
     _providers = EditorProviderCoordinator(
       controller: widget.controller,
       provider: widget.provider,
+      timeout: widget.providerTimeout,
       onError: (status) => widget.onProviderError?.call(status),
     );
     _find = EditorFindModel(widget.controller);
+    _providers.addListener(_changed);
     widget.controller.addListener(_changed);
   }
 
@@ -155,6 +160,8 @@ class _SourceEditorState extends State<BirbSourceEditor> {
       _closeFind();
     } else if (_providers.completions.isNotEmpty || _providers.hover != null) {
       _providers.dismiss();
+    } else if (_diagnosticsOpen) {
+      setState(() => _diagnosticsOpen = false);
     } else {
       setState(() => _tabTraversal = true);
     }
@@ -169,7 +176,17 @@ class _SourceEditorState extends State<BirbSourceEditor> {
       _detach(oldWidget);
       _attach();
     } else {
-      _providers.setProvider(widget.provider);
+      if (oldWidget.providerTimeout != widget.providerTimeout) {
+        _providers.dispose();
+        _providers = EditorProviderCoordinator(
+          controller: widget.controller,
+          provider: widget.provider,
+          timeout: widget.providerTimeout,
+          onError: (status) => widget.onProviderError?.call(status),
+        )..addListener(_changed);
+      } else {
+        _providers.setProvider(widget.provider);
+      }
       if (oldWidget.focusNode != widget.focusNode) {
         if (oldWidget.focusNode == null) _focus.dispose();
         _focus = widget.focusNode ?? FocusNode(debugLabel: 'Source editor');
@@ -199,11 +216,7 @@ class _SourceEditorState extends State<BirbSourceEditor> {
         widget.controller._releaseRetiredAdapters();
       });
     }
-    final theme = Theme.of(context);
     final snapshot = widget.controller.snapshot;
-    final position = BirbSourceCoordinates(snapshot.source)
-        .positionAt(snapshot.selection.extentOffset);
-    final colors = widget.codeTheme.resolve(theme);
     return Focus(
       focusNode: _boundary,
       child: LayoutBuilder(
@@ -216,85 +229,74 @@ class _SourceEditorState extends State<BirbSourceEditor> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              EditorChrome(
-                snapshot: snapshot,
-                label: widget.label,
-                wrap: _wrap,
-                fontScale: _fontScale,
-                hasProvider: widget.provider != null,
-                invoke: _invokeCommand,
-              ),
-              if (_findOpen)
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: constraints.maxHeight * .45,
-                  ),
-                  child: SingleChildScrollView(
-                    child: EditorFindPanel(model: _find, close: _closeFind),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * .45,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      EditorChrome(
+                        snapshot: snapshot,
+                        label: widget.label,
+                        wrap: _wrap,
+                        fontScale: _fontScale,
+                        hasProvider: widget.provider != null,
+                        invoke: _invokeCommand,
+                      ),
+                      if (_findOpen)
+                        EditorFindPanel(model: _find, close: _closeFind),
+                    ],
                   ),
                 ),
+              ),
               Expanded(
-                child: Semantics(
+                child: EditorSurface(
+                  key: ObjectKey(_engine),
+                  controller: widget.controller,
+                  engine: _engine,
+                  scroll: _scroll,
+                  focus: _focus,
+                  providers: _providers,
+                  codeTheme: widget.codeTheme,
+                  fontScale: _fontScale,
+                  wrap: _wrap,
+                  actions: _shortcutActions,
                   label: widget.label,
-                  child: CodeEditor(
-                    key: ObjectKey(_engine),
-                    controller: _engine,
-                    scrollController: _scroll,
-                    focusNode: _focus,
-                    readOnly: snapshot.readOnly,
-                    wordWrap: _wrap,
-                    shortcutOverrideActions: _shortcutActions,
-                    maxLengthSingleLineRendering: 0x7fffffff,
-                    commentFormatter: DefaultCodeCommentFormatter(
-                      singleLinePrefix: '//',
-                      multiLinePrefix: '/*',
-                      multiLineSuffix: '*/',
-                    ),
-                    style: editorStyle(theme, widget.codeTheme, _fontScale),
-                    indicatorBuilder: (context, controller, chunks, notifier) =>
-                        ExcludeSemantics(
-                          child: Row(
-                            children: [
-                              DefaultCodeLineNumber(
-                                notifier: notifier,
-                                controller: controller,
-                                textStyle: BirbReviewStyle.codeTextStyle(theme)
-                                    .copyWith(
-                                      color: colors.gutter,
-                                      fontSize:
-                                          (BirbReviewStyle.codeTextStyle(theme)
-                                                  .fontSize ??
-                                              14) *
-                                          _fontScale,
-                                    ),
-                              ),
-                              DefaultCodeChunkIndicator(
-                                width: 48,
-                                controller: chunks,
-                                notifier: notifier,
-                              ),
-                            ],
-                          ),
-                        ),
-                  ),
                 ),
               ),
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Line ${position.line + 1}, column ${position.column + 1} · ${snapshot.readOnly ? 'Read only' : 'Editable'}',
+              if (_diagnosticsOpen)
+                SizedBox(
+                  height: constraints.maxHeight * .2,
+                  child: EditorDiagnosticsPanel(
+                    providers: _providers,
+                    close: () => setState(() => _diagnosticsOpen = false),
+                    navigate: (item) {
+                      widget.controller.setSelection(
+                        TextSelection(
+                          baseOffset: item.range.start,
+                          extentOffset: item.range.end,
+                        ),
+                      );
+                      _focus.requestFocus();
+                    },
                   ),
-                  TextButton(
-                    onPressed: () =>
+                ),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * .25,
+                ),
+                child: SingleChildScrollView(
+                  child: EditorStatusBar(
+                    snapshot: snapshot,
+                    providers: _providers,
+                    tabTraversal: _tabTraversal,
+                    toggleTraversal: () =>
                         setState(() => _tabTraversal = !_tabTraversal),
-                    child: Text(
-                      _tabTraversal
-                          ? 'Tab moves focus — restore indentation'
-                          : 'Tab indents · Esc enables focus traversal',
-                    ),
+                    showDiagnostics: () =>
+                        setState(() => _diagnosticsOpen = !_diagnosticsOpen),
                   ),
-                ],
+                ),
               ),
             ],
           );

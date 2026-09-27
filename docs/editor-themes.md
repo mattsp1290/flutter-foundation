@@ -16,7 +16,13 @@ GitHub Light/Dark use classic source colors from the official MIT-licensed
 [GitHub VS Code theme](https://github.com/primer/github-vscode-theme), its
 [src/theme.js](https://github.com/primer/github-vscode-theme/blob/main/src/theme.js)
 and Primer primitives. These are small editor-only palettes, not a complete
-workbench-theme port. Syntax classifications are the shared editor's Go lexer.
+workbench-theme port. The legacy `BirbCodeEditor` uses its bounded regex Go lexer.
+The opt-in `BirbSourceEditor` in `birb_code_editor` uses the bundled Go grammar
+from the pinned `re_highlight` dependency, mapped to the same public color roles.
+Unmatched tokens use the code foreground. Language providers supply completion,
+hover and diagnostics independently of lexical highlighting; missing providers
+do not disable syntax colors. Theme, wrap and font changes preserve the host's
+document, selection and engine history.
 
 Full upstream notices are retained in [Dracula license](licenses/dracula.txt)
 and [GitHub theme license](licenses/github-vscode-theme.txt). Values were
