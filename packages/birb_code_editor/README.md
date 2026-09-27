@@ -124,3 +124,30 @@ automated tests. The retained W1 probes cover the real engine and its geometry,
 input pipeline, exact history and lifecycle. These tests are not physical OS
 keyboard, IME, clipboard or accessibility certification. See the repository's
 `docs/editor-engine-qualification.md` for evidence and remaining release gates.
+
+
+## Verified candidate pin map
+
+Candidate B is `ffb6eebb69203ad48372b415623046e6f379a3a7`; release gates remain
+open in [editor acceptance](../../docs/editor-acceptance.md). Both editor-only
+and direct-design-system consumers passed isolated resolution, analysis, an
+edit/undo smoke test and a release web build before and after B was pushed.
+When importing the design system directly, use this exact compatible map:
+
+```yaml
+dependencies:
+  birb_code_editor:
+    git:
+      url: https://github.com/mattsp1290/flutter-foundation.git
+      ref: ffb6eebb69203ad48372b415623046e6f379a3a7
+      path: packages/birb_code_editor
+  birb_design_system:
+    git:
+      url: https://github.com/mattsp1290/flutter-foundation.git
+      ref: 3cccfc448de0306b036f93deb4409280266baa9f
+      path: packages/birb_design_system
+```
+
+Editor-only consumers can omit the direct design-system entry. These checks use
+independent app locks and no workspace assistance, sibling paths or overrides.
+B stays immutable; this documentation update is a separate commit.

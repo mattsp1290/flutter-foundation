@@ -1,0 +1,59 @@
+{
+  "foundation_ref": "ffb6eebb69203ad48372b415623046e6f379a3a7",
+  "engine_ref": "b07edbeb47ab7d9171dc8103cad32503978f4ff6",
+  "visual_results": [
+    {
+      "captures": [
+        "light-foundation-wide-100.png",
+        "light-foundation-320-100.png",
+        "light-foundation-wide-200.png",
+        "light-foundation-320-200.png",
+        "light-dracula-wide-100.png",
+        "light-dracula-320-100.png",
+        "light-dracula-wide-200.png",
+        "light-dracula-320-200.png",
+        "light-github-light-wide-100.png",
+        "light-github-light-320-100.png",
+        "light-github-light-wide-200.png",
+        "light-github-light-320-200.png",
+        "light-github-dark-wide-100.png",
+        "light-github-dark-320-100.png",
+        "light-github-dark-wide-200.png",
+        "light-github-dark-320-200.png",
+        "dark-foundation-wide-100.png",
+        "dark-foundation-320-100.png",
+        "dark-foundation-wide-200.png",
+        "dark-foundation-320-200.png",
+        "dark-dracula-wide-100.png",
+        "dark-dracula-320-100.png",
+        "dark-dracula-wide-200.png",
+        "dark-dracula-320-200.png",
+        "dark-github-light-wide-100.png",
+        "dark-github-light-320-100.png",
+        "dark-github-light-wide-200.png",
+        "dark-github-light-320-200.png",
+        "dark-github-dark-wide-100.png",
+        "dark-github-dark-320-100.png",
+        "dark-github-dark-wide-200.png",
+        "dark-github-dark-320-200.png"
+      ],
+      "wrap": true,
+      "font_scale": 1.125,
+      "same_controller_history_after_matrix": "pass",
+      "scope": "Screenshots require visual inspection; this does not establish screen-reader behavior",
+      "base_path": "/editor-check/",
+      "device_pixel_ratio": 1,
+      "browser": "153.0.8010.53",
+      "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "result": "pass"
+    }
+  ],
+  "inspected_captures": [
+    "dark-foundation-320-200.png",
+    "light-github-light-320-200.png",
+    "dark-dracula-wide-100.png",
+    "light-github-dark-wide-200.png",
+    "hover.png"
+  ],
+  "inspection": "No new defect found in these representative captures; complete physical matrix remains pending. Hover rendering and Escape dismissal also passed in release Chrome."
+}

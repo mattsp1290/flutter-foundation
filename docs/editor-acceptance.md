@@ -23,13 +23,16 @@ in [engine qualification](editor-engine-qualification.md) and the fork's
 Standalone consumption pins the editor to B and the design system to exactly
 A = `3cccfc448de0306b036f93deb4409280266baa9f`, both at
 `https://github.com/mattsp1290/flutter-foundation.git`, with package paths
-`packages/birb_code_editor` and `packages/birb_design_system`. B is not yet a
-final delivery SHA. Early checkpoint B =
+`packages/birb_code_editor` and `packages/birb_design_system`. The current verified candidate B is
+`ffb6eebb69203ad48372b415623046e6f379a3a7`; release gates remain open.
+Both [candidate cases](evidence/editor-acceptance/checkpoints/ffb6eeb/candidate-consumers.json)
+passed before its push, and both [published cases](evidence/editor-acceptance/checkpoints/ffb6eeb/published-consumers.json)
+passed afterward. This evidence commit is separate from B. Early checkpoint B =
 `998653683742e5e16ef8de7e9577a2aee0d90178` passed both editor-only consumption
 and coexistence with a direct design-system import: independent Pub resolution,
 analysis, public-widget edit/undo smoke test and offline-assets release build.
 These checks use an external temporary app and no overrides or sibling paths.
-They must be repeated at final B.
+Repeat them if code or dependency pins change before final delivery.
 
 ## Repeatable commands
 
@@ -81,15 +84,15 @@ until the run and evidence collection finish, then remove that owned directory.
 | --- | --- | --- |
 | Exact source/history | Fork 166 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
 | Recovery/input | Catalog macOS framework keyboard and composing deltas; immediate host recovery assertions | Pass; physical IME pending |
-| Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
-| Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 release browser captures](evidence/editor-acceptance/visuals/provenance.json); source/history survive all states; physical inspection pending |
+| Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; physical visual checks and hover retest pending |
+| Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 current release captures and hover](evidence/editor-acceptance/checkpoints/ffb6eeb/visuals/provenance.json); source/history survive all states; physical inspection pending |
 | Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Stage-two pass](evidence/editor-qualification/production-native-workers-stage2.json) |
-| Standalone dependency closure | [Published checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/published-consumers.json), exact A; editor-only and coexistence | Both cases pass resolution, analysis, public smoke and release build; final delivery B pending |
-| macOS external native suite | B `9986536`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
-| Native CI | [Checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/native-ci.json), PR merge tree verified identical to branch head | Linux and macOS suites pass; Windows build passes but harness console replay failed before tests; correction under validation |
-| Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
-| Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/provenance.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 35.3 ms, ready 235.1 ms; DPR 2: p95 34.8 ms, ready 238.2 ms; both pass 50 ms / 3 s budgets |
-| Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Four stage-two findings fixed and independently rechecked; portable gate, worker lifecycle and catalog macOS build pass; cloud rerun pending |
+| Standalone dependency closure | Candidate/published `ffb6eeb`, exact A; editor-only and coexistence | Both cases pass resolution, analysis, public smoke and release build before and after push; release gates pending |
+| macOS external native suite | B `ffb6eeb`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
+| Native CI | [Checkpoint `ffb6eeb`](evidence/editor-acceptance/checkpoints/ffb6eeb/native-ci.json), PR merge tree verified identical to branch head | Windows, macOS and Linux build/analyze/native suites pass; physical OS evidence pending |
+| Browser assets and real input | [Current release matrix](evidence/editor-acceptance/checkpoints/ffb6eeb/browser-ci.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | All four functional cases pass with fork `b07edbe`; software-rendered cloud timing remains failed |
+| Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/stage2-results.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 33.4 ms, ready 226.4 ms; DPR 2: p95 34.0 ms, ready 245.4 ms; both pass 50 ms / 3 s budgets |
+| Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Both review checkpoints pushed; all eleven findings fixed and independently rechecked; local gates pass |
 
 The selected completion row's foreground was corrected after browser inspection;
 the new [completion screenshot](evidence/editor-acceptance/browser/nested/dpr-1/completion-popup.png)
@@ -132,8 +135,8 @@ workflow. Run `36356469165` then passed the Linux and macOS native suites.
 Windows compiled successfully but replaying the UTF-8 build log into the
 cp1252 Python console raised `UnicodeEncodeError` before tests started. The
 runner now configures both console streams as UTF-8. A portable regression
-uses real cp1252 text streams and raw UTF-8 child bytes; a fresh Windows run
-is still required.
+uses real cp1252 text streams and raw UTF-8 child bytes. Run `36357239753`
+at `ffb6eeb` then passed all three native jobs, including Windows test execution.
 
 The performance timer runs inside the browser: real `keydown` starts it, and a
 `requestAnimationFrame` after the source/recovery frame ends it. WebDriver
@@ -149,7 +152,7 @@ web UI-thread syntax/fold analysis before paint. The fork now coalesces that
 work after the source frame and a short quiet period. [Throttled diagnostic records](evidence/editor-acceptance/performance/review-profile.json)
 show 65.8 ms after scheduling changes; this is an improvement, not a 50 ms
 acceptance pass. A subsequent [local stage-two release run](evidence/editor-acceptance/performance/stage2-results.json)
-passes at p95 33.4/34.0 ms and ready 226.4/245.4 ms for DPR1/2. Updated cloud
+passes at p95 33.4/34.0 ms and ready 226.4/245.4 ms for DPR 1/2. Updated cloud
 performance qualification remains required. [Cloud checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/performance.json)
 passes DPR 1 at 49.6 ms but fails DPR 2 at 98.5 ms; cold readiness is 1,357.1 ms.
 Chrome reports software WebGL fallback on the runner. Forcing SwiftShader on
@@ -157,8 +160,15 @@ the same local Mac reproduces a 66.0 ms DPR 2 p95, versus 34.0 ms with normal
 rendering. A separate CPU profile is mostly main-thread idle, pointing to the
 rendering path rather than another source-serialization bottleneck. This is
 diagnostic evidence, not a waiver: the 50 ms assertion remains unchanged pending
-a maintainer decision about the reference performance environment. The scroll gate also requires the observed
-source viewport offset to increase, in addition to preserving the document.
+a maintainer decision about the reference performance environment. The next
+cloud run
+at `ffb6eeb` varied further: DPR 1 failed at 66.0 ms, so DPR 2 was not reached;
+all four functional browser cases still passed. A disposable local test of
+Flutter’s [CPU-only CanvasKit mode](https://docs.flutter.dev/platform-integration/web/initialization)
+with SwiftShader also failed at 67.0 ms.
+Normal local Chrome reports the Apple M4 Max Metal renderer. No renderer or
+budget changes have been applied to the product or acceptance gate. The scroll
+gate also requires the observed source viewport offset to increase, in addition to preserving the document.
 
 ## Physical release checklist
 

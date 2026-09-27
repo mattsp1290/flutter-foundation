@@ -1,0 +1,54 @@
+{
+  "head_ref": "ffb6eebb69203ad48372b415623046e6f379a3a7",
+  "tested_pr_merge_ref": "a7a410554f4e012f9290bf3f3237af629b6460ae",
+  "verified_identical_git_tree": "c4217d38d721c36201d59bd517123739ed6c07bc",
+  "run_url": "https://github.com/mattsp1290/flutter-foundation/actions/runs/36357239753",
+  "native_passes": [
+    {
+      "mode": "candidate",
+      "platform": "windows",
+      "editor_only": false,
+      "host": "Windows-2025Server-10.0.26100-SP0",
+      "flutter": "3.47.1",
+      "dart": "3.13.1",
+      "editor_url": "file:///D:/a/_temp/birb-editor-native/candidate",
+      "editor_ref": "45d8258ce8c2146aa8b194acf9bc7c2bb188a387",
+      "candidate_original_ref": "a7a410554f4e012f9290bf3f3237af629b6460ae",
+      "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+      "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+      "result": "pass",
+      "evidence": "native framework input, not physical OS input"
+    },
+    {
+      "mode": "candidate",
+      "platform": "macos",
+      "editor_only": false,
+      "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "flutter": "3.47.1",
+      "dart": "3.13.1",
+      "editor_url": "file:///Users/runner/work/_temp/birb-editor-native/candidate",
+      "editor_ref": "b88f39ce56bcc76e200c95134b88a2acd718ed79",
+      "candidate_original_ref": "a7a410554f4e012f9290bf3f3237af629b6460ae",
+      "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+      "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+      "result": "pass",
+      "evidence": "native framework input, not physical OS input"
+    },
+    {
+      "mode": "candidate",
+      "platform": "linux",
+      "editor_only": false,
+      "host": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+      "flutter": "3.47.1",
+      "dart": "3.13.1",
+      "editor_url": "file:///home/runner/work/_temp/birb-editor-native/candidate",
+      "editor_ref": "71502e56b9c7d2d3ddeb54a87a2595e2306453cc",
+      "candidate_original_ref": "a7a410554f4e012f9290bf3f3237af629b6460ae",
+      "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+      "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+      "result": "pass",
+      "evidence": "native framework input, not physical OS input"
+    }
+  ],
+  "physical_os_evidence": false
+}
