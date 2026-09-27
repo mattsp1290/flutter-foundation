@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:re_editor/re_editor.dart';
 import 'package:re_highlight/languages/go.dart';
 
-import 'package:birb_code_editor/src/engine_adapter.dart';
+import 'qualification_engine_observer.dart';
 
 /// Temporary interactive W1 probe; not the production editor API.
 class BirbEditorQualification extends StatefulWidget {
@@ -16,7 +16,7 @@ class BirbEditorQualification extends StatefulWidget {
 }
 
 class _QualificationState extends State<BirbEditorQualification> {
-  late final EngineAdapter _adapter;
+  late final QualificationEngineObserver _adapter;
   final _scroll = CodeScrollController();
   String _recovery = '';
   bool _wrap = false;
@@ -24,7 +24,7 @@ class _QualificationState extends State<BirbEditorQualification> {
   @override
   void initState() {
     super.initState();
-    _adapter = EngineAdapter(
+    _adapter = QualificationEngineObserver(
       'package main\r\n\r\n// Mixed separators remain exact.\r'
       'func main() {\n\tprintln("hello", 42)\r\n}\n',
       onSourceChanged: (source) {

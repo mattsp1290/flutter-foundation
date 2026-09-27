@@ -31,7 +31,7 @@ class _SourceEditorState extends State<BirbSourceEditor> {
   late CodeScrollController _scroll;
   late EditorProviderCoordinator _providers;
   late GuardedEditorEngine _engine;
-  late EngineAdapter _adapter;
+  late CodeLineEditingController _documentEngine;
   bool _attached = false;
   bool _wrap = false;
   double _fontScale = 1;
@@ -91,7 +91,7 @@ class _SourceEditorState extends State<BirbSourceEditor> {
       verticalScroller: ScrollController(initialScrollOffset: offset.dy),
       horizontalScroller: ScrollController(initialScrollOffset: offset.dx),
     );
-    _adapter = widget.controller._adapter;
+    _documentEngine = widget.controller._engine;
     _scroll.verticalScroller.addListener(_saveScroll);
     _scroll.horizontalScroller.addListener(_saveScroll);
     _engine = widget.controller._bindEngine(this);
@@ -133,7 +133,8 @@ class _SourceEditorState extends State<BirbSourceEditor> {
 
   void _changed() {
     if (!mounted || !_attached) return;
-    if (!identical(_adapter, widget.controller._adapter) && _focus.hasFocus) {
+    if (!identical(_documentEngine, widget.controller._engine) &&
+        _focus.hasFocus) {
       _restoreFocus = true;
       _focus.unfocus();
     }
@@ -213,11 +214,11 @@ class _SourceEditorState extends State<BirbSourceEditor> {
         if (mounted && _attached) _focus.requestFocus();
       });
     }
-    if (!identical(_adapter, widget.controller._adapter)) {
-      _adapter = widget.controller._adapter;
+    if (!identical(_documentEngine, widget.controller._engine)) {
+      _documentEngine = widget.controller._engine;
       _engine = widget.controller._bindEngine(this);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.controller._releaseRetiredAdapters();
+        widget.controller._releaseRetiredEngines();
       });
     }
     final snapshot = widget.controller.snapshot;

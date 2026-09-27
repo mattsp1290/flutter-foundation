@@ -2,6 +2,7 @@
 """Generate an isolated editor consumer using immutable Git dependencies."""
 
 import argparse
+from dataclasses import dataclass
 import io
 import json
 import platform
@@ -90,9 +91,31 @@ def resolved_git_ref(lock, package):
     return ref.group(1) if ref else None
 
 
-def generate(args):
+@dataclass(frozen=True)
+class CandidateSource:
+    root: Path
+
+
+@dataclass(frozen=True)
+class PublishedSource:
+    url: str
+    ref: str
+
+
+def parse_editor_source(args, argument_parser):
+    if args.candidate_root is not None:
+        if args.editor_url is not None or args.editor_ref is not None:
+            argument_parser.error("Choose candidate-root OR both editor-url and editor-ref")
+        return CandidateSource(args.candidate_root)
+    if args.editor_url is None or args.editor_ref is None:
+        argument_parser.error("Published checks require both editor-url and editor-ref")
+    return PublishedSource(args.editor_url, args.editor_ref)
+
+
+def generate(*, source: CandidateSource | PublishedSource, target_platform: str,
+             output: Path, design_system_ref: str, editor_only: bool = False):
     flutter = flutter_sdk()
-    output = args.output.expanduser().resolve()
+    output = output.expanduser().resolve()
     if output.exists():
         raise RuntimeError("Output must be a new owned directory")
     if output == ROOT or ROOT in output.parents:
@@ -100,29 +123,29 @@ def generate(args):
     output.parent.mkdir(parents=True, exist_ok=True)
     output.mkdir()
     # Snapshot must remain beside the app while file-Git resolution is in use.
-    if args.candidate_root:
-        url, ref, original = export_candidate(args.candidate_root, output / "candidate")
+    if isinstance(source, CandidateSource):
+        url, ref, original = export_candidate(source.root, output / "candidate")
         manifest_root = output / "candidate"
         mode = "candidate"
     else:
-        url, ref, original = args.editor_url, args.editor_ref, None
+        url, ref, original = source.url, source.ref, None
         mode = "published"
         manifest_root = output / "manifest-check"
         run(["git", "init", "--quiet", str(manifest_root)])
         run(["git", "fetch", "--quiet", "--depth=1", url, ref], manifest_root)
         run(["git", "checkout", "--quiet", "--detach", "FETCH_HEAD"], manifest_root)
-    inspect_manifest(manifest_root, args.design_system_ref)
+    inspect_manifest(manifest_root, design_system_ref)
     app = output / "app"
-    run([flutter, "create", "--platforms=" + args.platform, "--project-name",
+    run([flutter, "create", "--platforms=" + target_platform, "--project-name",
          "birb_editor_platform_check", "--no-pub", str(app)])
     dependencies = {
         "flutter": {"sdk": "flutter"},
         "birb_code_editor": {"git": {"url": url, "ref": ref,
                                      "path": "packages/birb_code_editor"}},
     }
-    if not args.editor_only:
+    if not editor_only:
         dependencies["birb_design_system"] = {"git": {
-            "url": DESIGN_URL, "ref": args.design_system_ref,
+            "url": DESIGN_URL, "ref": design_system_ref,
             "path": "packages/birb_design_system"}}
     manifest = {
         "name": "birb_editor_platform_check", "publish_to": "none",
@@ -145,9 +168,9 @@ def generate(args):
         destination = app / target
         destination.parent.mkdir(exist_ok=True)
         content = (templates / template).read_text()
-        content = content.replace("// DESIGN_IMPORT", "" if args.editor_only else
+        content = content.replace("// DESIGN_IMPORT", "" if editor_only else
                                   "import 'package:birb_design_system/birb_design_system.dart';")
-        content = content.replace("/* DESIGN_THEME */", "" if args.editor_only else
+        content = content.replace("/* DESIGN_THEME */", "" if editor_only else
                                   "theme: BirbTheme.light, darkTheme: BirbTheme.dark,")
         destination.write_text(content)
     run([flutter, "pub", "get"], app)
@@ -155,13 +178,13 @@ def generate(args):
     if re.search(r"source: path\b", lock) or "dependency_overrides" in manifest:
         raise RuntimeError("Consumer resolved a path dependency or override")
     for package, expected in (("birb_code_editor", ref),
-                              ("birb_design_system", args.design_system_ref)):
+                              ("birb_design_system", design_system_ref)):
         if resolved_git_ref(lock, package) != expected:
             raise RuntimeError(f"Unexpected resolved ref for {package}")
-    record = {"mode": mode, "platform": args.platform, "editor_only": args.editor_only,
+    record = {"mode": mode, "platform": target_platform, "editor_only": editor_only,
               "host": platform.platform(), "flutter": "3.47.1", "dart": "3.13.1",
               "editor_url": url, "editor_ref": ref, "candidate_original_ref": original,
-              "design_system_url": DESIGN_URL, "design_system_ref": args.design_system_ref}
+              "design_system_url": DESIGN_URL, "design_system_ref": design_system_ref}
     (output / "pin-map.json").write_text(json.dumps(record, indent=2) + "\n")
     if mode == "published":
         shutil.rmtree(manifest_root)
@@ -169,22 +192,26 @@ def generate(args):
     return app
 
 
-def parser(*, require_target=True):
-    result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--platform", choices=("macos", "linux", "windows", "web"), required=require_target)
-    result.add_argument("--output", type=Path, required=require_target)
+def add_source_arguments(result):
     result.add_argument("--candidate-root", type=Path)
     result.add_argument("--editor-url", type=public_git_url)
     result.add_argument("--editor-ref", type=sha)
     result.add_argument("--design-system-ref", type=sha, required=True)
+
+
+def parser():
+    result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--platform", choices=("macos", "linux", "windows", "web"), required=True)
+    result.add_argument("--output", type=Path, required=True)
     result.add_argument("--editor-only", action="store_true")
+    add_source_arguments(result)
     return result
 
 
 if __name__ == "__main__":
-    arguments = parser().parse_args()
-    if bool(arguments.candidate_root) == bool(arguments.editor_url or arguments.editor_ref):
-        raise SystemExit("Choose candidate-root OR both editor-url and editor-ref")
-    if not arguments.candidate_root and not (arguments.editor_url and arguments.editor_ref):
-        raise SystemExit("Published checks require both editor-url and editor-ref")
-    generate(arguments)
+    argument_parser = parser()
+    arguments = argument_parser.parse_args()
+    generate(source=parse_editor_source(arguments, argument_parser),
+             target_platform=arguments.platform, output=arguments.output,
+             design_system_ref=arguments.design_system_ref,
+             editor_only=arguments.editor_only)

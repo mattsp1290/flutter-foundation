@@ -7,6 +7,7 @@ import 'package:birb_code_editor/src/provider_overlays.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:re_editor/re_editor.dart';
 
 class _FixtureProvider implements BirbEditorProvider {
   final completions = <Completer<List<BirbEditorCompletion>>>[];
@@ -104,6 +105,89 @@ void main() {
     label: text,
     edit: BirbEditorEdit(range: const TextRange(start: 0, end: 3), text: text),
   );
+
+  testWidgets('completion callback rechecks popup ownership before rebuild', (
+    tester,
+  ) async {
+    final controller = BirbEditorController(
+      documentId: 'callback',
+      source: 'bad',
+    );
+    final focus = FocusNode();
+    final provider = _FixtureProvider();
+    await mount(tester, controller, focus, provider);
+    await _controlKey(tester, LogicalKeyboardKey.space);
+    provider.completions.single.complete([item('unexpected')]);
+    await tester.pumpAndSettle();
+    final editor = tester.widget<CodeEditor>(find.byType(CodeEditor));
+    final oldEnter =
+        editor.shortcutOverrideActions![CodeShortcutNewLineIntent]!;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.f10);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    // Deliberately deliver the previously installed action before rebuilding.
+    const ActionDispatcher().invokeAction(
+      oldEnter,
+      const CodeShortcutNewLineIntent(),
+    );
+    expect(controller.snapshot.source, '\nbad');
+    await tester.pumpWidget(const SizedBox());
+    focus.dispose();
+    controller.dispose();
+  }, variant: TargetPlatformVariant({TargetPlatform.linux}));
+
+  for (final hiddenByToolbar in [true, false]) {
+    for (final key in [
+      LogicalKeyboardKey.enter,
+      LogicalKeyboardKey.arrowDown,
+    ]) {
+      testWidgets(
+        'hidden completion does not consume $key (toolbar=$hiddenByToolbar)',
+        (tester) async {
+          final source = List.filled(100, 'bad').join('\n');
+          final controller = BirbEditorController(
+            documentId: 'hidden',
+            source: source,
+          );
+          final focus = FocusNode();
+          final provider = _FixtureProvider();
+          await mount(tester, controller, focus, provider);
+          await _controlKey(tester, LogicalKeyboardKey.space);
+          provider.completions.single.complete([item('unexpected')]);
+          await tester.pumpAndSettle();
+          expect(find.text('Completions'), findsOneWidget);
+          if (hiddenByToolbar) {
+            await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+            await tester.sendKeyEvent(LogicalKeyboardKey.f10);
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          } else {
+            final editor = tester.widget<CodeEditor>(find.byType(CodeEditor));
+            editor.scrollController!.verticalScroller.jumpTo(
+              editor
+                  .scrollController!
+                  .verticalScroller
+                  .position
+                  .maxScrollExtent,
+            );
+          }
+          await tester.pumpAndSettle();
+          expect(find.text('Completions'), findsNothing);
+          await tester.sendKeyEvent(key);
+          if (key == LogicalKeyboardKey.enter) {
+            expect(controller.snapshot.source, '\n$source');
+          } else {
+            expect(controller.snapshot.source, source);
+            expect(controller.snapshot.selection.extentOffset, 4);
+          }
+          await tester.pumpWidget(const SizedBox());
+          focus.dispose();
+          controller.dispose();
+          expect(tester.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant({TargetPlatform.linux}),
+      );
+    }
+  }
 
   testWidgets(
     'completion keyboard navigation accepts one atomic edit and ignores stale responses',

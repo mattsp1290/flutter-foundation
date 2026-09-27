@@ -1,4 +1,6 @@
 import argparse
+from contextlib import redirect_stderr
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -8,6 +10,26 @@ from tool import create_editor_native_harness as harness
 
 
 class EditorHarnessTest(unittest.TestCase):
+    def test_source_boundary_rejects_incomplete_and_conflicting_modes(self):
+        parser = argparse.ArgumentParser()
+        harness.add_source_arguments(parser)
+        shared = ["--design-system-ref", "a" * 40]
+        url = ["--editor-url", "https://example.com/editor.git"]
+        ref = ["--editor-ref", "b" * 40]
+        candidate = ["--candidate-root", "/tmp/editor-candidate"]
+        for mode in ([], url, ref, candidate + url, candidate + ref, candidate + url + ref):
+            with self.subTest(mode=mode), redirect_stderr(io.StringIO()):
+                args = parser.parse_args(shared + mode)
+                with self.assertRaises(SystemExit) as error:
+                    harness.parse_editor_source(args, parser)
+                self.assertEqual(error.exception.code, 2)
+        self.assertEqual(
+            harness.parse_editor_source(parser.parse_args(shared + candidate), parser),
+            harness.CandidateSource(Path("/tmp/editor-candidate")))
+        self.assertEqual(
+            harness.parse_editor_source(parser.parse_args(shared + url + ref), parser),
+            harness.PublishedSource("https://example.com/editor.git", "b" * 40))
+
     def test_resolved_refs_accept_pub_yaml_quoting(self):
         for quote in ('', '"', "'"):
             ref = 'fb37f2' + 'a' * 34

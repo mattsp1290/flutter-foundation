@@ -17,6 +17,8 @@ import 'snapshot.dart';
 import 'selection_toolbar.dart';
 import 'source_semantics.dart';
 
+part 'surface_popups.dart';
+
 class EditorSurface extends StatefulWidget {
   const EditorSurface({
     super.key,
@@ -228,11 +230,7 @@ class _EditorSurfaceState extends State<EditorSurface> {
     );
     final snapshot = widget.controller.snapshot;
     final geometry = _geometry;
-    final completionAnchor = geometry.caret(snapshot.selection.extentOffset);
-    final hover = widget.providers.hover;
-    final hoverAnchor = geometry.caret(
-      widget.providers.hoverPosition ?? snapshot.selection.extentOffset,
-    );
+    final popup = _resolvePopup(geometry);
     final mac = theme.platform == TargetPlatform.macOS;
     return LayoutBuilder(
       key: _surfaceKey,
@@ -288,33 +286,7 @@ class _EditorSurfaceState extends State<EditorSurface> {
                         readOnly: snapshot.readOnly,
                         wordWrap: widget.wrap,
                         autofocus: false,
-                        shortcutOverrideActions: {
-                          ...widget.actions,
-                          if (_toolbarAnchor != null)
-                            CodeShortcutEscIntent:
-                                CallbackAction<CodeShortcutEscIntent>(
-                                  onInvoke: (_) {
-                                    _dismissToolbar();
-                                    return null;
-                                  },
-                                ),
-                          if (_items.isNotEmpty) ...{
-                            CodeShortcutCursorMoveIntent:
-                                CallbackAction<CodeShortcutCursorMoveIntent>(
-                                  onInvoke: (intent) {
-                                    _moveCompletion(intent.direction);
-                                    return null;
-                                  },
-                                ),
-                            CodeShortcutNewLineIntent:
-                                CallbackAction<CodeShortcutNewLineIntent>(
-                                  onInvoke: (_) {
-                                    _accept(_items[_selected]);
-                                    return null;
-                                  },
-                                ),
-                          },
-                        },
+                        shortcutOverrideActions: _popupActions(popup),
                         maxLengthSingleLineRendering: 0x7fffffff,
                         commentFormatter: DefaultCodeCommentFormatter(
                           singleLinePrefix: '//',
@@ -377,50 +349,7 @@ class _EditorSurfaceState extends State<EditorSurface> {
                   ),
                 ),
               ),
-              if (_toolbarAnchor != null)
-                EditorProviderPopup(
-                  anchor: _toolbarAnchor!,
-                  size: constraints.biggest,
-                  title: 'Selection',
-                  close: _dismissToolbar,
-                  child: EditorSelectionToolbar(
-                    controller: widget.controller,
-                    dismiss: _dismissToolbar,
-                  ),
-                ),
-              if (_toolbarAnchor == null &&
-                  _items.isNotEmpty &&
-                  completionAnchor != null)
-                EditorProviderPopup(
-                  anchor: completionAnchor,
-                  size: constraints.biggest,
-                  title: 'Completions',
-                  close: widget.providers.dismiss,
-                  child: EditorCompletionList(
-                    items: _items,
-                    selected: _selected,
-                    scrollController: _completionScroll,
-                    accept: _accept,
-                    enabled:
-                        snapshot.capabilities.canEdit &&
-                        snapshot.composing.isCollapsed,
-                  ),
-                ),
-              if (_toolbarAnchor == null &&
-                  _items.isEmpty &&
-                  hover != null &&
-                  hoverAnchor != null)
-                EditorProviderPopup(
-                  anchor: hoverAnchor,
-                  size: constraints.biggest,
-                  title: 'Hover information',
-                  fitContent: true,
-                  close: widget.providers.dismiss,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(hover.text),
-                  ),
-                ),
+              if (popup != null) _buildPopup(popup, constraints.biggest),
             ],
           ),
         ),

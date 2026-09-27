@@ -17,30 +17,30 @@ extension _EditorViewBinding on BirbEditorController {
     _mutationEpoch++;
     _viewOwner = null;
     _viewAttachment = null;
-    _viewAdapter = null;
-    _releaseRetiredAdapters();
+    _viewEngine = null;
+    _releaseRetiredEngines();
   }
 
-  void _releaseRetiredAdapters() {
-    for (final adapter in List.of(_retiredAdapters)) {
-      if (!identical(adapter, _viewAdapter)) {
-        _retiredAdapters.remove(adapter);
-        adapter.dispose();
+  void _releaseRetiredEngines() {
+    for (final engine in List.of(_retiredEngines)) {
+      if (!identical(engine, _viewEngine)) {
+        _retiredEngines.remove(engine);
+        engine.dispose();
       }
     }
   }
 
   GuardedEditorEngine _bindEngine(Object owner) {
-    final adapter = _adapter;
+    final engine = _engine;
     final attachment = _viewAttachment;
-    _viewAdapter = adapter;
+    _viewEngine = engine;
     bool current() =>
         !_disposed &&
         identical(_viewOwner, owner) &&
         identical(_viewAttachment, attachment) &&
-        identical(_adapter, adapter);
+        identical(_engine, engine);
     return GuardedEditorEngine(
-      delegate: adapter.engine,
+      delegate: engine,
       isCurrent: current,
       mutate: (operation, changesSource) {
         if (!current() || _notifying || (changesSource && _readOnly)) return;

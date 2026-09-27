@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:re_editor/re_editor.dart';
 
 import 'edit_transaction.dart';
-import 'engine_adapter.dart';
+import 'engine_factory.dart';
 import 'editor_surface.dart';
 import 'editor_status.dart';
 import 'diagnostics_panel.dart';
@@ -33,11 +33,11 @@ class BirbEditorController implements Listenable {
     String source = '',
     this._readOnly = false,
   }) {
-    _adapter = _createAdapter(source);
+    _engine = _createEngine(source);
     _snapshot = _capture(BirbEditorOrigin.hostReplacement);
   }
 
-  late EngineAdapter _adapter;
+  late CodeLineEditingController _engine;
   late BirbEditorSnapshot _snapshot;
   String _documentId;
   int _generation = 0;
@@ -51,16 +51,16 @@ class BirbEditorController implements Listenable {
   final _textListeners = <ValueChanged<BirbEditorSnapshot>>[];
   Object? _viewOwner;
   Object? _viewAttachment;
-  EngineAdapter? _viewAdapter;
-  final _retiredAdapters = <EngineAdapter>[];
+  CodeLineEditingController? _viewEngine;
+  final _retiredEngines = <CodeLineEditingController>[];
   Offset _scrollOffset = Offset.zero;
 
   BirbEditorSnapshot get snapshot => _snapshot;
 
-  EngineAdapter _createAdapter(String source) {
-    final adapter = EngineAdapter(source, onSourceChanged: (_) {});
-    adapter.engine.addListener(_engineChanged);
-    return adapter;
+  CodeLineEditingController _createEngine(String source) {
+    final engine = createExactEngine(source);
+    engine.addListener(_engineChanged);
+    return engine;
   }
 
   @override
@@ -93,7 +93,7 @@ class BirbEditorController implements Listenable {
   }
 
   BirbEditorSnapshot _capture(BirbEditorOrigin origin) {
-    final engine = _adapter.engine;
+    final engine = _engine;
     final source = engine.text;
     final coordinates = BirbSourceCoordinates(source);
     final selection = engine.unfoldLineSelection;
@@ -135,7 +135,7 @@ class BirbEditorController implements Listenable {
   }
 
   void _publish(BirbEditorOrigin origin, {bool replacement = false}) {
-    final textChanged = replacement || _adapter.engine.text != _snapshot.source;
+    final textChanged = replacement || _engine.text != _snapshot.source;
     if (textChanged) _generation++;
     _mutationEpoch++;
     _snapshot = _capture(origin);
@@ -193,11 +193,11 @@ class BirbEditorController implements Listenable {
   }) {
     final rejected = _guard(editing: false);
     if (rejected != null) return rejected;
-    final previous = _adapter;
-    _adapter = _createAdapter(source);
-    previous.engine.removeListener(_engineChanged);
-    _retiredAdapters.add(previous);
-    _releaseRetiredAdapters();
+    final previous = _engine;
+    _engine = _createEngine(source);
+    previous.removeListener(_engineChanged);
+    _retiredEngines.add(previous);
+    _releaseRetiredEngines();
     _documentId = documentId;
     _clipboardUnavailable = false;
     _publish(BirbEditorOrigin.hostReplacement, replacement: true);
@@ -214,14 +214,14 @@ class BirbEditorController implements Listenable {
   }
 
   CodeLineSelection _engineSelection(TextSelection selection) {
-    final coordinates = BirbSourceCoordinates(_adapter.engine.text);
+    final coordinates = BirbSourceCoordinates(_engine.text);
     final base = coordinates.positionAt(selection.baseOffset);
     final extent = coordinates.positionAt(selection.extentOffset);
     int reveal(int line) {
-      var index = _adapter.engine.lineIndex2Index(line);
-      while (_adapter.engine.index2lineIndex(index.index) != line) {
-        _adapter.engine.expandChunk(index.index);
-        index = _adapter.engine.lineIndex2Index(line);
+      var index = _engine.lineIndex2Index(line);
+      while (_engine.index2lineIndex(index.index) != line) {
+        _engine.expandChunk(index.index);
+        index = _engine.lineIndex2Index(line);
       }
       return index.index;
     }
@@ -247,8 +247,8 @@ class BirbEditorController implements Listenable {
     }
     _batchDepth++;
     try {
-      _adapter.engine.selection = _engineSelection(selection);
-      _adapter.engine.makeCursorVisible();
+      _engine.selection = _engineSelection(selection);
+      _engine.makeCursorVisible();
     } finally {
       _batchDepth--;
       _publish(_snapshot.origin);
@@ -278,9 +278,9 @@ class BirbEditorController implements Listenable {
       return prepared.result;
     }
     return _command(() {
-      _adapter.engine.runRevocableOp(() {
+      _engine.runRevocableOp(() {
         for (final edit in prepared.edits) {
-          _adapter.engine.replaceSelection(
+          _engine.replaceSelection(
             edit.text,
             _engineSelection(
               TextSelection(
@@ -291,29 +291,26 @@ class BirbEditorController implements Listenable {
           );
         }
         if (prepared.selection != null) {
-          _adapter.engine.selection = _engineSelection(prepared.selection!);
+          _engine.selection = _engineSelection(prepared.selection!);
         }
       });
     }, BirbEditorOrigin.command);
   }
 
-  BirbEditorEditResult undo() =>
-      _command(_adapter.engine.undo, BirbEditorOrigin.undo);
-  BirbEditorEditResult redo() =>
-      _command(_adapter.engine.redo, BirbEditorOrigin.redo);
+  BirbEditorEditResult undo() => _command(_engine.undo, BirbEditorOrigin.undo);
+  BirbEditorEditResult redo() => _command(_engine.redo, BirbEditorOrigin.redo);
   BirbEditorEditResult indent() =>
-      _command(_adapter.engine.applyIndent, BirbEditorOrigin.command);
+      _command(_engine.applyIndent, BirbEditorOrigin.command);
   BirbEditorEditResult outdent() =>
-      _command(_adapter.engine.applyOutdent, BirbEditorOrigin.command);
+      _command(_engine.applyOutdent, BirbEditorOrigin.command);
   BirbEditorEditResult selectAll() => setSelection(
     TextSelection(baseOffset: 0, extentOffset: _snapshot.source.length),
   );
 
   BirbEditorEditResult toggleComment() => _command(() {
-    _adapter.engine.runRevocableOp(() {
-      _adapter.engine.value = DefaultCodeCommentFormatter(
-        singleLinePrefix: '//',
-      ).format(_adapter.engine.value, '  ', true);
+    _engine.runRevocableOp(() {
+      _engine.value = DefaultCodeCommentFormatter(singleLinePrefix: '//')
+          .format(_engine.value, '  ', true);
     });
   }, BirbEditorOrigin.command);
 
@@ -345,9 +342,9 @@ class BirbEditorController implements Listenable {
       throw StateError('Cannot dispose the editor during notification');
     }
     _disposed = true;
-    _adapter.engine.removeListener(_engineChanged);
-    _adapter.dispose();
-    _releaseRetiredAdapters();
+    _engine.removeListener(_engineChanged);
+    _engine.dispose();
+    _releaseRetiredEngines();
     _listeners.clear();
     _textListeners.clear();
   }

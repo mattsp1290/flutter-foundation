@@ -16,7 +16,6 @@ jobs:
       # The pinned AG-UI dependency has unrelated LFS test fixtures. Pub needs
       # only the Dart SDK path, so avoid an authenticated LFS smudge checkout.
       GIT_LFS_SKIP_SMUDGE: "1"
-      EDITOR_BROWSER_EVIDENCE: ${{ runner.temp }}/editor-browser-evidence
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -29,6 +28,8 @@ jobs:
       - name: Install browser integration dependencies
         run: python3 tool/install_ci_browser.py --output "$RUNNER_TEMP/editor-browser"
       - name: Verify workspace
+        env:
+          EDITOR_BROWSER_EVIDENCE: ${{ runner.temp }}/editor-browser-evidence
         run: ./tool/verify.sh
       - name: Upload browser evidence
         if: always()

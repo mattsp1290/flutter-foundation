@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:re_editor/re_editor.dart';
-import 'package:birb_code_editor/src/engine_adapter.dart';
+
+import 'support/qualification_engine_observer.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -99,7 +100,7 @@ void main() {
       const initial = 'a\r\nb\rc\n';
       var recovered = initial;
       var count = 0;
-      final adapter = EngineAdapter(
+      final adapter = QualificationEngineObserver(
         initial,
         onSourceChanged: (source) {
           recovered = source;
@@ -114,7 +115,10 @@ void main() {
       expect(recovered, '');
       expect(count, 1);
       await Future<void>.microtask(() {
-        final reload = EngineAdapter(recovered, onSourceChanged: (_) {});
+        final reload = QualificationEngineObserver(
+          recovered,
+          onSourceChanged: (_) {},
+        );
         expect(reload.source, '');
         reload.dispose();
       });

@@ -83,13 +83,13 @@ until the run and evidence collection finish, then remove that owned directory.
 | Recovery/input | Catalog macOS framework keyboard and composing deltas; immediate host recovery assertions | Pass; physical IME pending |
 | Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
 | Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 release browser captures](evidence/editor-acceptance/visuals/provenance.json); source/history survive all states; physical inspection pending |
-| Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Recorded pass](evidence/editor-qualification/production-native-workers.json) |
+| Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Stage-two pass](evidence/editor-qualification/production-native-workers-stage2.json) |
 | Standalone dependency closure | B `9986536`, exact A; editor-only and coexistence | Early published checkpoint pass; candidate/final B pending |
 | macOS external native suite | B `9986536`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
 | Linux / Windows | [CI run 36351633076](https://github.com/mattsp1290/flutter-foundation/actions/runs/36351633076), B `5a2a462` | macOS pass; Windows harness lock-ref parser corrected after false failure; Linux clipboard boundary accepted; updated native suite pending |
 | Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
 | Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/provenance.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 35.3 ms, ready 235.1 ms; DPR 2: p95 34.8 ms, ready 238.2 ms; both pass 50 ms / 3 s budgets |
-| Review gauntlet | Two independent stage-one reviews requested changes; seven distinct findings are being fixed and verified | Stage-one checkpoint pending; pinned Cursor stage not yet run |
+| Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Four stage-two findings fixed and independently rechecked; portable gate, worker lifecycle and catalog macOS build pass; cloud rerun pending |
 
 The selected completion row's foreground was corrected after browser inspection;
 the new [completion screenshot](evidence/editor-acceptance/browser/nested/dpr-1/completion-popup.png)
@@ -123,7 +123,12 @@ passed core input/state and API-boundary clipboard checks but failed an invalid
 pairing assertion (multiline replacement was incorrectly expected to pair).
 The corrected case uses native deletion followed by insertion and checks both
 undo boundaries. Windows also exposed UTF-8 log decoding through cp1252; the
-runner now explicitly reads Flutter logs as UTF-8.
+runner now explicitly reads Flutter logs as UTF-8. The complete macOS external
+suite passed all four tests at `d630362`, including pairing and clipboard API
+readback. Its cloud run `36355561347` failed before starting jobs because
+`runner.temp` was referenced in job-level environment configuration. The fix
+moves the value to the verification step; actionlint accepts the corrected
+workflow. A new cloud run is still required.
 
 The performance timer runs inside the browser: real `keydown` starts it, and a
 `requestAnimationFrame` after the source/recovery frame ends it. WebDriver
@@ -138,7 +143,9 @@ not waived. A local 4× CPU-throttled diagnostic reproduced 79.9 ms and identifi
 web UI-thread syntax/fold analysis before paint. The fork now coalesces that
 work after the source frame and a short quiet period. [Throttled diagnostic records](evidence/editor-acceptance/performance/review-profile.json)
 show 65.8 ms after scheduling changes; this is an improvement, not a 50 ms
-acceptance pass. Updated cloud performance qualification remains required. The scroll gate also requires the observed
+acceptance pass. A subsequent [local stage-two release run](evidence/editor-acceptance/performance/stage2-results.json)
+passes at p95 33.4/34.0 ms and ready 226.4/245.4 ms for DPR1/2. Updated cloud
+performance qualification remains required. The scroll gate also requires the observed
 source viewport offset to increase, in addition to preserving the document.
 
 ## Physical release checklist

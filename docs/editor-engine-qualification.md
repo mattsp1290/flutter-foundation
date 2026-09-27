@@ -118,7 +118,7 @@ contain counts and tool/platform versions, without VM-service credentials.
 | Required W1 capability | Public hook and executable evidence | Outcome |
 | --- | --- | --- |
 | Exact load/edit/copy, CRLF/CR/mixed/Unicode, nested folds, 64 KiB | Fork `exact_source_test.dart`; Foundation `engine_qualification_test.dart` and 64 KiB paragraph test | Pass with owned patch |
-| Synchronous source before recovery task, no fold/selection text event | `EngineAdapter` listener; adapter recovery test; native delta/composition callback test | Pass |
+| Synchronous source before recovery task, no fold/selection text event | Controller source subscription; test-only qualification observer; native delta/composition callback test | Pass |
 | Atomic edits and exact history/selection; raw folded offsets | `runRevocableOp`, `unfoldLineSelection`, per-line serialization; Foundation transaction and raw-offset probes | Pass with owned patch |
 | Async completion, hover, diagnostic ranges/list, stale-result rejection | Exported `CodeIndicatorValueNotifier`/`CodeLineRenderParagraph`; bounded coordinator and product widget tests | Implemented and tested; final platform matrix remains W4 |
 | Offline Go and visible absolute lines, nested asset path, long-line rendering | Explicit `langGo`/`CodeHighlightTheme`, `DefaultCodeLineNumber`; Chrome screenshots/network observation and 64 KiB view test | Pass for W1; W4 actively blocked-origin/performance matrix remains |
