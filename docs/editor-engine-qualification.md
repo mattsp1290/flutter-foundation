@@ -8,7 +8,7 @@ physical-IME certification or four-platform delivery claim.
 
 The maintainer supplied `git@github.com:mattsp1290/re-editor.git` and confirmed
 `~/git/re-editor` as the fork checkout. Foundation resolves the public HTTPS URL
-at immutable commit `5e6cf9525d9433f3dc439e2d647ff61334cc08d3`, branch
+at immutable commit `8cf321dd7c62a831b455201dedb638851c4fb9c3`, branch
 `birb/exact-source-0.10.0`; remote and local SHAs match. The fork starts at
 upstream `0a2a7d832011431d123b1b9391a481171cb4b849`, whose library is identical
 to the publisher archive. `BIRB_PATCH.md` in the fork records ownership,
@@ -17,15 +17,20 @@ regression tests, upgrade rules and removal conditions.
 The bounded patch touches six upstream implementation files. It retains source
 separators in existing line/history values, groups nested transactions, includes
 folded document tails in select-all, fixes upstream's paired-delete regression,
-and cancels owned deferred timers. The renderer, input stack and history remain
+and cancels owned deferred timers. W2's controller probe also exposed selection
+and folding creating history entries or discarding redo. Exact-source mode now
+updates the current node's presentation state without branching source history.
+Range insertions that join CR and LF now produce canonical logical lines; that
+uncommon edit reparses the document and expands folds, with exact undo recovery.
+The renderer, input stack and history remain
 the upstream implementations. `preserveLineBreaks: true` is an opt-in public
 engine option; Foundation's internal adapter enables it and selects the first
 existing separator as the Enter convention (LF for a document without one).
 
-The fork's 154 tests pass on Flutter 3.47.1. Its baseline and patched analyzer
+The fork's 156 tests pass on Flutter 3.47.1. Its W1 baseline and patched analyzer
 both report the same 15 upstream diagnostics; this is not reported as a passing
-fork analysis gate. Foundation's workspace analysis passes. Foundation currently
-has 16 passing engine/view/provider qualification tests, covering exact source,
+fork analysis gate. Foundation's W1 workspace analysis passed. The original
+16 engine/view/provider qualification tests still pass, covering exact source,
 same-stack callback before queued reload, filtered fold/selection events,
 multi-edit undo including selection, visible 64 KiB paragraphs, delta input,
 detach and public paragraph geometry after scroll/wrap. A delayed provider
@@ -47,7 +52,9 @@ This observation is not yet the W4 test that actively blocks external origins.
 Screenshots: [initial rendering](evidence/editor-qualification/chrome-nested-base.png)
 and [keyboard edit](evidence/editor-qualification/chrome-keyboard-edit.png).
 These screenshots used the preceding timer-fix pin `9f1acb6`; the subsequent
-pin changes timer disposal, not rendering. Repeat release evidence at delivery.
+pins change timer disposal and history bookkeeping, not rendering. Repeat
+release evidence at delivery. Native worker/input evidence below was collected
+at the preceding `5e6cf95` pin; rerun these probes before delivery.
 
 `flutter build macos` and the native `editor_qualification_test.dart` driven
 through `editor_qualification_driver.dart` pass. The test sends keyboard and

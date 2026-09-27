@@ -14,7 +14,7 @@ dependencies:
   re_editor:
     git:
       url: https://github.com/mattsp1290/re-editor.git
-      ref: 5e6cf9525d9433f3dc439e2d647ff61334cc08d3
+      ref: 8cf321dd7c62a831b455201dedb638851c4fb9c3
   re_highlight: 0.0.3
   birb_design_system:
     git:
