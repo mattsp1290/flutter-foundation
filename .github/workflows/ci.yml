@@ -12,6 +12,10 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      # The pinned AG-UI dependency has unrelated LFS test fixtures. Pub needs
+      # only the Dart SDK path, so avoid an authenticated LFS smudge checkout.
+      GIT_LFS_SKIP_SMUDGE: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -21,5 +25,9 @@ jobs:
           channel: stable
           flutter-version: 3.47.1
           cache: true
+      - name: Install browser integration dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes chromium-chromedriver
       - name: Verify workspace
         run: ./tool/verify.sh

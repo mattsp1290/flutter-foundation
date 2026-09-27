@@ -1,7 +1,8 @@
 # Design contract coverage
 
 The root [`DESIGN.md`](../../DESIGN.md) is the normative design contract for
-the reusable package and catalog. It was adapted from `ui/DESIGN.md` at the
+the reusable package, catalog, and the thin Birb agent conversation surface.
+It was adapted from `ui/DESIGN.md` at the
 pinned Birbparty source commit
 `0a037dc0d696cf6ea09e006d9c7145b0ab9f8291` (Git blob
 `120a3f798a1fce82d0db9347d9686afe06fd54fd`). The semantic color tables,
@@ -27,8 +28,16 @@ The committed test suite provides the following implementation evidence:
 | Semantic-role consumption boundary | `lib/src/audit/design_system_audit.dart` | `test/audit/design_system_audit_test.dart` |
 | Code review components | `lib/src/review/birb_diff_view.dart`, `lib/src/review/birb_review_style.dart`, `lib/src/review/birb_review_models.dart` | `test/review/birb_diff_view_test.dart`, `test/review/birb_review_style_test.dart`, `test/review/birb_review_models_test.dart` |
 | Simulated review host | `lib/src/preview/birb_review_harness.dart` | `test/preview/birb_review_harness_test.dart` |
+| Birb agent conversation shell, transcript/source states, composer/stop, persistent host action, and error live region | `packages/birb_ag_ui_widgets/lib/src/birb_agent_conversation.dart` | `packages/birb_ag_ui_widgets/test/birb_agent_conversation_test.dart`, `packages/ag_ui_widgets/test/` |
+| Synthetic host-authority fixture | `examples/benchy_contract/lib/main.dart` | `examples/benchy_contract/test/benchy_contract_test.dart` |
 
 [`source_parity_evidence.md`](../../packages/birb_design_system/test/source_oracle/source_parity_evidence.md)
 records the temporary source-oracle comparison. The contract test treats this
 matrix and the current component and mechanism tables as closed inventories,
 and verifies that every referenced implementation and evidence file exists.
+
+For the agent conversation surface, the required manual inspection is light and
+dark themes at 320 logical pixels and 200% text, keyboard focus traversal,
+overlay reachability, 48-pixel authored controls, and visible/live status and
+error cues. Record the tester, platform, date, and outcome in release evidence;
+this matrix does not claim physical mobile-device acceptance.

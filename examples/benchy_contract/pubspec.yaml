@@ -1,0 +1,18 @@
+name: benchy_contract
+publish_to: none
+resolution: workspace
+environment:
+  sdk: '>=3.13.1 <4.0.0'
+  flutter: '>=3.47.1'
+dependencies:
+  ag_ui_view_state: ^0.1.0
+  birb_ag_ui_widgets: ^0.1.0
+  flutter:
+    sdk: flutter
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
