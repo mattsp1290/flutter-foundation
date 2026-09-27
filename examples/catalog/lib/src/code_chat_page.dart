@@ -1,3 +1,4 @@
+import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,8 @@ class _CodeChatPageState extends State<CodeChatPage> {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
+      const BirbEditorQualification(),
+      const SizedBox(height: 24),
       Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [

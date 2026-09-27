@@ -58,8 +58,7 @@ void main(List<String> arguments) {
     }
   }
 
-  for (final entity in root.listSync(recursive: true)) {
-    if (entity is! File) continue;
+  for (final entity in _sourceFiles(root)) {
     final relative = entity.path.substring(root.path.length + 1);
     if (relative != 'pubspec.lock' && relative.endsWith('pubspec.lock')) {
       failures.add('member lockfile is forbidden: $relative');
@@ -75,5 +74,19 @@ void main(List<String> arguments) {
       stderr.writeln('- $failure');
     }
     exitCode = 1;
+  }
+}
+
+Iterable<File> _sourceFiles(Directory directory) sync* {
+  for (final entity in directory.listSync(followLinks: false)) {
+    if (entity is File) {
+      yield entity;
+    } else if (entity is Directory) {
+      final name = entity.uri.pathSegments
+          .where((part) => part.isNotEmpty)
+          .last;
+      if ({'.git', '.dart_tool', 'build'}.contains(name)) continue;
+      yield* _sourceFiles(entity);
+    }
   }
 }

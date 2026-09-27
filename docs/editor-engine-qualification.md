@@ -1,7 +1,110 @@
 # Native editor engine qualification
 
-Status: W1 incomplete; unpatched candidate fails exact-source fidelity.
-W2–W4 and release/adoption are not authorized by passing individual probes.
+Status: executable W1 feasibility probes pass with the owned fork. W2 may build
+the production contract on these hooks. W1 is not a complete product, release,
+physical-IME certification or four-platform delivery claim.
+
+## Current owned candidate
+
+The maintainer supplied `git@github.com:mattsp1290/re-editor.git` and confirmed
+`~/git/re-editor` as the fork checkout. Foundation resolves the public HTTPS URL
+at immutable commit `5e6cf9525d9433f3dc439e2d647ff61334cc08d3`, branch
+`birb/exact-source-0.10.0`; remote and local SHAs match. The fork starts at
+upstream `0a2a7d832011431d123b1b9391a481171cb4b849`, whose library is identical
+to the publisher archive. `BIRB_PATCH.md` in the fork records ownership,
+regression tests, upgrade rules and removal conditions.
+
+The bounded patch touches six upstream implementation files. It retains source
+separators in existing line/history values, groups nested transactions, includes
+folded document tails in select-all, fixes upstream's paired-delete regression,
+and cancels owned deferred timers. The renderer, input stack and history remain
+the upstream implementations. `preserveLineBreaks: true` is an opt-in public
+engine option; Foundation's internal adapter enables it and selects the first
+existing separator as the Enter convention (LF for a document without one).
+
+The fork's 154 tests pass on Flutter 3.47.1. Its baseline and patched analyzer
+both report the same 15 upstream diagnostics; this is not reported as a passing
+fork analysis gate. Foundation's workspace analysis passes. Foundation currently
+has 16 passing engine/view/provider qualification tests, covering exact source,
+same-stack callback before queued reload, filtered fold/selection events,
+multi-edit undo including selection, visible 64 KiB paragraphs, delta input,
+detach and public paragraph geometry after scroll/wrap. A delayed provider
+prototype rejects a stale response, positions completion/hover with exported
+caret geometry, paints diagnostic range markers, exposes a semantic diagnostic
+button and accepts a replacement that undoes exactly. Two simultaneous views
+and twenty highlighted remounts return owned subscription counts to zero while
+preserving host text/history/selection. Desktop widget variants
+are simulated target-platform settings, not actual Linux/Windows execution.
+
+Chrome 153.0.8010.53 / ChromeDriver 153.0.8010.52 loaded a local release build at
+`/editor-check/` using `flutter build web --no-web-resources-cdn --base-href
+/editor-check/`. Visible absolute digits and Go keyword/string/number/comment
+styles appeared with no provider and without enabling accessibility mode.
+WebDriver pointer and Command+A/typing actions changed the source to
+`package typed`; the visible synchronous-recovery counter became 13 UTF-16
+units. Browser logs had no errors; captured requests were all local assets.
+This observation is not yet the W4 test that actively blocks external origins.
+Screenshots: [initial rendering](evidence/editor-qualification/chrome-nested-base.png)
+and [keyboard edit](evidence/editor-qualification/chrome-keyboard-edit.png).
+These screenshots used the preceding timer-fix pin `9f1acb6`; the subsequent
+pin changes timer disposal, not rendering. Repeat release evidence at delivery.
+
+`flutter build macos` and the native `editor_qualification_test.dart` driven
+through `editor_qualification_driver.dart` pass. The test sends keyboard and
+platform delta messages, observes exact host recovery before the next frame,
+checks intermediate/committed composing text and undoes to prior exact source.
+This is native framework-input evidence, not physical OS IME evidence. The
+driver reports a foregrounding failure and missing native integration plugin
+warning, but connects through the VM service and receives passing test results;
+no foreground/manual claim is made.
+
+The native worker-lifecycle probe observes three VM isolates while a highlighted
+view is mounted and one after detach, returning to baseline on all twenty
+cycles. Run `python3 tool/verify_editor_worker_lifecycle.py` to repeat this
+measurement; it requires all samples and an actual increase while mounted.
+The [recorded native samples](evidence/editor-qualification/native-workers.json)
+contain counts and tool/platform versions, without VM-service credentials.
+
+| Required W1 capability | Public hook and executable evidence | Outcome |
+| --- | --- | --- |
+| Exact load/edit/copy, CRLF/CR/mixed/Unicode, nested folds, 64 KiB | Fork `exact_source_test.dart`; Foundation `engine_qualification_test.dart` and 64 KiB paragraph test | Pass with owned patch |
+| Synchronous source before recovery task, no fold/selection text event | `EngineAdapter` listener; adapter recovery test; native delta/composition callback test | Pass |
+| Atomic edits and exact history/selection; raw folded offsets | `runRevocableOp`, `unfoldLineSelection`, per-line serialization; Foundation transaction and raw-offset probes | Pass with owned patch |
+| Async completion, hover, diagnostic ranges/list, stale-result rejection | Exported `CodeIndicatorValueNotifier`/`CodeLineRenderParagraph`; provider UI probe and scroll/wrap geometry test | Feasible through public hooks; final bounded coordinator and product UI remain W2/W3 |
+| Offline Go and visible absolute lines, nested asset path, long-line rendering | Explicit `langGo`/`CodeHighlightTheme`, `DefaultCodeLineNumber`; Chrome screenshots/network observation and 64 KiB view test | Pass for W1; W4 actively blocked-origin/performance matrix remains |
+| Theme/remount/two-controller state and owned resource disposal | Repeated highlighted-view subscription test; native worker VM samples and detach/input tests | Pass with owned timer fixes |
+
+`CodeFindController` and revocable replacements are exercised by the fork's
+upstream search tests. Provider UI uses exported paragraph geometry directly;
+it need not force asynchronous providers through the upstream synchronous
+`CodeAutocomplete` prompt builder. No separate text renderer or private runtime
+import is required. Selection toolbar and finished search UI are W3 composition.
+
+`PATH="/tmp/birb-editor-tools:$PATH" ./tool/verify.sh` passes, including source and
+boundary audits, workspace analysis, all package/example tests, mandatory
+generic POST/SSE browser integration and both web builds. The temporary tools
+directory contains the official ChromeDriver, while coreutils supplies timeout;
+these are machine prerequisites, not repository artifacts. The harness now
+serves through Flutter's `web-server` device before WebDriver launches Chrome,
+avoiding the pinned SDK's `chrome` device startup deadlock. It supports the real
+macOS executable path and `CHROME_EXECUTABLE`. The Benchy contract test now
+distinguishes its writable composer from its readonly selectable caption.
+
+The release JavaScript build passes; the tool's separate Wasm dry run warns
+that the pinned isolate_contactor uses `dart:html`. No Wasm support is claimed.
+Physical keyboard/clipboard/IME and screen-reader release checks on all selected
+platforms remain W4 requirements, as do production provider coordination,
+performance budgets and external package closure.
+
+The source audit now distinguishes direct, unmodified forwarding from the
+existing `BirbReviewStyle.codeTextStyle` token from authoring a new font. It still
+rejects literal names, arbitrary styles, fallback-list modifications and color
+exceptions; all 54 audit tests pass. The package boundary scan prunes generated
+`.dart_tool`, `build` and Git metadata, while a separate disposable probe proves
+source member lockfiles are still rejected. Existing generated validation
+fixtures were not edited or removed.
+
+## Original unpatched experiment (retained failure evidence)
 
 ## Reproduction on 2026-09-27
 
@@ -66,10 +169,10 @@ additional qualification and risks the competing history engine prohibited by
 the plan. This evidence does not claim every possible adapter is impossible;
 it establishes why the straightforward passive mapping does not meet the gate.
 
-## Proposed owned patch boundary; not implemented
+## Original proposed patch boundary
 
-Require a maintainer-selected fork location and owner before adopting a fork.
-Candidate owner/location proposed for decision: `mattsp1290/re-editor`.
+The required maintainer-selected fork location and owner are now resolved above.
+The original candidate owner/location was `mattsp1290/re-editor`.
 Do not switch engines or weaken source fidelity.
 
 Investigate per-line separator metadata retained in the existing engine value
@@ -97,7 +200,8 @@ The scaffold pins design system dependency A to
 `https://github.com/mattsp1290/flutter-foundation.git`, subpath
 `packages/birb_design_system`. No editor delivery commit B exists yet and no
 external dependency closure is claimed. There are no overrides or member
-lockfiles. Runtime product source and an engine adapter are not implemented.
+lockfiles. The qualification adapter/view exist; the public production contract
+is not implemented.
 
 Notices in `docs/licenses/` preserve re_editor, re_highlight, isolate_manager
 and isolate_contactor licenses from the exact resolved releases. They are

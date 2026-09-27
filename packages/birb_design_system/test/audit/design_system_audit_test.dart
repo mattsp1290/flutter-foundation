@@ -6,6 +6,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('design-system source audit', () {
+    test('permits direct code-style forwarding but rejects authored fonts', () {
+      final root = _fixtureRoot();
+      const path = 'packages/editor/lib/editor.dart';
+      _write(root, path, '''
+final style = EditorStyle(
+  fontFamily: BirbReviewStyle.codeTextStyle(theme).fontFamily,
+  fontFamilyFallback: BirbReviewStyle.codeTextStyle(theme).fontFamilyFallback,
+);
+''');
+      expect(_violations(root), isEmpty);
+      for (final source in [
+        "EditorStyle(fontFamily: 'new font')",
+        'EditorStyle(fontFamily: otherStyle.fontFamily)',
+        "EditorStyle(fontFamily: BirbReviewStyle.codeTextStyle(theme).fontFamily ?? 'new font')",
+        "EditorStyle(fontFamilyFallback: [...BirbReviewStyle.codeTextStyle(theme).fontFamilyFallback, 'new font'])",
+        "EditorStyle(fontFamily: BirbReviewStyle.codeTextStyle(theme).fontFamily.replaceAll('a', 'b'))",
+      ]) {
+        _write(root, path, 'final style = $source;');
+        expect(_violations(root), isNotEmpty, reason: source);
+      }
+    });
+
     test('allows the private palette and compliant package sources', () {
       final root = _fixtureRoot();
       _write(

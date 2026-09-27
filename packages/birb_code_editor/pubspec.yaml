@@ -11,7 +11,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  re_editor: 0.10.0
+  re_editor:
+    git:
+      url: https://github.com/mattsp1290/re-editor.git
+      ref: 5e6cf9525d9433f3dc439e2d647ff61334cc08d3
   re_highlight: 0.0.3
   birb_design_system:
     git:

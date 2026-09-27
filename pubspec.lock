@@ -403,10 +403,11 @@ packages:
   re_editor:
     dependency: transitive
     description:
-      name: re_editor
-      sha256: "66671c4774a6b4c5254c9a53ab35a083e7e7da9ae371c519bcf491c70a2a4e56"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "5e6cf9525d9433f3dc439e2d647ff61334cc08d3"
+      resolved-ref: "5e6cf9525d9433f3dc439e2d647ff61334cc08d3"
+      url: "https://github.com/mattsp1290/re-editor.git"
+    source: git
     version: "0.10.0"
   re_highlight:
     dependency: transitive

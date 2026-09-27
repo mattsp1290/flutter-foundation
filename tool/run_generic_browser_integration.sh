@@ -9,7 +9,14 @@ flutter_root=$($flutter_bin --version --machine | sed -n \
 dart_bin="$flutter_root/bin/cache/dart-sdk/bin/dart"
 [ -x "$dart_bin" ] || { echo 'Flutter bundled Dart is unavailable' >&2; exit 1; }
 command -v chromedriver >/dev/null
-chromium_bin=$(command -v chromium 2>/dev/null || command -v google-chrome)
+chromium_bin=${CHROME_EXECUTABLE:-}
+if [ -z "$chromium_bin" ]; then
+  if [ -x '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' ]; then
+    chromium_bin='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  else
+    chromium_bin=$(command -v chromium 2>/dev/null || command -v google-chrome)
+  fi
+fi
 command -v timeout >/dev/null
 
 temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/generic-ag-ui.XXXXXX")
@@ -44,7 +51,9 @@ sleep 1
 kill -0 "$driver_pid" 2>/dev/null || { cat "$temp_dir/chromedriver.log" >&2; exit 1; }
 
 cd "$root/examples/generic_ag_ui"
-if ! timeout 600 "$flutter_bin" drive -d chrome --headless \
+# WebDriver launches Chrome after the server starts. The chrome device waits
+# for a debugger before WebDriver can launch it on the pinned Flutter SDK.
+if ! timeout 600 "$flutter_bin" drive -d web-server --browser-name=chrome --headless \
   --chrome-binary="$chromium_bin" \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/session_flow_test.dart \
