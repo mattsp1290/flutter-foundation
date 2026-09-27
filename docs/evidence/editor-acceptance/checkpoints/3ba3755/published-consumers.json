@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "published",
+    "platform": "web",
+    "editor_only": true,
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "flutter": "3.47.1",
+    "dart": "3.13.1",
+    "editor_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "editor_ref": "3ba3755f6bf0b88b4db2d2a7ffe6976cde2a81ee",
+    "candidate_original_ref": null,
+    "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+    "result": "pass",
+    "checks": [
+      "resolve",
+      "analyze",
+      "widget-smoke",
+      "release-web-build"
+    ]
+  },
+  {
+    "mode": "published",
+    "platform": "web",
+    "editor_only": false,
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "flutter": "3.47.1",
+    "dart": "3.13.1",
+    "editor_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "editor_ref": "3ba3755f6bf0b88b4db2d2a7ffe6976cde2a81ee",
+    "candidate_original_ref": null,
+    "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+    "result": "pass",
+    "checks": [
+      "resolve",
+      "analyze",
+      "widget-smoke",
+      "release-web-build"
+    ]
+  }
+]

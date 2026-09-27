@@ -84,9 +84,9 @@ until the run and evidence collection finish, then remove that owned directory.
 | Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
 | Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 release browser captures](evidence/editor-acceptance/visuals/provenance.json); source/history survive all states; physical inspection pending |
 | Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Stage-two pass](evidence/editor-qualification/production-native-workers-stage2.json) |
-| Standalone dependency closure | B `9986536`, exact A; editor-only and coexistence | Early published checkpoint pass; candidate/final B pending |
+| Standalone dependency closure | [Published checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/published-consumers.json), exact A; editor-only and coexistence | Both cases pass resolution, analysis, public smoke and release build; final delivery B pending |
 | macOS external native suite | B `9986536`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
-| Linux / Windows | [CI run 36351633076](https://github.com/mattsp1290/flutter-foundation/actions/runs/36351633076), B `5a2a462` | macOS pass; Windows harness lock-ref parser corrected after false failure; Linux clipboard boundary accepted; updated native suite pending |
+| Native CI | [Checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/native-ci.json), PR merge tree verified identical to branch head | Linux and macOS suites pass; Windows build passes but harness console replay failed before tests; correction under validation |
 | Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
 | Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/provenance.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 35.3 ms, ready 235.1 ms; DPR 2: p95 34.8 ms, ready 238.2 ms; both pass 50 ms / 3 s budgets |
 | Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Four stage-two findings fixed and independently rechecked; portable gate, worker lifecycle and catalog macOS build pass; cloud rerun pending |
@@ -128,7 +128,12 @@ suite passed all four tests at `d630362`, including pairing and clipboard API
 readback. Its cloud run `36355561347` failed before starting jobs because
 `runner.temp` was referenced in job-level environment configuration. The fix
 moves the value to the verification step; actionlint accepts the corrected
-workflow. A new cloud run is still required.
+workflow. Run `36356469165` then passed the Linux and macOS native suites.
+Windows compiled successfully but replaying the UTF-8 build log into the
+cp1252 Python console raised `UnicodeEncodeError` before tests started. The
+runner now configures both console streams as UTF-8. A portable regression
+uses real cp1252 text streams and raw UTF-8 child bytes; a fresh Windows run
+is still required.
 
 The performance timer runs inside the browser: real `keydown` starts it, and a
 `requestAnimationFrame` after the source/recovery frame ends it. WebDriver
@@ -145,7 +150,14 @@ work after the source frame and a short quiet period. [Throttled diagnostic reco
 show 65.8 ms after scheduling changes; this is an improvement, not a 50 ms
 acceptance pass. A subsequent [local stage-two release run](evidence/editor-acceptance/performance/stage2-results.json)
 passes at p95 33.4/34.0 ms and ready 226.4/245.4 ms for DPR1/2. Updated cloud
-performance qualification remains required. The scroll gate also requires the observed
+performance qualification remains required. [Cloud checkpoint `3ba3755`](evidence/editor-acceptance/checkpoints/3ba3755/performance.json)
+passes DPR 1 at 49.6 ms but fails DPR 2 at 98.5 ms; cold readiness is 1,357.1 ms.
+Chrome reports software WebGL fallback on the runner. Forcing SwiftShader on
+the same local Mac reproduces a 66.0 ms DPR 2 p95, versus 34.0 ms with normal
+rendering. A separate CPU profile is mostly main-thread idle, pointing to the
+rendering path rather than another source-serialization bottleneck. This is
+diagnostic evidence, not a waiver: the 50 ms assertion remains unchanged pending
+a maintainer decision about the reference performance environment. The scroll gate also requires the observed
 source viewport offset to increase, in addition to preserving the document.
 
 ## Physical release checklist

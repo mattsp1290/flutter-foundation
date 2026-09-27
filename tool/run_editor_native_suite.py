@@ -10,6 +10,9 @@ import sys
 
 
 def main():
+    # Keep both log decoding and console replay independent of the host code page.
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app", type=Path, required=True)
     parser.add_argument("--platform", choices=("macos", "linux", "windows"), required=True)
