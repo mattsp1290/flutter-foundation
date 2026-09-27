@@ -117,7 +117,9 @@ class _BirbChatComposerState extends State<BirbChatComposer> {
       if (widget.beforeSubmit != null) widget.beforeSubmit!,
       if (widget.errorText != null && widget.onRetry != null)
         TextButton(
-          onPressed: widget.submitting ? null : widget.onRetry,
+          onPressed: widget.submitting || widget.readOnly
+              ? null
+              : widget.onRetry,
           child: const Text('Retry message'),
         ),
       FilledButton(

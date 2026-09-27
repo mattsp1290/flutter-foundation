@@ -1,5 +1,6 @@
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -24,6 +25,58 @@ void main() {
       });
     }
   }
+  testWidgets('gutter follows native wrapping at caret-width boundaries', (
+    tester,
+  ) async {
+    final controller = BirbCodeController(text: '${'x' * 24}\nsecond\n');
+    addTearDown(controller.dispose);
+    for (final width in [319.0, 320.0, 321.0, 340.0, 350.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: BirbTheme.light,
+          home: Scaffold(
+            body: SizedBox(
+              width: width,
+              height: 240,
+              child: BirbCodeEditor(controller: controller),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final editable = tester
+          .state<EditableTextState>(find.byType(EditableText))
+          .renderEditable;
+      final gutterFinder = find
+          .descendant(
+            of: find.byType(BirbCodeEditor),
+            matching: find.byType(CustomPaint),
+          )
+          .evaluate()
+          .where((e) => (e.widget as CustomPaint).painter != null)
+          .first;
+      final gutter = gutterFinder.renderObject! as RenderCustomPaint;
+      final pattern = paints;
+      for (final start in [0, 25, 32]) {
+        final top = gutter
+            .globalToLocal(
+              editable.localToGlobal(
+                editable
+                    .getLocalRectForCaret(TextPosition(offset: start))
+                    .topLeft,
+              ),
+            )
+            .dy;
+        pattern.paragraph(
+          offset: predicate<Offset>((offset) => (offset.dy - top).abs() < .01),
+        );
+      }
+      expect(
+        (Canvas canvas) => gutter.painter!.paint(canvas, gutter.size),
+        pattern,
+      );
+    }
+  });
   testWidgets(
     'native editing preserves source, composition and borrowed state',
     (tester) async {

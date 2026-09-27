@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../review/birb_review_style.dart';
 import 'birb_code_controller.dart';
@@ -33,6 +34,8 @@ class BirbCodeEditor extends StatefulWidget {
 
 class _BirbCodeEditorState extends State<BirbCodeEditor> {
   final _scroll = ScrollController();
+  final _fieldKey = GlobalKey();
+  final _gutterKey = GlobalKey();
   bool _focused = false;
 
   @override
@@ -100,17 +103,13 @@ class _BirbCodeEditorState extends State<BirbCodeEditor> {
                         width: gutterWidth,
                         child: ClipRect(
                           child: CustomPaint(
+                            key: _gutterKey,
                             painter: _LineNumbers(
-                              source: widget.controller.buildTextSpan(
-                                context: context,
-                                style: style,
-                                withComposing: true,
-                              ),
                               text: value.text,
                               style: style.copyWith(color: colors.gutter),
                               scale: scale,
-                              sourceWidth: (constraints.maxWidth - gutterWidth)
-                                  .clamp(1, double.infinity),
+                              fieldKey: _fieldKey,
+                              gutterKey: _gutterKey,
                               scroll: _scroll,
                             ),
                           ),
@@ -121,6 +120,7 @@ class _BirbCodeEditorState extends State<BirbCodeEditor> {
                       child: Semantics(
                         label: widget.label,
                         child: TextField(
+                          key: _fieldKey,
                           controller: widget.controller,
                           focusNode: widget.focusNode,
                           scrollController: _scroll,
@@ -164,44 +164,50 @@ class _BirbCodeEditorState extends State<BirbCodeEditor> {
 
 class _LineNumbers extends CustomPainter {
   _LineNumbers({
-    required this.source,
     required this.text,
     required this.style,
     required this.scale,
-    required this.sourceWidth,
+    required this.fieldKey,
+    required this.gutterKey,
     required this.scroll,
   }) : super(repaint: scroll);
 
-  final TextSpan source;
   final String text;
   final TextStyle style;
   final TextScaler scale;
-  final double sourceWidth;
+  final GlobalKey fieldKey, gutterKey;
   final ScrollController scroll;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final layout = TextPainter(
-      text: source,
-      textDirection: TextDirection.ltr,
-      textScaler: scale,
-      strutStyle: StrutStyle.fromTextStyle(style),
-    )..layout(maxWidth: sourceWidth);
+    // Use the native editable's completed layout, including its caret margin,
+    // soft wrapping, strut, composition and current scroll offset.
+    RenderEditable? editable;
+    void findEditable(RenderObject object) {
+      if (object is RenderEditable) {
+        editable = object;
+      } else {
+        object.visitChildren(findEditable);
+      }
+    }
+
+    final field = fieldKey.currentContext?.findRenderObject();
+    final gutter = gutterKey.currentContext?.findRenderObject();
+    if (field == null || gutter is! RenderBox) return;
+    findEditable(field);
+    final native = editable;
+    if (native == null) return;
     final number = TextPainter(
       textDirection: TextDirection.ltr,
       textScaler: scale,
     );
-    final offset = scroll.hasClients ? scroll.offset : 0.0;
     var line = 1;
     var start = 0;
     while (true) {
-      final caret = layout.getOffsetForCaret(
-        TextPosition(offset: start),
-        Rect.zero,
-      );
+      final caret = native.getLocalRectForCaret(TextPosition(offset: start));
+      final top = gutter.globalToLocal(native.localToGlobal(caret.topLeft)).dy;
       number.text = TextSpan(text: '$line', style: style);
       number.layout();
-      final top = caret.dy - offset;
       if (top + number.height >= 0 && top < size.height) {
         number.paint(canvas, Offset(size.width - number.width - 12, top));
       }
@@ -210,7 +216,6 @@ class _LineNumbers extends CustomPainter {
       start = newline + 1;
       line++;
     }
-    layout.dispose();
     number.dispose();
   }
 

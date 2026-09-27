@@ -3,6 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('readonly composer blocks retry', (tester) async {
+    final controller = TextEditingController(text: 'draft');
+    addTearDown(controller.dispose);
+    var retries = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BirbTheme.light,
+        home: Scaffold(
+          body: BirbChatComposer(
+            controller: controller,
+            onSubmit: (_) {},
+            readOnly: true,
+            errorText: 'Failed',
+            onRetry: () => retries++,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Retry message'));
+    expect(retries, 0);
+  });
   testWidgets(
     'pending send leaves later drafting enabled and never clears text',
     (tester) async {
