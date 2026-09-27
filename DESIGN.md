@@ -624,3 +624,44 @@ bodies, editable suggestions, review submission and merge, complete
 pull-request timelines, and persisted drafts. A selection may span rows today
 (section 10.1); what stays deferred is selecting across the gutter, and any
 selection surviving a scroll far enough to unmount its rows.
+
+
+## 11. Editable source
+
+`BirbCodeEditor` borrows its controller and focus node. It uses the existing
+`BirbReviewStyle.codeTextStyle` monospace exception without adding a typeface
+or primitive color. The source surface is `surface`; source/gutter/comments
+use `onSurface`/`onSurfaceVariant`, Go keywords use `primary` and bold,
+strings/numbers use `secondary`, and comments are italic. These roles meet
+normal-text contrast on the source surface in both authored themes.
+
+The editor has one native multiline text field and a painted, non-semantic
+logical-line gutter. It soft-wraps long lines and uses the same text layout,
+scale and scroll offset for numbers and source. Tabs stay literal native text;
+this editor does not promise fixed tab columns or replace tabs with spaces.
+Composing text uses the native composing underline and temporarily suspends
+syntax styling. Source copy excludes gutter numbers. The host owns source
+limits, formatting, persistence and failure presentation. Tab traverses focus;
+read-only fields stay selectable. Source is bounded by its host (interviewprep
+uses 64KiB). The viewport needs finite width and height.
+
+
+### 11.1 Named editor presets
+
+The user's explicit editor-preset requirement introduces one code-only palette
+exception: `lib/src/widgets/birb_code_palette.dart` may construct the documented
+Dracula/GitHub colors. No other file receives an exception and non-code
+foundation surfaces retain their original contract. `BirbCodeColors` resolves
+all code foregrounds, background, selection and cursor together. Named presets
+do not inherit app brightness. Foundation remains the ambient-theme choice.
+See `docs/editor-themes.md` for provenance and accessibility adaptations.
+
+### 11.2 Chat presentation
+
+Chat messages use plain selectable text on the ambient surface with semantic
+author labels and optional status/actions. Hosts supply stable widget keys and
+own message order, history, streaming and transport. Chat composition reuses
+BirbTextFormField's ledger layout. Pending submission blocks duplicate sends
+but leaves newer drafting enabled; explicit readOnly is separate. Shared
+widgets never clear or persist drafts. Enter is multiline input; send is an
+explicit button with a same-frame double-activation guard.

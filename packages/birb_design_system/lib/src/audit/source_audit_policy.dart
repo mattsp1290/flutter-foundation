@@ -176,6 +176,10 @@ bool _covers(_Exemption exemption, String path, bool standaloneDesignSystem) =>
 
 bool _isPalettePath(String path, bool standaloneDesignSystem) =>
     path == _workspacePalettePath ||
+    path ==
+        'packages/birb_design_system/lib/src/widgets/birb_code_palette.dart' ||
+    (standaloneDesignSystem &&
+        path == 'lib/src/widgets/birb_code_palette.dart') ||
     (standaloneDesignSystem && path == _standalonePalettePath);
 
 bool _isStandaloneDesignSystem(Directory root) {

@@ -4,6 +4,7 @@ import 'package:birb_design_system/design_system_preview.dart';
 import 'package:flutter/material.dart';
 
 import 'catalog_keys.dart';
+import 'code_chat_page.dart';
 
 enum CatalogThemePreview {
   persisted,
@@ -198,6 +199,7 @@ class _CatalogHomeState extends State<CatalogHome> {
   Widget _page() => switch (_section) {
     CatalogSection.components => const BirbThemeHarness(),
     CatalogSection.codeReview => const BirbReviewHarness(),
+    CatalogSection.codeAndChat => const CodeChatPage(),
     CatalogSection.appearance => _AppearancePage(
       controller: widget.controller,
       preview: widget.preview,
@@ -210,6 +212,7 @@ extension on CatalogSection {
   String get label => switch (this) {
     CatalogSection.components => 'Components',
     CatalogSection.codeReview => 'Code review',
+    CatalogSection.codeAndChat => 'Code & chat',
     CatalogSection.appearance => 'Appearance',
     CatalogSection.accessibility => 'Accessibility',
   };
@@ -217,6 +220,7 @@ extension on CatalogSection {
   IconData get icon => switch (this) {
     CatalogSection.components => Icons.widgets_outlined,
     CatalogSection.codeReview => Icons.rate_review_outlined,
+    CatalogSection.codeAndChat => Icons.code,
     CatalogSection.appearance => Icons.brightness_6_outlined,
     CatalogSection.accessibility => Icons.accessibility_new,
   };
