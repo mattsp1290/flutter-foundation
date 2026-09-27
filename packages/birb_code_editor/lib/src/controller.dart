@@ -1,11 +1,24 @@
-import 'package:flutter/foundation.dart';
+import 'package:birb_design_system/birb_design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:re_editor/re_editor.dart';
 
 import 'edit_transaction.dart';
 import 'engine_adapter.dart';
+import 'editor_theme.dart';
+import 'editor_chrome.dart';
+import 'find_model.dart';
+import 'find_panel.dart';
+import 'guarded_engine.dart';
+import 'language_provider.dart';
+import 'provider_coordinator.dart';
 import 'snapshot.dart';
 import 'source_coordinates.dart';
+
+part 'editor.dart';
+part 'editor_commands.dart';
+part 'view_binding.dart';
 
 /// Host-owned exact source and engine history. Dispose after detaching the view.
 ///
@@ -32,6 +45,10 @@ class BirbEditorController implements Listenable {
   int _batchDepth = 0;
   final _listeners = <VoidCallback>[];
   final _textListeners = <ValueChanged<BirbEditorSnapshot>>[];
+  Object? _viewOwner;
+  EngineAdapter? _viewAdapter;
+  final _retiredAdapters = <EngineAdapter>[];
+  Offset _scrollOffset = Offset.zero;
 
   BirbEditorSnapshot get snapshot => _snapshot;
 
@@ -99,8 +116,8 @@ class BirbEditorController implements Listenable {
       readOnly: _readOnly,
       capabilities: BirbEditorCapabilities(
         canEdit: !_readOnly,
-        canUndo: !_readOnly && engine.canUndo,
-        canRedo: !_readOnly && engine.canRedo,
+        canUndo: !_readOnly && !engine.isComposing && engine.canUndo,
+        canRedo: !_readOnly && !engine.isComposing && engine.canRedo,
         canCopy: source.isNotEmpty,
       ),
       origin: origin,
@@ -136,11 +153,12 @@ class BirbEditorController implements Listenable {
   void _callListener(VoidCallback listener) {
     try {
       listener();
-    } catch (_) {
+    } catch (_, stack) {
       // A subscriber's exception may itself contain document text.
       FlutterError.reportError(
         FlutterErrorDetails(
           exception: StateError('An editor subscriber failed'),
+          stack: stack,
           library: 'birb_code_editor',
         ),
       );
@@ -172,7 +190,8 @@ class BirbEditorController implements Listenable {
     final previous = _adapter;
     _adapter = _createAdapter(source);
     previous.engine.removeListener(_engineChanged);
-    previous.dispose();
+    _retiredAdapters.add(previous);
+    _releaseRetiredAdapters();
     _documentId = documentId;
     _publish(BirbEditorOrigin.hostReplacement, replacement: true);
     return BirbEditorEditResult.applied;
@@ -222,6 +241,7 @@ class BirbEditorController implements Listenable {
     _batchDepth++;
     try {
       _adapter.engine.selection = _engineSelection(selection);
+      _adapter.engine.makeCursorVisible();
     } finally {
       _batchDepth--;
       _publish(_snapshot.origin);
@@ -327,6 +347,30 @@ class BirbEditorController implements Listenable {
     );
   }
 
+  Future<BirbEditorEditResult> cut() async {
+    final rejected = _guard();
+    if (rejected != null) return rejected;
+    final captured = _snapshot;
+    final epoch = _mutationEpoch;
+    final coordinates = BirbSourceCoordinates(captured.source);
+    final range = captured.selection.isCollapsed
+        ? coordinates.lineRange(
+            coordinates.positionAt(captured.selection.extentOffset).line,
+          )
+        : captured.selection;
+    await Clipboard.setData(
+      ClipboardData(text: captured.source.substring(range.start, range.end)),
+    );
+    final afterCopy = _guard();
+    if (afterCopy != null) return afterCopy;
+    if (_mutationEpoch != epoch) return BirbEditorEditResult.stale;
+    return applyEdits(
+      expectedDocumentId: captured.documentId,
+      expectedGeneration: captured.generation,
+      edits: [BirbEditorEdit(range: range, text: '')],
+    );
+  }
+
   List<TextRange> find(String query, {bool caseSensitive = true}) {
     if (query.isEmpty || _disposed) return const [];
     final coordinates = BirbSourceCoordinates(_snapshot.source);
@@ -340,12 +384,18 @@ class BirbEditorController implements Listenable {
 
   void dispose() {
     if (_disposed) return;
+    if (_viewOwner != null) {
+      throw StateError(
+        'Detach the editor view before disposing its controller',
+      );
+    }
     if (_notifying) {
       throw StateError('Cannot dispose the editor during notification');
     }
     _disposed = true;
     _adapter.engine.removeListener(_engineChanged);
     _adapter.dispose();
+    _releaseRetiredAdapters();
     _listeners.clear();
     _textListeners.clear();
   }
