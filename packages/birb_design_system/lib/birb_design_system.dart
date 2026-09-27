@@ -14,3 +14,7 @@ export 'src/theme/birb_theme.dart';
 export 'src/tokens/birb_tokens.dart';
 export 'src/widgets/birb_filter_chip.dart';
 export 'src/widgets/birb_text_form_field.dart';
+export 'src/widgets/birb_code_controller.dart';
+export 'src/widgets/birb_code_editor.dart';
+export 'src/widgets/birb_code_theme.dart';
+export 'src/widgets/birb_chat.dart';

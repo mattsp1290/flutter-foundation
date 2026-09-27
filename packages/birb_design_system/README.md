@@ -160,3 +160,28 @@ the scrollbar, `Left`/`Right`, or the scroll semantics actions.
 `BirbReviewHarness`, a runnable simulated review with deterministic fixtures. It
 has no service dependency, sends nothing, and says so on screen. The catalog at
 `examples/catalog` hosts it beside `BirbThemeHarness`.
+
+
+### Editable code
+
+Use `BirbCodeController(text: source)` and `BirbCodeEditor(controller: controller,
+onChanged: saveDraft, label: 'Go source code')` inside a finite-height viewport.
+The host disposes the controller and any supplied focus node. The default
+language is Go; `BirbCodeLanguage.plain` disables syntax styling. Logical line
+numbers follow soft-wrapped lines and never enter copied text. Actual tabs,
+Unicode and incomplete code are preserved. `readOnly: true` keeps selection.
+The host owns source-size limits, persistence and formatting; the editor never
+runs code, accesses storage or sends network requests. See DESIGN.md section 11.
+
+
+`BirbCodeEditor(theme: BirbCodeTheme.dracula, ...)` selects an independent code
+preset. Foundation, Dracula, GitHub Light and GitHub Dark are available through
+`BirbCodeThemeSelector`; hosts own preference storage. `BirbCodeColors` exposes
+resolved roles to other code renderers. See docs/editor-themes.md for sources.
+
+Use `BirbChatMessage(key: ValueKey(messageId), author: 'Coach', text: body)`
+for plain selectable transcript text. Optional streaming/status/actions remain
+host-owned. `BirbChatComposer(controller: draft, onSubmit: submit)` borrows the
+controller/focus node and never clears text. `submitting` blocks duplicate send
+while allowing later drafting; `readOnly` is separate. Hosts must clear only the
+confirmed submitted text, retain newer drafts, and own errors/retries.
