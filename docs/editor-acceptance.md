@@ -90,7 +90,7 @@ until the run and evidence collection finish, then remove that owned directory.
 | Standalone dependency closure | Candidate/published `ffb6eeb`, exact A; editor-only and coexistence | Both cases pass resolution, analysis, public smoke and release build before and after push; release gates pending |
 | macOS external native suite | B `ffb6eeb`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
 | Native CI | [Checkpoint `ffb6eeb`](evidence/editor-acceptance/checkpoints/ffb6eeb/native-ci.json), PR merge tree verified identical to branch head | Windows, macOS and Linux build/analyze/native suites pass; physical OS evidence pending |
-| Browser assets and real input | [Current release matrix](evidence/editor-acceptance/checkpoints/ffb6eeb/browser-ci.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | All four functional cases pass with fork `b07edbe`; software-rendered cloud timing remains failed |
+| Browser assets and real input | [Current release matrix](evidence/editor-acceptance/checkpoints/ffb6eeb/browser-ci.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | All four functional cases pass with fork `b07edbe`; historical cloud timing failed the original 50 ms limit; revised-budget CI pending |
 | Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/stage2-results.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 33.4 ms, ready 226.4 ms; DPR 2: p95 34.0 ms, ready 245.4 ms; both pass 50 ms / 3 s budgets |
 | Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Both review checkpoints pushed; all eleven findings fixed and independently rechecked; local gates pass |
 
@@ -159,16 +159,32 @@ Chrome reports software WebGL fallback on the runner. Forcing SwiftShader on
 the same local Mac reproduces a 66.0 ms DPR 2 p95, versus 34.0 ms with normal
 rendering. A separate CPU profile is mostly main-thread idle, pointing to the
 rendering path rather than another source-serialization bottleneck. This is
-diagnostic evidence, not a waiver: the 50 ms assertion remains unchanged pending
-a maintainer decision about the reference performance environment. The next
+diagnostic evidence collected against the original 50 ms limit. The next
 cloud run
 at `ffb6eeb` varied further: DPR 1 failed at 66.0 ms, so DPR 2 was not reached;
 all four functional browser cases still passed. A disposable local test of
 Flutter’s [CPU-only CanvasKit mode](https://docs.flutter.dev/platform-integration/web/initialization)
 with SwiftShader also failed at 67.0 ms.
-Normal local Chrome reports the Apple M4 Max Metal renderer. No renderer or
-budget changes have been applied to the product or acceptance gate. The scroll
+Normal local Chrome reports the Apple M4 Max Metal renderer. No renderer
+changes have been applied to the product or acceptance gate. The scroll
 gate also requires the observed source viewport offset to increase, in addition to preserving the document.
+
+## Revised performance budget
+
+The maintainer authorized relaxing the 50 ms limit after the cloud failures.
+The enforced p95 key-to-visible-edit budget is now **100 ms**, retaining the
+software-rendered CI environment, both DPR 1/2 cases, 20 warmups and 100 measured
+edits on the 64 KiB / 2,000-line fixture. Cold readiness remains **3 seconds**.
+This supersedes the 50 ms performance requirement in the original W4 plan;
+it does not change functional, source-integrity or physical acceptance criteria.
+
+The bounded revision covers recorded cloud p95 measurements of 66.0, 79.5 and
+98.5 ms. The latest original-budget failure was
+[run 36358121167](https://github.com/mattsp1290/flutter-foundation/actions/runs/36358121167)
+at 79.5 ms with readiness 1,192.6 ms. Historical failures above remain failures
+under their original budget, and local hardware timings remain separately
+identified. New performance records include both enforced budgets. A fresh
+cloud run must qualify this change; the threshold change itself is not a pass.
 
 ## Physical release checklist
 
