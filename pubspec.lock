@@ -404,8 +404,8 @@ packages:
     dependency: transitive
     description:
       path: "."
-      ref: "44095948df411c1033e2f68f822e64ee9f07042d"
-      resolved-ref: "44095948df411c1033e2f68f822e64ee9f07042d"
+      ref: b07edbeb47ab7d9171dc8103cad32503978f4ff6
+      resolved-ref: b07edbeb47ab7d9171dc8103cad32503978f4ff6
       url: "https://github.com/mattsp1290/re-editor.git"
     source: git
     version: "0.10.0"

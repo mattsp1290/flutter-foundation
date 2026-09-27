@@ -3,6 +3,7 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:birb_code_editor/src/diagnostic_markers.dart';
+import 'package:birb_code_editor/src/provider_overlays.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +39,46 @@ Future<void> _controlKey(WidgetTester tester, LogicalKeyboardKey key) async {
 }
 
 void main() {
+  testWidgets('tiny hover surface scrolls without clipping its close action', (
+    tester,
+  ) async {
+    for (final height in [32.0, 54.0]) {
+      var dismissed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                height: height,
+                child: Stack(
+                  children: [
+                    EditorProviderPopup(
+                      anchor: const Rect.fromLTWH(60, 0, 2, 18),
+                      size: Size(320, height),
+                      title: 'Hover information',
+                      close: () => dismissed = true,
+                      fitContent: true,
+                      child: const SingleChildScrollView(
+                        child: Text('Short hover'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final close = find.byTooltip('Dismiss Hover information');
+      await tester.ensureVisible(close);
+      await tester.tap(close);
+      expect(dismissed, isTrue);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   Future<void> mount(
     WidgetTester tester,
     BirbEditorController controller,
@@ -201,6 +242,23 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Plain hover information'), findsOneWidget);
+    final popupMaterial = find
+        .descendant(
+          of: find.byType(EditorProviderPopup),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(tester.getSize(popupMaterial).height, lessThan(150));
+    await tester.tapAt(point);
+    await tester.pumpAndSettle();
+    expect(find.text('Plain hover information'), findsNothing);
+    await mouse.moveTo(point + const Offset(20, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Plain hover information'), findsOneWidget);
+    await mouse.moveTo(Offset.zero);
+    await tester.pumpAndSettle();
+    expect(find.text('Plain hover information'), findsNothing);
     await mouse.removePointer();
     await tester.pumpWidget(const SizedBox());
     focus.dispose();

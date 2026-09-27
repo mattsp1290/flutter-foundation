@@ -48,6 +48,16 @@ def run_case(driver, server, base_path):
     assert initial["length"] == 82, initial
     modifier = "\ue03d" if driver.capabilities["platformName"] == "mac" else "\ue009"
     focus_source(driver)
+    # Move to the empty final logical line and edit there. This also checks
+    # semantic selection offsets outside the first line of a mixed document.
+    end_key = "\ue015" if driver.capabilities["platformName"] == "mac" else "\ue010"
+    driver.key(end_key, (modifier,))
+    driver.frames()
+    driver.key("z")
+    wait_for(lambda: (value := observation(driver)) and value["units"] == initial["units"] + [122])
+    driver.button("Undo")
+    wait_for(lambda: (value := observation(driver)) and value["units"] == initial["units"])
+    focus_source(driver)
     driver.key("a", (modifier,))
     for character in "package browser":
         driver.key(character)
@@ -89,7 +99,7 @@ def run_case(driver, server, base_path):
         raise RuntimeError(f"Browser errors: {errors}")
     return {"editor_ready_ms_including_driver_and_semantics": ready_ms,
             "edited_generation": edited["generation"], "external_origin_probe": "blocked",
-            "checks": ["visible-input", "same-source-recovery", "empty-recovery", "readonly",
+            "checks": ["visible-input", "mixed-source-end-input", "same-source-recovery", "empty-recovery", "readonly",
                        "completion", "undo", "redo", "offline-assets"]}
 
 

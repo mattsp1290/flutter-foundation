@@ -7,6 +7,7 @@ import 'package:re_editor/re_editor.dart';
 class GuardedEditorEngine extends CodeLineEditingControllerDelegate {
   GuardedEditorEngine({
     required super.delegate,
+    required this.isCurrent,
     required this.mutate,
     required this.onUndo,
     required this.onRedo,
@@ -16,6 +17,7 @@ class GuardedEditorEngine extends CodeLineEditingControllerDelegate {
   });
 
   final void Function(VoidCallback operation, bool changesSource) mutate;
+  final bool Function() isCurrent;
   final VoidCallback onUndo;
   final VoidCallback onRedo;
   final Future<void> Function() onCopy;

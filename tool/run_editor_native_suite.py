@@ -38,7 +38,8 @@ def main():
         with (app.parent / f"{name}.log").open("w") as log:
             result = subprocess.run(command, cwd=app, stdout=log,
                                     stderr=subprocess.STDOUT, timeout=900)
-        output = (app.parent / f"{name}.log").read_text()
+        # Flutter writes UTF-8 even when Windows Python defaults to cp1252.
+        output = (app.parent / f"{name}.log").read_text(encoding="utf-8", errors="replace")
         print(output, flush=True)
         if result.returncode:
             raise RuntimeError(f"Native {name} failed: {result.returncode}")

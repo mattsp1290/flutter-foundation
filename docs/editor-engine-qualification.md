@@ -39,13 +39,13 @@ does not establish physical screen-reader or IME behavior.
 
 The maintainer supplied `git@github.com:mattsp1290/re-editor.git` and confirmed
 `~/git/re-editor` as the fork checkout. Foundation resolves the public HTTPS URL
-at immutable commit `44095948df411c1033e2f68f822e64ee9f07042d`, branch
+at immutable commit `b07edbeb47ab7d9171dc8103cad32503978f4ff6`, branch
 `birb/exact-source-0.10.0`; remote and local SHAs match. The fork starts at
 upstream `0a2a7d832011431d123b1b9391a481171cb4b849`, whose library is identical
 to the publisher archive. `BIRB_PATCH.md` in the fork records ownership,
 regression tests, upgrade rules and removal conditions.
 
-The bounded patch touches seven upstream source files and adds one private
+The bounded patch touches eight upstream source files and adds one private
 exact-value helper. It retains source
 separators in existing line/history values, groups nested transactions, includes
 folded document tails in select-all, fixes upstream's paired-delete regression,
@@ -56,12 +56,21 @@ All value mutations that join CR and LF now produce canonical logical lines
 before history and notifications; that uncommon edit reparses the document and
 expands folds, with exact undo recovery. Tests cover Enter, deletion and range
 replacement, and assert logical line counts during randomized edits.
+Review qualification added trailing transaction boundaries so later typing has
+its own undo entry, corrected word-extension direction, and bounded forward word
+navigation at trailing whitespace. Six new regressions cover these cases.
+CPU profiling of the web fallback showed syntax and folding analysis blocking
+the first edit frame. Web tasks now retain only their latest pending input and
+run after a frame plus a 50 ms quiet period; disposal cancels pending work. The 166 native
+tests and an additional Chrome analysis/lifecycle case pass. This uses the
+existing web UI-thread fallback, not a browser worker bootstrap. Native isolates
+are unchanged. Browser latency still requires its separate measured gate.
 The renderer, input stack and history remain
 the upstream implementations. `preserveLineBreaks: true` is an opt-in public
 engine option; Foundation's internal adapter enables it and selects the first
 existing separator as the Enter convention (LF for a document without one).
 
-The fork's 160 tests pass on Flutter 3.47.1. Its W1 baseline and current analyzer
+The fork's 166 tests pass on Flutter 3.47.1. Its W1 baseline and current analyzer
 both report the same 15 upstream diagnostics; this is not reported as a passing
 fork analysis gate. Foundation's W1 workspace analysis passed. The original
 16 engine/view/provider qualification tests still pass, covering exact source,

@@ -253,7 +253,11 @@ class _SourceEditorState extends State<BirbSourceEditor> {
                           invoke: _invokeCommand,
                         ),
                         if (_findOpen)
-                          EditorFindPanel(model: _find, close: _closeFind),
+                          EditorFindPanel(
+                            key: ObjectKey(_find),
+                            model: _find,
+                            close: _closeFind,
+                          ),
                       ],
                     ),
                   ),

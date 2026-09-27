@@ -25,7 +25,9 @@ Command+K on macOS or Ctrl+K elsewhere requests hover. Completion uses arrows
 and Enter; Escape dismisses it. The command menu offers the same actions.
 
 Provider popups stay inside the source surface and follow paragraph geometry
-through scroll/wrap changes. Diagnostic underlines use solid, dashed or dotted
+through scroll/wrap changes. Hover cards fit short messages and dismiss when
+you click or scroll the source, move to another source position, or leave the
+editor surface. Diagnostic underlines use solid, dashed or dotted
 patterns and have a separate navigable severity list. Provider failures expose
 a neutral status and explicit retry. Code/gutter fonts respect system text
 scaling and user size controls. The catalog includes two independent editors,
@@ -85,6 +87,11 @@ If an insertion joins CR/LF or surrogate halves, its default caret moves to the
 end of the joined unit. Adjacent edits are coalesced before engine application.
 An engine mutation joining CR/LF reparses logical lines and expands folds;
 undo restores the prior exact value and fold state.
+Clipboard commands return `clipboardUnavailable` on expected platform failures.
+The snapshot exposes the same flag; built-in controls announce a neutral failure
+and a successful retry clears it. No raw platform message or clipboard contents
+are included in the status. OS clipboard transport may normalize line endings;
+paste preserves the exact text returned by Flutter's clipboard API.
 No command acknowledges saves or owns storage.
 
 ## Language providers

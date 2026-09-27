@@ -19,6 +19,7 @@ import 'snapshot.dart';
 import 'source_coordinates.dart';
 
 part 'editor.dart';
+part 'clipboard_commands.dart';
 part 'editor_commands.dart';
 part 'view_binding.dart';
 
@@ -43,11 +44,13 @@ class BirbEditorController implements Listenable {
   int _mutationEpoch = 0;
   bool _readOnly;
   bool _disposed = false;
+  bool _clipboardUnavailable = false;
   bool _notifying = false;
   int _batchDepth = 0;
   final _listeners = <VoidCallback>[];
   final _textListeners = <ValueChanged<BirbEditorSnapshot>>[];
   Object? _viewOwner;
+  Object? _viewAttachment;
   EngineAdapter? _viewAdapter;
   final _retiredAdapters = <EngineAdapter>[];
   Offset _scrollOffset = Offset.zero;
@@ -116,6 +119,7 @@ class BirbEditorController implements Listenable {
             )
           : TextRange.empty,
       readOnly: _readOnly,
+      clipboardUnavailable: _clipboardUnavailable,
       capabilities: BirbEditorCapabilities(
         canEdit: !_readOnly,
         canUndo: !_readOnly && !engine.isComposing && engine.canUndo,
@@ -195,6 +199,7 @@ class BirbEditorController implements Listenable {
     _retiredAdapters.add(previous);
     _releaseRetiredAdapters();
     _documentId = documentId;
+    _clipboardUnavailable = false;
     _publish(BirbEditorOrigin.hostReplacement, replacement: true);
     return BirbEditorEditResult.applied;
   }
@@ -312,66 +317,11 @@ class BirbEditorController implements Listenable {
     });
   }, BirbEditorOrigin.command);
 
-  Future<BirbEditorEditResult> copy() async {
-    final rejected = _guard(editing: false);
-    if (rejected != null) return rejected;
-    final selection = _snapshot.selection;
-    final range = selection.isCollapsed
-        ? BirbSourceCoordinates(_snapshot.source).lineRange(
-            BirbSourceCoordinates(_snapshot.source)
-                .positionAt(selection.extentOffset)
-                .line,
-          )
-        : selection;
-    await Clipboard.setData(
-      ClipboardData(text: _snapshot.source.substring(range.start, range.end)),
-    );
-    return BirbEditorEditResult.applied;
-  }
+  Future<BirbEditorEditResult> copy() => _copy();
 
-  Future<BirbEditorEditResult> paste() async {
-    final rejected = _guard();
-    if (rejected != null) return rejected;
-    final captured = _snapshot;
-    final epoch = _mutationEpoch;
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final afterRead = _guard();
-    if (afterRead != null) return afterRead;
-    if (epoch != _mutationEpoch) return BirbEditorEditResult.stale;
-    if (_snapshot.selection != captured.selection) {
-      return BirbEditorEditResult.stale;
-    }
-    if (data == null) return BirbEditorEditResult.unchanged;
-    return applyEdits(
-      expectedDocumentId: captured.documentId,
-      expectedGeneration: captured.generation,
-      edits: [BirbEditorEdit(range: captured.selection, text: data.text ?? '')],
-    );
-  }
+  Future<BirbEditorEditResult> paste() => _paste();
 
-  Future<BirbEditorEditResult> cut() async {
-    final rejected = _guard();
-    if (rejected != null) return rejected;
-    final captured = _snapshot;
-    final epoch = _mutationEpoch;
-    final coordinates = BirbSourceCoordinates(captured.source);
-    final range = captured.selection.isCollapsed
-        ? coordinates.lineRange(
-            coordinates.positionAt(captured.selection.extentOffset).line,
-          )
-        : captured.selection;
-    await Clipboard.setData(
-      ClipboardData(text: captured.source.substring(range.start, range.end)),
-    );
-    final afterCopy = _guard();
-    if (afterCopy != null) return afterCopy;
-    if (_mutationEpoch != epoch) return BirbEditorEditResult.stale;
-    return applyEdits(
-      expectedDocumentId: captured.documentId,
-      expectedGeneration: captured.generation,
-      edits: [BirbEditorEdit(range: range, text: '')],
-    );
-  }
+  Future<BirbEditorEditResult> cut() => _cut();
 
   List<TextRange> find(String query, {bool caseSensitive = true}) {
     if (query.isEmpty || _disposed) return const [];

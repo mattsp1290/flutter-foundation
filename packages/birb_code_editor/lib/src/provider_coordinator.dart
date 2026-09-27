@@ -157,6 +157,12 @@ class EditorProviderCoordinator extends ChangeNotifier {
     );
   }
 
+  void dismissHover() {
+    if (_disposed) return;
+    _hover.invalidate();
+    _changed();
+  }
+
   void dismiss() {
     if (_disposed) return;
     _completion.invalidate();

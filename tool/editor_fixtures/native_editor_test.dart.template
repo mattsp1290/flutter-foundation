@@ -162,8 +162,13 @@ void main() {
     await command('Select all');
     host.focus.requestFocus();
     await tester.pump();
-    await delta(tester, 'package main', '(', 0, 12, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await tester.pump();
+    expect(host.recovered, '');
+    await delta(tester, '', '(', 0, 0, 1);
     expect(host.recovered, '()');
+    await command('Undo');
+    expect(host.recovered, '');
     await command('Undo');
     expect(host.recovered, fixtureSource);
     await tester.pumpWidget(const SizedBox());

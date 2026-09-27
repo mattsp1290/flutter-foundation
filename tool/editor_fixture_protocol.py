@@ -8,4 +8,12 @@ return text ? JSON.parse(text.slice(19)) : null;
 
 
 def observation(driver):
-    return driver.js(OBSERVATION)
+    value = driver.js(OBSERVATION)
+    if value:
+        value.pop('viewport', None)
+    return value
+
+
+def viewport(driver):
+    value = driver.js(OBSERVATION)
+    return None if value is None else value.get('viewport')

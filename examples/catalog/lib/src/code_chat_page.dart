@@ -31,6 +31,7 @@ class _CodeChatPageState extends State<CodeChatPage> {
   final _draft = TextEditingController();
   BirbCodeTheme _theme = BirbCodeTheme.foundation;
   bool _readOnly = false;
+  double _acceptanceViewport = 0;
   CatalogProviderMode _providerMode = CatalogProviderMode.local;
   BirbEditorProvider? _provider = const CatalogEditorProvider(
     CatalogProviderMode.local,
@@ -54,6 +55,31 @@ class _CodeChatPageState extends State<CodeChatPage> {
     _code.dispose();
     _draft.dispose();
     super.dispose();
+  }
+
+  Widget _primaryEditor() {
+    final editor = BirbSourceEditor(
+      key: const ValueKey('catalog-production-editor'),
+      controller: _editor,
+      provider: _provider,
+      codeTheme: _theme,
+      label: 'Go source code',
+    );
+    if (!editorAcceptanceEnabled) return editor;
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // In the large fixture only the source viewport has this extent;
+        // bounded header/footer scroll notifications are excluded.
+        final metrics = notification.metrics;
+        if (metrics.axis == Axis.vertical &&
+            metrics.maxScrollExtent > 1000 &&
+            metrics.pixels != _acceptanceViewport) {
+          setState(() => _acceptanceViewport = metrics.pixels);
+        }
+        return false;
+      },
+      child: editor,
+    );
   }
 
   @override
@@ -122,21 +148,12 @@ class _CodeChatPageState extends State<CodeChatPage> {
       ),
       Semantics(
         label: editorAcceptanceEnabled
-            ? 'Editor observation ${jsonEncode({'units': _recovery.length <= 1024 ? _recovery.codeUnits : null, 'length': _recovery.length, 'generation': _editor.snapshot.generation})}'
+            ? 'Editor observation ${jsonEncode({'units': _recovery.length <= 1024 ? _recovery.codeUnits : null, 'length': _recovery.length, 'generation': _editor.snapshot.generation, 'viewport': _acceptanceViewport})}'
             : null,
         excludeSemantics: editorAcceptanceEnabled,
         child: Text('Recovery: ${_recovery.length} UTF-16 units'),
       ),
-      SizedBox(
-        height: 520,
-        child: BirbSourceEditor(
-          key: const ValueKey('catalog-production-editor'),
-          controller: _editor,
-          provider: _provider,
-          codeTheme: _theme,
-          label: 'Go source code',
-        ),
-      ),
+      SizedBox(height: 520, child: _primaryEditor()),
       const SizedBox(height: 24),
       const Text('Independent editor'),
       SizedBox(

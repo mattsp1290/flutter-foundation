@@ -13,7 +13,7 @@ independent controllers are supported. Recovery listeners receive exact source
 in the same call stack as a committed mutation, before a queued reload/frame.
 
 The qualified fork is `mattsp1290/re-editor` at
-`44095948df411c1033e2f68f822e64ee9f07042d`, derived from 0.10.0.
+`b07edbeb47ab7d9171dc8103cad32503978f4ff6`, derived from 0.10.0.
 Highlighter `re_highlight` is 0.0.3; native workers resolve `isolate_manager`
 4.1.5+1 and `isolate_contactor` 4.1.0. These four MIT dependencies retain their
 notices under [licenses](licenses/). Patch details and historical evidence are
@@ -79,7 +79,7 @@ until the run and evidence collection finish, then remove that owned directory.
 
 | Area | Evidence | Status |
 | --- | --- | --- |
-| Exact source/history | Fork 160 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
+| Exact source/history | Fork 166 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
 | Recovery/input | Catalog macOS framework keyboard and composing deltas; immediate host recovery assertions | Pass; physical IME pending |
 | Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
 | Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 release browser captures](evidence/editor-acceptance/visuals/provenance.json); source/history survive all states; physical inspection pending |
@@ -89,7 +89,7 @@ until the run and evidence collection finish, then remove that owned directory.
 | Linux / Windows | [CI run 36351633076](https://github.com/mattsp1290/flutter-foundation/actions/runs/36351633076), B `5a2a462` | macOS pass; Windows harness lock-ref parser corrected after false failure; Linux clipboard boundary accepted; updated native suite pending |
 | Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
 | Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/provenance.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 35.3 ms, ready 235.1 ms; DPR 2: p95 34.8 ms, ready 238.2 ms; both pass 50 ms / 3 s budgets |
-| Review gauntlet | Two independent reviews, fixes, then pinned Cursor maintainability rubric | Not yet run |
+| Review gauntlet | Two independent stage-one reviews requested changes; seven distinct findings are being fixed and verified | Stage-one checkpoint pending; pinned Cursor stage not yet run |
 
 The selected completion row's foreground was corrected after browser inspection;
 the new [completion screenshot](evidence/editor-acceptance/browser/nested/dpr-1/completion-popup.png)
@@ -118,7 +118,12 @@ units, asserts pasted source/recovery equals that API value, then verifies undo
 restores the original mixed separators. Loading, edits, snapshots, recovery and
 undo retain exact-separator guarantees. This approved exception applies only to
 OS clipboard transport, not internal editor serialization. The updated suite
-still needs all three native runs.
+still needs all three native runs. At checkpoint `636bf0a`, Linux and macOS
+passed core input/state and API-boundary clipboard checks but failed an invalid
+pairing assertion (multiline replacement was incorrectly expected to pair).
+The corrected case uses native deletion followed by insertion and checks both
+undo boundaries. Windows also exposed UTF-8 log decoding through cp1252; the
+runner now explicitly reads Flutter logs as UTF-8.
 
 The performance timer runs inside the browser: real `keydown` starts it, and a
 `requestAnimationFrame` after the source/recovery frame ends it. WebDriver
@@ -127,7 +132,14 @@ The cold timer starts after Flutter startup, before opening the editor. The
 fixture exposes only length/generation for large source to avoid copying a
 64 KiB observation into every status update. Twenty wheel actions preserve the
 source and generation; the screenshot reaches absolute line 101 without a
-document reload. The portable browser gate also enforces these budgets.
+document reload. The portable browser gate also enforces these budgets. Its cloud run at
+`636bf0a` failed at p95 78.1 ms (cold ready 1,571 ms); this failure is retained,
+not waived. A local 4× CPU-throttled diagnostic reproduced 79.9 ms and identified
+web UI-thread syntax/fold analysis before paint. The fork now coalesces that
+work after the source frame and a short quiet period. [Throttled diagnostic records](evidence/editor-acceptance/performance/review-profile.json)
+show 65.8 ms after scheduling changes; this is an improvement, not a 50 ms
+acceptance pass. Updated cloud performance qualification remains required. The scroll gate also requires the observed
+source viewport offset to increase, in addition to preserving the document.
 
 ## Physical release checklist
 
@@ -153,7 +165,13 @@ as physical OS results.
 - Switch theme, wrap and font size, resize, detach/remount and operate the
   second editor. Confirm source, history and selection remain correct.
 
-All four physical platform records are missing. The maintainer has volunteered
+The maintainer reported that hover information made the code section unusable
+at checkpoint `636bf0a`. The follow-up makes short hover cards fit their content
+and dismisses hover on source clicks, wheel input, pointer movement to another
+source position, or leaving the surface. Widget regressions cover compact size,
+click dismissal and leaving the surface. Physical recheck is pending.
+
+All four complete physical platform records are missing. The maintainer has volunteered
 for macOS and Chrome; Linux and Windows still need operators. Do not fulfill Beans
 `flutter-foundation-r-ikci` or claim consumer adoption until required evidence,
 final published pin-map resolution and both review stages are complete. The

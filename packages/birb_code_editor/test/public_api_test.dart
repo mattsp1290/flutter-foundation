@@ -60,6 +60,42 @@ void main() {
   );
 
   testWidgets(
+    'typing after an atomic command has a separate exact undo boundary',
+    (tester) async {
+      const tail = '\r\nend\rlast\n';
+      final controller = BirbEditorController(
+        documentId: 'history',
+        source: 'ab$tail',
+      );
+      final focus = FocusNode();
+      await mount(tester, controller, focus);
+      focus.requestFocus();
+      await tester.pump();
+      await _input(tester, 'abc');
+      controller.applyEdits(
+        expectedDocumentId: 'history',
+        expectedGeneration: controller.snapshot.generation,
+        edits: const [
+          BirbEditorEdit(range: TextRange(start: 1, end: 2), text: 'B'),
+        ],
+      );
+      final completed = controller.snapshot;
+      await tester.pump();
+      await _input(tester, 'aBcx');
+      controller.undo();
+      expect(controller.snapshot.source, 'aBc$tail');
+      expect(controller.snapshot.selection, completed.selection);
+      controller.undo();
+      expect(controller.snapshot.source, 'abc$tail');
+      expect(controller.snapshot.selection.extentOffset, 3);
+      await tester.pumpWidget(const SizedBox());
+      focus.dispose();
+      controller.dispose();
+    },
+    variant: TargetPlatformVariant({TargetPlatform.linux}),
+  );
+
+  testWidgets(
     'keyboard Enter preserves logical positions when mixed separators join',
     (tester) async {
       final controller = BirbEditorController(

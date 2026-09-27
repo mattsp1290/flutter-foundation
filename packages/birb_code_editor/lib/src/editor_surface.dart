@@ -9,6 +9,7 @@ import 'controller.dart';
 import 'diagnostic_markers.dart';
 import 'editor_geometry.dart';
 import 'editor_theme.dart';
+import 'guarded_engine.dart';
 import 'language_provider.dart';
 import 'provider_coordinator.dart';
 import 'provider_overlays.dart';
@@ -31,7 +32,7 @@ class EditorSurface extends StatefulWidget {
     required this.label,
   });
   final BirbEditorController controller;
-  final CodeLineEditingController engine;
+  final GuardedEditorEngine engine;
   final CodeScrollController scroll;
   final FocusNode focus;
   final EditorProviderCoordinator providers;
@@ -151,11 +152,16 @@ class _EditorSurfaceState extends State<EditorSurface> {
     );
   }
 
+  void _dismissHover() {
+    _hoverTimer?.cancel();
+    widget.providers.dismissHover();
+  }
+
   void _hover(Offset position) {
     final offset = _geometry.positionAt(position);
     if (offset == _hoverOffset) return;
     _hoverOffset = offset;
-    _hoverTimer?.cancel();
+    _dismissHover();
     if (offset == null) return;
     _hoverTimer = Timer(const Duration(milliseconds: 350), () {
       if (mounted) widget.providers.requestHover(offset);
@@ -231,180 +237,192 @@ class _EditorSurfaceState extends State<EditorSurface> {
     return LayoutBuilder(
       key: _surfaceKey,
       builder: (context, constraints) => ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            MouseRegion(
-              onHover: (event) => _hover(event.localPosition),
-              onExit: (_) {
-                _hoverTimer?.cancel();
-                _hoverOffset = null;
-              },
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(
-                    LogicalKeyboardKey.space,
-                    control: true,
-                  ): widget.providers.requestCompletion,
-                  SingleActivator(
-                    LogicalKeyboardKey.keyK,
-                    meta: mac,
-                    control: !mac,
-                  ): () =>
-                      widget.providers.requestHover(),
-                  const SingleActivator(
-                    LogicalKeyboardKey.f10,
-                    shift: true,
-                  ): () {
-                    final anchor = _geometry.caret(
-                      widget.controller.snapshot.selection.extentOffset,
-                    );
-                    if (anchor != null) setState(() => _toolbarAnchor = anchor);
-                  },
+        child: MouseRegion(
+          onExit: (_) => _dismissHover(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              MouseRegion(
+                onHover: (event) => _hover(event.localPosition),
+                onExit: (_) {
+                  _hoverTimer?.cancel();
+                  _hoverOffset = null;
                 },
-                child: EditorSourceSemantics(
-                  controller: widget.controller,
-                  focus: widget.focus,
-                  label: widget.label,
-                  child: CodeEditor(
-                    controller: widget.engine,
-                    toolbarController: _toolbar,
-                    scrollController: widget.scroll,
-                    focusNode: widget.focus,
-                    readOnly: snapshot.readOnly,
-                    wordWrap: widget.wrap,
-                    autofocus: false,
-                    shortcutOverrideActions: {
-                      ...widget.actions,
-                      if (_toolbarAnchor != null)
-                        CodeShortcutEscIntent:
-                            CallbackAction<CodeShortcutEscIntent>(
-                              onInvoke: (_) {
-                                _dismissToolbar();
-                                return null;
-                              },
-                            ),
-                      if (_items.isNotEmpty) ...{
-                        CodeShortcutCursorMoveIntent:
-                            CallbackAction<CodeShortcutCursorMoveIntent>(
-                              onInvoke: (intent) {
-                                _moveCompletion(intent.direction);
-                                return null;
-                              },
-                            ),
-                        CodeShortcutNewLineIntent:
-                            CallbackAction<CodeShortcutNewLineIntent>(
-                              onInvoke: (_) {
-                                _accept(_items[_selected]);
-                                return null;
-                              },
-                            ),
+                child: Listener(
+                  onPointerDown: (_) => _dismissHover(),
+                  onPointerSignal: (_) => _dismissHover(),
+                  child: CallbackShortcuts(
+                    bindings: {
+                      const SingleActivator(
+                        LogicalKeyboardKey.space,
+                        control: true,
+                      ): widget.providers.requestCompletion,
+                      SingleActivator(
+                        LogicalKeyboardKey.keyK,
+                        meta: mac,
+                        control: !mac,
+                      ): () =>
+                          widget.providers.requestHover(),
+                      const SingleActivator(
+                        LogicalKeyboardKey.f10,
+                        shift: true,
+                      ): () {
+                        final anchor = _geometry.caret(
+                          widget.controller.snapshot.selection.extentOffset,
+                        );
+                        if (anchor != null) {
+                          setState(() => _toolbarAnchor = anchor);
+                        }
                       },
                     },
-                    maxLengthSingleLineRendering: 0x7fffffff,
-                    commentFormatter: DefaultCodeCommentFormatter(
-                      singleLinePrefix: '//',
-                      multiLinePrefix: '/*',
-                      multiLineSuffix: '*/',
-                    ),
-                    style: editorStyle(
-                      theme,
-                      widget.codeTheme,
-                      widget.fontScale,
-                      textScaler: scaler,
-                    ),
-                    indicatorBuilder: (context, controller, chunks, notifier) {
-                      _bindGeometry(notifier);
-                      return ExcludeSemantics(
-                        child: Row(
-                          key: _gutterKey,
-                          children: [
-                            DefaultCodeLineNumber(
-                              notifier: notifier,
-                              controller: controller,
-                              textStyle: codeStyle,
-                              focusedTextStyle: codeStyle,
-                            ),
-                            DefaultCodeChunkIndicator(
-                              width: 48,
-                              controller: chunks,
-                              notifier: notifier,
-                            ),
-                          ],
+                    child: EditorSourceSemantics(
+                      controller: widget.controller,
+                      engine: widget.engine,
+                      focus: widget.focus,
+                      label: widget.label,
+                      child: CodeEditor(
+                        controller: widget.engine,
+                        toolbarController: _toolbar,
+                        scrollController: widget.scroll,
+                        focusNode: widget.focus,
+                        readOnly: snapshot.readOnly,
+                        wordWrap: widget.wrap,
+                        autofocus: false,
+                        shortcutOverrideActions: {
+                          ...widget.actions,
+                          if (_toolbarAnchor != null)
+                            CodeShortcutEscIntent:
+                                CallbackAction<CodeShortcutEscIntent>(
+                                  onInvoke: (_) {
+                                    _dismissToolbar();
+                                    return null;
+                                  },
+                                ),
+                          if (_items.isNotEmpty) ...{
+                            CodeShortcutCursorMoveIntent:
+                                CallbackAction<CodeShortcutCursorMoveIntent>(
+                                  onInvoke: (intent) {
+                                    _moveCompletion(intent.direction);
+                                    return null;
+                                  },
+                                ),
+                            CodeShortcutNewLineIntent:
+                                CallbackAction<CodeShortcutNewLineIntent>(
+                                  onInvoke: (_) {
+                                    _accept(_items[_selected]);
+                                    return null;
+                                  },
+                                ),
+                          },
+                        },
+                        maxLengthSingleLineRendering: 0x7fffffff,
+                        commentFormatter: DefaultCodeCommentFormatter(
+                          singleLinePrefix: '//',
+                          multiLinePrefix: '/*',
+                          multiLineSuffix: '*/',
                         ),
-                      );
-                    },
+                        style: editorStyle(
+                          theme,
+                          widget.codeTheme,
+                          widget.fontScale,
+                          textScaler: scaler,
+                        ),
+                        indicatorBuilder:
+                            (context, controller, chunks, notifier) {
+                              _bindGeometry(notifier);
+                              return ExcludeSemantics(
+                                child: Row(
+                                  key: _gutterKey,
+                                  children: [
+                                    DefaultCodeLineNumber(
+                                      notifier: notifier,
+                                      controller: controller,
+                                      textStyle: codeStyle,
+                                      focusedTextStyle: codeStyle,
+                                    ),
+                                    DefaultCodeChunkIndicator(
+                                      width: 48,
+                                      controller: chunks,
+                                      notifier: notifier,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            IgnorePointer(
-              child: CustomPaint(
-                key: const ValueKey('editor-diagnostic-markers'),
-                painter: EditorDiagnosticMarkers(
-                  geometry: geometry,
-                  diagnostics: widget.providers.diagnostics,
-                  color: colors.foreground,
-                ),
-              ),
-            ),
-            IgnorePointer(
-              child: DecoratedBox(
-                key: const ValueKey('editor-focus-border'),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: widget.focus.hasFocus
-                        ? colors.cursor
-                        : colors.gutter,
-                    width: widget.focus.hasFocus ? 2 : 1,
+              IgnorePointer(
+                child: CustomPaint(
+                  key: const ValueKey('editor-diagnostic-markers'),
+                  painter: EditorDiagnosticMarkers(
+                    geometry: geometry,
+                    diagnostics: widget.providers.diagnostics,
+                    color: colors.foreground,
                   ),
                 ),
               ),
-            ),
-            if (_toolbarAnchor != null)
-              EditorProviderPopup(
-                anchor: _toolbarAnchor!,
-                size: constraints.biggest,
-                title: 'Selection',
-                close: _dismissToolbar,
-                child: EditorSelectionToolbar(
-                  controller: widget.controller,
-                  dismiss: _dismissToolbar,
+              IgnorePointer(
+                child: DecoratedBox(
+                  key: const ValueKey('editor-focus-border'),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: widget.focus.hasFocus
+                          ? colors.cursor
+                          : colors.gutter,
+                      width: widget.focus.hasFocus ? 2 : 1,
+                    ),
+                  ),
                 ),
               ),
-            if (_toolbarAnchor == null &&
-                _items.isNotEmpty &&
-                completionAnchor != null)
-              EditorProviderPopup(
-                anchor: completionAnchor,
-                size: constraints.biggest,
-                title: 'Completions',
-                close: widget.providers.dismiss,
-                child: EditorCompletionList(
-                  items: _items,
-                  selected: _selected,
-                  scrollController: _completionScroll,
-                  accept: _accept,
-                  enabled:
-                      snapshot.capabilities.canEdit &&
-                      snapshot.composing.isCollapsed,
+              if (_toolbarAnchor != null)
+                EditorProviderPopup(
+                  anchor: _toolbarAnchor!,
+                  size: constraints.biggest,
+                  title: 'Selection',
+                  close: _dismissToolbar,
+                  child: EditorSelectionToolbar(
+                    controller: widget.controller,
+                    dismiss: _dismissToolbar,
+                  ),
                 ),
-              ),
-            if (_toolbarAnchor == null &&
-                _items.isEmpty &&
-                hover != null &&
-                hoverAnchor != null)
-              EditorProviderPopup(
-                anchor: hoverAnchor,
-                size: constraints.biggest,
-                title: 'Hover information',
-                close: widget.providers.dismiss,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(hover.text),
+              if (_toolbarAnchor == null &&
+                  _items.isNotEmpty &&
+                  completionAnchor != null)
+                EditorProviderPopup(
+                  anchor: completionAnchor,
+                  size: constraints.biggest,
+                  title: 'Completions',
+                  close: widget.providers.dismiss,
+                  child: EditorCompletionList(
+                    items: _items,
+                    selected: _selected,
+                    scrollController: _completionScroll,
+                    accept: _accept,
+                    enabled:
+                        snapshot.capabilities.canEdit &&
+                        snapshot.composing.isCollapsed,
+                  ),
                 ),
-              ),
-          ],
+              if (_toolbarAnchor == null &&
+                  _items.isEmpty &&
+                  hover != null &&
+                  hoverAnchor != null)
+                EditorProviderPopup(
+                  anchor: hoverAnchor,
+                  size: constraints.biggest,
+                  title: 'Hover information',
+                  fitContent: true,
+                  close: widget.providers.dismiss,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(hover.text),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

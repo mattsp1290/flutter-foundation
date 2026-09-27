@@ -14,28 +14,30 @@ class EditorProviderPopup extends StatelessWidget {
     required this.title,
     required this.close,
     required this.child,
+    this.fitContent = false,
   });
   final Rect anchor;
   final Size size;
   final String title;
   final VoidCallback close;
   final Widget child;
+  final bool fitContent;
 
   @override
   Widget build(BuildContext context) {
     final width = math.min(360.0, size.width);
-    final height = math.min(280.0, size.height * .75);
+    final height = math.min(
+      size.height,
+      math.min(280.0, math.max(96.0, size.height * .75)),
+    );
     final left = anchor.left.clamp(0.0, math.max(0.0, size.width - width));
     final below = size.height - anchor.bottom;
     final top = (below >= height ? anchor.bottom : anchor.top - height).clamp(
       0.0,
       math.max(0.0, size.height - height),
     );
-    return Positioned(
-      left: left.toDouble(),
-      top: top.toDouble(),
-      width: width,
-      height: height,
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: math.max(96, height)),
       child: CallbackShortcuts(
         bindings: {const SingleActivator(LogicalKeyboardKey.escape): close},
         child: Semantics(
@@ -46,6 +48,7 @@ class EditorProviderPopup extends StatelessWidget {
             color: Theme.of(context).colorScheme.surfaceContainerHigh,
             shape: Border.all(color: Theme.of(context).colorScheme.outline),
             child: Column(
+              mainAxisSize: fitContent ? MainAxisSize.min : MainAxisSize.max,
               children: [
                 Row(
                   children: [
@@ -67,12 +70,27 @@ class EditorProviderPopup extends StatelessWidget {
                     ),
                   ],
                 ),
-                Expanded(child: child),
+                Flexible(
+                  fit: fitContent ? FlexFit.loose : FlexFit.tight,
+                  child: child,
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+    return Positioned(
+      left: left.toDouble(),
+      top: fitContent && below < height ? null : top.toDouble(),
+      bottom: fitContent && below < height
+          ? (size.height - anchor.top).clamp(0.0, size.height - height)
+          : null,
+      width: width,
+      height: fitContent && height >= 96 ? null : height,
+      child: height < 96
+          ? SingleChildScrollView(child: SizedBox(height: 96, child: content))
+          : content,
     );
   }
 }

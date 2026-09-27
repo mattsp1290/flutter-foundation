@@ -15,6 +15,7 @@ enum BirbEditorEditResult {
   overlappingEdits,
   reentrant,
   disposed,
+  clipboardUnavailable,
 }
 
 @immutable
@@ -46,6 +47,7 @@ class BirbEditorSnapshot {
     required this.capabilities,
     required this.origin,
     this.state = BirbEditorState.ready,
+    this.clipboardUnavailable = false,
   });
   final String documentId;
   final int generation;
@@ -56,6 +58,9 @@ class BirbEditorSnapshot {
   final BirbEditorCapabilities capabilities;
   final BirbEditorOrigin origin;
   final BirbEditorState state;
+
+  /// The last current clipboard operation failed; a successful retry clears it.
+  final bool clipboardUnavailable;
 }
 
 @immutable

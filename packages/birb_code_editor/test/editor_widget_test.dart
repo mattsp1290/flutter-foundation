@@ -4,6 +4,42 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('controller swap resets visible find fields with the model', (
+    tester,
+  ) async {
+    final first = BirbEditorController(documentId: 'first', source: 'old');
+    final second = BirbEditorController(documentId: 'second', source: 'new');
+    Future<void> mount(BirbEditorController controller) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: BirbSourceEditor(controller: controller)),
+      ),
+    );
+    await mount(first);
+    await tester.tap(find.byTooltip('Find and replace'));
+    await tester.pump();
+    final query = find.widgetWithText(TextFormField, 'Find source');
+    final replacement = find.widgetWithText(
+      TextFormField,
+      'Replace with (literal text)',
+    );
+    await tester.enterText(query, 'old');
+    await tester.enterText(replacement, 'replacement');
+    await tester.pump();
+    await mount(second);
+    await tester.pump();
+    for (final field in [query, replacement]) {
+      final input = find.descendant(
+        of: field,
+        matching: find.byType(EditableText),
+      );
+      expect(tester.widget<EditableText>(input).controller.text, '');
+    }
+    expect(find.text('No matches'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    first.dispose();
+    second.dispose();
+  }, variant: TargetPlatformVariant({TargetPlatform.linux}));
+
   testWidgets(
     'find replacement uses one transaction and reports malformed regex',
     (tester) async {

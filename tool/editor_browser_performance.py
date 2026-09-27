@@ -3,7 +3,7 @@
 import math
 import json
 
-from editor_fixture_protocol import OBSERVATION, observation
+from editor_fixture_protocol import OBSERVATION, observation, viewport
 from editor_webdriver import wait_for
 
 
@@ -57,6 +57,7 @@ def run_performance(driver, server, base_path, focus_source):
             samples.append(elapsed)
     driver.screenshot('warmed-edits.png')
     before_scroll = observation(driver)
+    before_offset = viewport(driver)
     for _ in range(20):
         driver.request('POST', '/actions', {'actions': [{'type': 'wheel', 'id': 'scroll', 'actions': [
             {'type': 'scroll', 'origin': 'viewport', 'x': 600, 'y': 450,
@@ -64,6 +65,9 @@ def run_performance(driver, server, base_path, focus_source):
         ]}]})
         driver.frames()
     driver.screenshot('scroll-without-reload.png')
+    after_offset = viewport(driver)
+    if before_offset is None or after_offset is None or after_offset <= before_offset:
+        raise RuntimeError(f'Wheel input did not advance source viewport: {before_offset} -> {after_offset}')
     if observation(driver) != before_scroll:
         raise RuntimeError('Scrolling unexpectedly changed the document')
     p95 = sorted(samples)[math.ceil(.95 * len(samples)) - 1]
@@ -71,6 +75,7 @@ def run_performance(driver, server, base_path, focus_source):
               'measured_edits': len(samples), 'samples_ms': samples, 'p95_ms': p95,
               'cold_editor_ready_ms_after_flutter_startup': ready_ms,
               'build_mode': 'release', 'scroll_without_document_replacement': 'pass',
+              'scroll_offset_before': before_offset, 'scroll_offset_after': after_offset,
               'measurement': 'real browser keydown to rAF following recovery semantics and source frame'}
     # Persist failed measurements as evidence too; never silently loosen budgets.
     (driver.output / 'performance.json').write_text(json.dumps(record, indent=2) + '\n')

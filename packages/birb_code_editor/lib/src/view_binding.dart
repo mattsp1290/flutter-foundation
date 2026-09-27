@@ -7,6 +7,7 @@ extension _EditorViewBinding on BirbEditorController {
       throw StateError('An editor controller supports one attached view');
     }
     _viewOwner = owner;
+    _viewAttachment = Object();
     _mutationEpoch++;
   }
 
@@ -15,6 +16,7 @@ extension _EditorViewBinding on BirbEditorController {
     _scrollOffset = offset;
     _mutationEpoch++;
     _viewOwner = null;
+    _viewAttachment = null;
     _viewAdapter = null;
     _releaseRetiredAdapters();
   }
@@ -30,13 +32,16 @@ extension _EditorViewBinding on BirbEditorController {
 
   GuardedEditorEngine _bindEngine(Object owner) {
     final adapter = _adapter;
+    final attachment = _viewAttachment;
     _viewAdapter = adapter;
     bool current() =>
         !_disposed &&
         identical(_viewOwner, owner) &&
+        identical(_viewAttachment, attachment) &&
         identical(_adapter, adapter);
     return GuardedEditorEngine(
       delegate: adapter.engine,
+      isCurrent: current,
       mutate: (operation, changesSource) {
         if (!current() || _notifying || (changesSource && _readOnly)) return;
         _batchDepth++;

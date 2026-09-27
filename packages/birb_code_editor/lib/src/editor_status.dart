@@ -30,6 +30,11 @@ class EditorStatusBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (snapshot.clipboardUnavailable)
+          Semantics(
+            liveRegion: true,
+            child: const Text('Clipboard unavailable. Try the command again.'),
+          ),
         EditorProviderStatus(
           providers: providers,
           showDiagnostics: showDiagnostics,
