@@ -81,6 +81,15 @@ def inspect_manifest(repository, design_ref):
             raise RuntimeError("Unexpected local or Git subpath dependency")
 
 
+def resolved_git_ref(lock, package):
+    section = re.search(r"^  " + re.escape(package) + r":\n(.*?)(?=^  \w|\Z)", lock, re.M | re.S)
+    if not section or "source: git" not in section.group(1):
+        return None
+    ref = re.search(r'''^\s+resolved-ref:\s*["']?([0-9a-f]{40})["']?\s*$''',
+                    section.group(1), re.M)
+    return ref.group(1) if ref else None
+
+
 def generate(args):
     flutter = flutter_sdk()
     output = args.output.expanduser().resolve()
@@ -147,8 +156,7 @@ def generate(args):
         raise RuntimeError("Consumer resolved a path dependency or override")
     for package, expected in (("birb_code_editor", ref),
                               ("birb_design_system", args.design_system_ref)):
-        section = re.search(r"^  " + package + r":\n(.*?)(?=^  \w|\Z)", lock, re.M | re.S)
-        if not section or f'resolved-ref: "{expected}"' not in section.group(1):
+        if resolved_git_ref(lock, package) != expected:
             raise RuntimeError(f"Unexpected resolved ref for {package}")
     record = {"mode": mode, "platform": args.platform, "editor_only": args.editor_only,
               "host": platform.platform(), "flutter": "3.47.1", "dart": "3.13.1",

@@ -5,6 +5,7 @@ import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
 
 import 'editor_provider_fixture.dart';
+import 'editor_acceptance_fixture.dart';
 
 class CodeChatPage extends StatefulWidget {
   const CodeChatPage({super.key});
@@ -13,8 +14,9 @@ class CodeChatPage extends StatefulWidget {
 }
 
 class _CodeChatPageState extends State<CodeChatPage> {
-  static const _initialSource =
-      'package main\r\n\r\n// Exact mixed separators.\rfunc main() {\n\tprintln("hello", 42)\r\n}\n';
+  static final _initialSource = editorAcceptanceSource(
+    'package main\r\n\r\n// Exact mixed separators.\rfunc main() {\n\tprintln("hello", 42)\r\n}\n',
+  );
   final _editor = BirbEditorController(
     documentId: 'catalog-main',
     source: _initialSource,
@@ -119,10 +121,10 @@ class _CodeChatPageState extends State<CodeChatPage> {
         ],
       ),
       Semantics(
-        label: const bool.fromEnvironment('BIRB_EDITOR_ACCEPTANCE')
-            ? 'Editor observation ${jsonEncode({'units': _recovery.codeUnits, 'length': _recovery.length, 'generation': _editor.snapshot.generation})}'
+        label: editorAcceptanceEnabled
+            ? 'Editor observation ${jsonEncode({'units': _recovery.length <= 1024 ? _recovery.codeUnits : null, 'length': _recovery.length, 'generation': _editor.snapshot.generation})}'
             : null,
-        excludeSemantics: const bool.fromEnvironment('BIRB_EDITOR_ACCEPTANCE'),
+        excludeSemantics: editorAcceptanceEnabled,
         child: Text('Recovery: ${_recovery.length} UTF-16 units'),
       ),
       SizedBox(

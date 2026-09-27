@@ -82,13 +82,13 @@ until the run and evidence collection finish, then remove that owned directory.
 | Exact source/history | Fork 160 tests; controller/engine tests including mixed separators, raw offsets, nested folds and 64 KiB line | Automated pass; final matrix pending |
 | Recovery/input | Catalog macOS framework keyboard and composing deltas; immediate host recovery assertions | Pass; physical IME pending |
 | Providers/UI | Completion keyboard acceptance, pointer/keyboard hover, diagnostic marker geometry/navigation, readonly toolbar and stale response tests | Automated pass; final visual matrix pending |
-| Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | Pass for tested fixture; full preset matrix pending |
+| Narrow/scaled UI | 320×480 widget test with 200% text and reachable find/close | [32 release browser captures](evidence/editor-acceptance/visuals/provenance.json); source/history survive all states; physical inspection pending |
 | Workers | Twenty production-view macOS cycles: 1 detached / 3 mounted isolates | [Recorded pass](evidence/editor-qualification/production-native-workers.json) |
 | Standalone dependency closure | B `9986536`, exact A; editor-only and coexistence | Early published checkpoint pass; candidate/final B pending |
 | macOS external native suite | B `9986536`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
-| Linux / Windows | [CI run 36350365422](https://github.com/mattsp1290/flutter-foundation/actions/runs/36350365422), B `16972fd` | Windows and macOS pass; Linux clipboard CRLF check failed; readback probe pending |
+| Linux / Windows | [CI run 36351633076](https://github.com/mattsp1290/flutter-foundation/actions/runs/36351633076), B `5a2a462` | macOS pass; Windows harness lock-ref parser corrected after false failure; Linux clipboard boundary accepted; updated native suite pending |
 | Browser assets and real input | [Recorded release matrix](evidence/editor-acceptance/browser/provenance.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | Pass for tested scenarios with fork `4409594`; full command/preset/performance matrix pending |
-| Performance | 64 KiB / 2,000-line fixture, 100 warmed edits, p95 ≤50 ms; cold ready ≤3 s | Not yet measured |
+| Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/provenance.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 35.3 ms, ready 235.1 ms; DPR 2: p95 34.8 ms, ready 238.2 ms; both pass 50 ms / 3 s budgets |
 | Review gauntlet | Two independent reviews, fixes, then pinned Cursor maintainability rubric | Not yet run |
 
 The selected completion row's foreground was corrected after browser inspection;
@@ -108,10 +108,26 @@ undeclared web fallback-font download for the platform command symbol.
 
 The first portable CI attempt could not launch snap-based Chromium. CI now
 installs Chrome for Testing and ChromeDriver together at 153.0.8010.52; that
-change still needs a successful CI run. The Linux native failure remains open:
-the fixture wrote CRLF to the system clipboard and pasted LF. A readback probe
-will distinguish platform clipboard conversion from an editor mutation before
-any acceptance decision changes.
+portable job passed in run 36351633076. The Linux native run established:
+the fixture wrote CRLF to the system clipboard and a direct `Clipboard.getData`
+returned LF before editor input (run 36351633076, Linux job 108711306308).
+On 2026-09-27 the maintainer accepted the clipboard API boundary: paste must
+preserve exactly the text returned by Flutter, and copy passes exact source to
+Flutter. OS transport may normalize it. The native suite records readback code
+units, asserts pasted source/recovery equals that API value, then verifies undo
+restores the original mixed separators. Loading, edits, snapshots, recovery and
+undo retain exact-separator guarantees. This approved exception applies only to
+OS clipboard transport, not internal editor serialization. The updated suite
+still needs all three native runs.
+
+The performance timer runs inside the browser: real `keydown` starts it, and a
+`requestAnimationFrame` after the source/recovery frame ends it. WebDriver
+transport time is excluded; no controller text assignment is the measured edit.
+The cold timer starts after Flutter startup, before opening the editor. The
+fixture exposes only length/generation for large source to avoid copying a
+64 KiB observation into every status update. Twenty wheel actions preserve the
+source and generation; the screenshot reaches absolute line 101 without a
+document reload. The portable browser gate also enforces these budgets.
 
 ## Physical release checklist
 
@@ -124,7 +140,8 @@ as physical OS results.
 - Type, select with mouse and keyboard, undo/redo, indent/outdent, comment,
   fold/unfold, find/replace, and scroll on both axes.
 - Copy to another application and paste back mixed separators and Unicode;
-  inspect exact recovered source. Verify readonly permits copy/find and blocks
+  compare recovered source with the clipboard API value and record any OS
+  normalization. Verify readonly permits copy/find and blocks
   paste, undo and provider acceptance.
 - Use a real IME through intermediate composition and commit; undo, reload
   recovery immediately, and verify no committed text was lost.
@@ -136,7 +153,8 @@ as physical OS results.
 - Switch theme, wrap and font size, resize, detach/remount and operate the
   second editor. Confirm source, history and selection remain correct.
 
-All four physical platform records are missing. Do not fulfill Beans
+All four physical platform records are missing. The maintainer has volunteered
+for macOS and Chrome; Linux and Windows still need operators. Do not fulfill Beans
 `flutter-foundation-r-ikci` or claim consumer adoption until required evidence,
 final published pin-map resolution and both review stages are complete. The
 consumer separately verifies its real interview screen, persistence and gopls;

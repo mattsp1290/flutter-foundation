@@ -42,6 +42,8 @@ class _SourceEditorState extends State<BirbSourceEditor> {
   bool _diagnosticsOpen = false;
   bool _tabTraversal = false;
   late EditorFindModel _find;
+  final _headerScroll = ScrollController();
+  final _footerScroll = ScrollController();
   final _boundary = FocusNode(
     debugLabel: 'Editor boundary',
     canRequestFocus: false,
@@ -198,6 +200,8 @@ class _SourceEditorState extends State<BirbSourceEditor> {
   void dispose() {
     _detach(widget);
     _boundary.dispose();
+    _headerScroll.dispose();
+    _footerScroll.dispose();
     super.dispose();
   }
 
@@ -233,20 +237,25 @@ class _SourceEditorState extends State<BirbSourceEditor> {
                 constraints: BoxConstraints(
                   maxHeight: constraints.maxHeight * .45,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      EditorChrome(
-                        snapshot: snapshot,
-                        label: widget.label,
-                        wrap: _wrap,
-                        fontScale: _fontScale,
-                        hasProvider: widget.provider != null,
-                        invoke: _invokeCommand,
-                      ),
-                      if (_findOpen)
-                        EditorFindPanel(model: _find, close: _closeFind),
-                    ],
+                child: Scrollbar(
+                  controller: _headerScroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _headerScroll,
+                    child: Column(
+                      children: [
+                        EditorChrome(
+                          snapshot: snapshot,
+                          label: widget.label,
+                          wrap: _wrap,
+                          fontScale: _fontScale,
+                          hasProvider: widget.provider != null,
+                          invoke: _invokeCommand,
+                        ),
+                        if (_findOpen)
+                          EditorFindPanel(model: _find, close: _closeFind),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -286,15 +295,20 @@ class _SourceEditorState extends State<BirbSourceEditor> {
                 constraints: BoxConstraints(
                   maxHeight: constraints.maxHeight * .25,
                 ),
-                child: SingleChildScrollView(
-                  child: EditorStatusBar(
-                    snapshot: snapshot,
-                    providers: _providers,
-                    tabTraversal: _tabTraversal,
-                    toggleTraversal: () =>
-                        setState(() => _tabTraversal = !_tabTraversal),
-                    showDiagnostics: () =>
-                        setState(() => _diagnosticsOpen = !_diagnosticsOpen),
+                child: Scrollbar(
+                  controller: _footerScroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _footerScroll,
+                    child: EditorStatusBar(
+                      snapshot: snapshot,
+                      providers: _providers,
+                      tabTraversal: _tabTraversal,
+                      toggleTraversal: () =>
+                          setState(() => _tabTraversal = !_tabTraversal),
+                      showDiagnostics: () =>
+                          setState(() => _diagnosticsOpen = !_diagnosticsOpen),
+                    ),
                   ),
                 ),
               ),

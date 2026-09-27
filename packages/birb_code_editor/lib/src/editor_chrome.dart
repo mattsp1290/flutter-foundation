@@ -72,6 +72,12 @@ class EditorChrome extends StatelessWidget {
           ),
           PopupMenuButton<EditorCommand>(
             tooltip: 'Editor commands',
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            elevation: 0,
+            surfaceTintColor: WidgetStateColor.transparent,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: Theme.of(context).colorScheme.outline),
+            ),
             onSelected: invoke,
             itemBuilder: (_) => [
               for (final command in EditorCommand.values)

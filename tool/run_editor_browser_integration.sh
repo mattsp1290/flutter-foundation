@@ -19,4 +19,7 @@ for base in / /editor-check/; do
   python3 "$root/tool/editor_browser_driver.py" --web-root build/web \
     --base-path "$base" --chrome "$chrome" --evidence "$evidence/$case_name"
 done
+python3 "$root/tool/editor_browser_driver.py" --web-root build/web \
+  --base-path /editor-check/ --chrome "$chrome" --performance \
+  --evidence "$evidence/performance"
 printf 'Editor browser evidence: %s\n' "$evidence"

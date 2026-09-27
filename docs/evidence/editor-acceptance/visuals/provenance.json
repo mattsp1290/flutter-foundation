@@ -1,0 +1,11 @@
+{
+  "observed_at": "2026-09-27T21:48:22.938030+00:00",
+  "foundation_base": "5a2a462464e4e8612dfa0e42478394f2afb12d53",
+  "foundation_state": "Working tree committed alongside these records; visible chrome scrollbars and outlined command menu included",
+  "engine_ref": "44095948df411c1033e2f68f822e64ee9f07042d",
+  "flutter": "3.47.1",
+  "dart": "3.13.1",
+  "method": "Real browser edit; toggle wrap and font scale 1.125, then light/dark \u00d7 four presets \u00d7 wide/320px \u00d7 100/200% text. Wait for theme and tooltip animations. Undo after all states restores exact original source.",
+  "inspection": "Representative normal-width and all four dark narrow/200% code palettes inspected. Full physical accessibility checklist remains open.",
+  "command": "python3 tool/editor_browser_driver.py --web-root examples/catalog/build/web --base-path /editor-check/ --chrome <Chrome executable> --visuals --evidence <owned output>"
+}

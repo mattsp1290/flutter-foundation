@@ -10,17 +10,7 @@ import tempfile
 
 from editor_asset_server import EditorAssetServer
 from editor_webdriver import EditorWebDriver, wait_for
-
-
-OBSERVATION = """
-const text=[...document.querySelectorAll('flt-semantics')].map(el =>
-  el.getAttribute('aria-label') || el.textContent).find(text => text.startsWith('Editor observation '));
-return text ? JSON.parse(text.slice(19)) : null;
-"""
-
-
-def observation(driver):
-    return driver.js(OBSERVATION)
+from editor_fixture_protocol import observation
 
 
 def expect_source(driver, source):
@@ -32,14 +22,15 @@ def expect_source(driver, source):
 def focus_source(driver):
     rect = driver.js("""
       const input=document.querySelector('[data-semantics-role="text-field"][aria-label="Go source code"]');
-      if (input) { const r=input.getBoundingClientRect(); return [r.x,r.y-96,r.width,r.height]; }
+      if (input) { const r=input.getBoundingClientRect(); return [r.x+110,r.y+16]; }
       const el=document.querySelector('flt-semantics[aria-label="Go source code"]');
       if (!el) return null;
-      const r=el.getBoundingClientRect(); return [r.x,r.y,r.width,r.height];
+      const r=el.getBoundingClientRect(); return [r.x+110,r.y+112];
     """)
     if not rect:
         raise RuntimeError("Rendered source region is missing")
-    driver.click(rect[0] + 110, rect[1] + 112)
+    driver.click(*rect)
+    driver.frames()
 
 
 def run_case(driver, server, base_path):
@@ -108,6 +99,9 @@ def main():
     parser.add_argument("--base-path", choices=("/", "/editor-check/"), required=True)
     parser.add_argument("--chrome", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--performance", action="store_true")
+    mode.add_argument("--visuals", action="store_true")
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     records = []
@@ -116,12 +110,19 @@ def main():
         target = site if args.base_path == "/" else site / "editor-check"
         shutil.copytree(args.web_root, target)
         with EditorAssetServer(site) as server:
-            for scale in (1, 2):
+            for scale in ((1,) if args.visuals else (1, 2)):
                 output = args.evidence / f"dpr-{scale}"
                 output.mkdir(exist_ok=True)
                 with EditorWebDriver(args.chrome, server.origin, scale, output) as driver:
                     try:
-                        record = run_case(driver, server, args.base_path)
+                        if args.visuals:
+                            from editor_browser_visuals import run_visuals
+                            record = run_visuals(driver, server, args.base_path, focus_source)
+                        elif args.performance:
+                            from editor_browser_performance import run_performance
+                            record = run_performance(driver, server, args.base_path, focus_source)
+                        else:
+                            record = run_case(driver, server, args.base_path)
                     except Exception:
                         (output / 'failure-browser.json').write_text(json.dumps(driver.request('POST', '/log', {'type': 'browser'}), indent=2) + '\n')
                         driver.screenshot('failure.png')

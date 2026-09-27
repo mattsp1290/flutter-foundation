@@ -103,17 +103,17 @@ class EditorWebDriver:
         self.request("POST", "/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": actions}]})
 
     def button(self, text):
-        point = self.js("""
+        point = wait_for(lambda: self.js("""
           const el=[...document.querySelectorAll('flt-semantics')].find(el =>
-            ['button','checkbox'].includes(el.getAttribute('role')) &&
+            ['button','checkbox','menuitem'].includes(el.getAttribute('role')) &&
             (el.textContent===arguments[0] || el.getAttribute('aria-label')===arguments[0]));
           if (!el) return null;
           const r=el.getBoundingClientRect(); return [r.x+r.width/2,r.y+r.height/2];
-        """, text)
-        if not point:
-            raise RuntimeError(f"Missing visible control: {text}")
+        """, text))
         self.click(*point)
         self.frames()
 
-    def screenshot(self, name):
-        (self.output / name).write_bytes(base64.b64decode(self.request("GET", "/screenshot")))
+    def screenshot(self, name, clip=None):
+        data = self.request('POST', '/goog/cdp/execute', {'cmd': 'Page.captureScreenshot',
+            'params': {'format': 'png', 'clip': clip}})['data'] if clip else self.request('GET', '/screenshot')
+        (self.output / name).write_bytes(base64.b64decode(data))

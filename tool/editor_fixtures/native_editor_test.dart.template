@@ -70,13 +70,11 @@ void main() {
         (await Clipboard.getData(Clipboard.kTextPlain))?.text,
         'package edited',
       );
-      await Clipboard.setData(const ClipboardData(text: 'package pasted\r\n'));
-      final readback = await Clipboard.getData(Clipboard.kTextPlain);
-      debugPrint('EDITOR_CLIPBOARD_READBACK ${readback?.text?.codeUnits}');
+      await Clipboard.setData(const ClipboardData(text: 'package pasted'));
     });
     await shortcut(LogicalKeyboardKey.keyV);
     await tester.pumpAndSettle();
-    expect(host.recovered, 'package pasted\r\n');
+    expect(host.recovered, 'package pasted');
     final selected = host.controller.snapshot.selection;
     final generation = host.controller.snapshot.generation;
     await tester.tap(find.text('Theme'));
@@ -87,7 +85,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Attach'));
     await tester.pumpAndSettle();
-    expect(host.controller.snapshot.source, 'package pasted\r\n');
+    expect(host.controller.snapshot.source, 'package pasted');
     host.focus.requestFocus();
     await tester.pump();
     await shortcut(LogicalKeyboardKey.keyZ);
@@ -108,6 +106,104 @@ void main() {
     expect(tester.takeException(), isNull);
     // CI must observe this marker as well as the driver's successful exit.
     debugPrint('EDITOR_NATIVE_SUITE_PASS');
+  });
+
+  testWidgets('native command menu, find replacement and pairing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const EditorFixture());
+    await tester.pumpAndSettle();
+    final host = tester.state<EditorFixtureState>(find.byType(EditorFixture));
+    Future<void> command(String label) async {
+      await tester.tap(find.byTooltip('Editor commands').first);
+      await tester.pumpAndSettle();
+      final item = find.text(label).last;
+      await tester.ensureVisible(item);
+      await tester.tap(item);
+      await tester.pumpAndSettle();
+    }
+
+    await command('Select all');
+    await command('Indent');
+    expect(host.recovered, isNot(fixtureSource));
+    await command('Outdent');
+    expect(host.recovered, fixtureSource);
+    await command('Toggle Go comment');
+    expect(host.recovered, contains('//'));
+    await command('Undo');
+    expect(host.recovered, fixtureSource);
+    await command('Select all');
+    await command('Fold selected lines');
+    expect(host.recovered, fixtureSource);
+    await command('Unfold all');
+    expect(host.recovered, fixtureSource);
+    await command('Find and replace');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Find source'),
+      'main',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Replace with (literal text)'),
+      'renamed',
+    );
+    await tester.pump();
+    final replace = find.text('Replace all');
+    await tester.ensureVisible(replace);
+    await tester.tap(replace);
+    await tester.pump();
+    expect(host.recovered, fixtureSource.replaceAll('main', 'renamed'));
+    await tester.ensureVisible(find.byTooltip('Close find'));
+    await tester.tap(find.byTooltip('Close find'));
+    await tester.pump();
+    await command('Undo');
+    expect(host.recovered, fixtureSource);
+    host.focus.requestFocus();
+    await tester.pump();
+    await command('Select all');
+    host.focus.requestFocus();
+    await tester.pump();
+    await delta(tester, 'package main', '(', 0, 12, 1);
+    expect(host.recovered, '()');
+    await command('Undo');
+    expect(host.recovered, fixtureSource);
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('paste preserves the exact clipboard API value', (tester) async {
+    const sent = 'package pasted\r\n';
+    String? received;
+    await tester.runAsync(() async {
+      await Clipboard.setData(const ClipboardData(text: sent));
+      final readback = await Clipboard.getData(Clipboard.kTextPlain);
+      debugPrint('EDITOR_CLIPBOARD_READBACK ${readback?.text?.codeUnits}');
+      received = readback?.text;
+    });
+    expect(received, isNotNull);
+    expect(received, isNotEmpty);
+    await tester.pumpWidget(const EditorFixture());
+    await tester.pumpAndSettle();
+    final host = tester.state<EditorFixtureState>(find.byType(EditorFixture));
+    host.focus.requestFocus();
+    await tester.pump();
+    final modifier = defaultTargetPlatform == TargetPlatform.macOS
+        ? LogicalKeyboardKey.metaLeft
+        : LogicalKeyboardKey.controlLeft;
+    for (final key in [LogicalKeyboardKey.keyA, LogicalKeyboardKey.keyV]) {
+      await tester.sendKeyDownEvent(modifier);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(modifier);
+      await tester.pumpAndSettle();
+    }
+    expect(host.recovered, received);
+    expect(host.controller.snapshot.source, received);
+    await tester.sendKeyDownEvent(modifier);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+    await tester.sendKeyUpEvent(modifier);
+    await tester.pump();
+    expect(host.recovered, fixtureSource);
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
   });
 }
 

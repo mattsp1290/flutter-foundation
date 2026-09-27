@@ -8,6 +8,15 @@ from tool import create_editor_native_harness as harness
 
 
 class EditorHarnessTest(unittest.TestCase):
+    def test_resolved_refs_accept_pub_yaml_quoting(self):
+        for quote in ('', '"', "'"):
+            ref = 'fb37f2' + 'a' * 34
+            lock = ('packages:\n  birb_code_editor:\n    description:\n'
+                    f'      resolved-ref: {quote}{ref}{quote}\n'
+                    '    source: git\n  unrelated:\n    source: hosted\n')
+            self.assertEqual(harness.resolved_git_ref(lock, 'birb_code_editor'), ref)
+            self.assertIsNone(harness.resolved_git_ref(lock, 'unrelated'))
+
     def test_export_contains_only_clean_committed_head(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
