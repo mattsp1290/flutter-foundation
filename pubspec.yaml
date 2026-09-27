@@ -5,6 +5,7 @@ environment:
   sdk: ^3.13.1
 
 workspace:
+  - packages/birb_code_editor
   - packages/birb_design_system
   - packages/birb_appearance
   - packages/ag_ui_view_state

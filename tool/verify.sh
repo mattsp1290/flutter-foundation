@@ -36,6 +36,8 @@ run_step 'Audit design-system source' \
 run_step 'Verify AG-UI fixtures' "$flutter_dart" run tool/verify_agent_fixtures.dart
 run_step 'Audit AG-UI package boundaries' "$flutter_dart" run tool/check_agent_boundaries.dart
 run_step 'Analyze workspace' flutter analyze
+run_step 'Qualify birb_code_editor engine' \
+  run_package_tests packages/birb_code_editor
 run_step 'Test birb_design_system scaffold' \
   run_package_tests packages/birb_design_system
 run_step 'Test birb_appearance scaffold' \
