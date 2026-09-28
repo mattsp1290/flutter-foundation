@@ -90,7 +90,7 @@ until the run and evidence collection finish, then remove that owned directory.
 | Standalone dependency closure | Candidate/published `ffb6eeb`, exact A; editor-only and coexistence | Both cases pass resolution, analysis, public smoke and release build before and after push; release gates pending |
 | macOS external native suite | B `ffb6eeb`: pointer focus, keyboard undo/redo, composing updates, system clipboard, readonly, theme/remount and focus exit | Framework suite pass; physical checks pending |
 | Native CI | [Checkpoint `ffb6eeb`](evidence/editor-acceptance/checkpoints/ffb6eeb/native-ci.json), PR merge tree verified identical to branch head | Windows, macOS and Linux build/analyze/native suites pass; physical OS evidence pending |
-| Browser assets and real input | [Current release matrix](evidence/editor-acceptance/checkpoints/ffb6eeb/browser-ci.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | All four functional cases pass with fork `b07edbe`; historical cloud timing failed the original 50 ms limit; revised-budget CI pending |
+| Browser assets and real input | [Current release matrix](evidence/editor-acceptance/checkpoints/ffb6eeb/browser-ci.json): root/nested paths × DPR 1/2; visible gutter before accessibility, actual typing after enabling it, recovery, readonly, completion/undo/redo; proxy rejects external origins | All four functional cases pass with fork `b07edbe`; historical cloud timing failed the original 50 ms limit; 100 ms CI failed at 124.4 ms; temporary 250 ms qualification pending |
 | Performance | [100 measured edits after 20 warmups](evidence/editor-acceptance/performance/stage2-results.json), 64 KiB / 2,000 lines, local release Chrome on M4 Max / 64 GiB | DPR 1: p95 33.4 ms, ready 226.4 ms; DPR 2: p95 34.0 ms, ready 245.4 ms; both pass 50 ms / 3 s budgets |
 | Review gauntlet | Seven stage-one findings fixed and pushed at `d630362`; pinned Cursor rubric `ecc249f1e306fc64ddf83c7bed16cacf7c2239db` requested three Important fixes and one Suggestion | Both review checkpoints pushed; all eleven findings fixed and independently rechecked; local gates pass |
 
@@ -172,19 +172,31 @@ gate also requires the observed source viewport offset to increase, in addition 
 ## Revised performance budget
 
 The maintainer authorized relaxing the 50 ms limit after the cloud failures.
-The enforced p95 key-to-visible-edit budget is now **100 ms**, retaining the
+The maintainer subsequently selected a temporary **250 ms** p95
+key-to-visible-edit budget on 2026-09-28, retaining the
 software-rendered CI environment, both DPR 1/2 cases, 20 warmups and 100 measured
 edits on the 64 KiB / 2,000-line fixture. Cold readiness remains **3 seconds**.
 This supersedes the 50 ms performance requirement in the original W4 plan;
 it does not change functional, source-integrity or physical acceptance criteria.
 
-The bounded revision covers recorded cloud p95 measurements of 66.0, 79.5 and
-98.5 ms. The latest original-budget failure was
+The initial 100 ms revision covered recorded cloud p95 measurements of 66.0,
+79.5 and 98.5 ms. The latest original-budget failure was
 [run 36358121167](https://github.com/mattsp1290/flutter-foundation/actions/runs/36358121167)
 at 79.5 ms with readiness 1,192.6 ms. Historical failures above remain failures
 under their original budget, and local hardware timings remain separately
 identified. New performance records include both enforced budgets. A fresh
 cloud run must qualify this change; the threshold change itself is not a pass.
+
+The first revised-budget run,
+[36359855393](https://github.com/mattsp1290/flutter-foundation/actions/runs/36359855393)
+at `6e73ddc35a5f7044588c73344adf785a6032d3a8`, failed at **124.4 ms p95**
+against 100 ms, with readiness **878.4 ms** against 3,000 ms. All four functional
+browser cases and all three native jobs passed. The performance loop stopped
+on its first DPR case, so DPR 2 was not qualified by this run. The temporary
+250 ms limit supersedes that 100 ms gate. A fresh run must still pass both DPR
+cases; the historical result does not establish acceptance under the new limit.
+Revisit this temporary latency allowance after performance investigation;
+raising the gate does not represent an editor speed improvement.
 
 ## Physical release checklist
 

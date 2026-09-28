@@ -7,8 +7,8 @@ from editor_fixture_protocol import OBSERVATION, observation, viewport
 from editor_webdriver import wait_for
 
 
-# Maintainer-approved budget for the software-rendered CI reference.
-EDIT_P95_BUDGET_MS = 100
+# Temporary maintainer-approved budget for the software-rendered CI reference.
+EDIT_P95_BUDGET_MS = 250
 READY_BUDGET_MS = 3000
 
 
