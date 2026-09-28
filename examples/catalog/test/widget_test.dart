@@ -1,4 +1,5 @@
 import 'package:birb_appearance/birb_appearance.dart';
+import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:birb_design_system/design_system_preview.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,60 @@ import 'package:flutter_foundation_catalog/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'code and chat offers production editors, provider fixtures and the legacy API',
+    (tester) async {
+      final store = _CatalogStore();
+      await _pumpCatalog(tester, store);
+      await _selectSection(tester, CatalogSection.codeAndChat);
+      expect(
+        find.byKey(const ValueKey('catalog-production-editor')),
+        findsOneWidget,
+      );
+      final primary = tester
+          .widget<BirbSourceEditor>(
+            find.byKey(const ValueKey('catalog-production-editor')),
+          )
+          .controller;
+      expect(primary.snapshot.source, contains('\r\n'));
+      expect(find.text('Local provider'), findsOneWidget);
+      await tester.tap(find.text('Read only'));
+      await tester.pump();
+      expect(primary.snapshot.readOnly, isTrue);
+      await tester.tap(find.text('Empty source'));
+      await tester.pump();
+      expect(primary.snapshot.source, '');
+      expect(find.text('Recovery: 0 UTF-16 units'), findsOneWidget);
+      final pageScroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byKey(const ValueKey('catalog-code-page')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      for (
+        var step = 0;
+        step < 8 &&
+            find.text('Legacy editor — existing API').evaluate().isEmpty;
+        step++
+      ) {
+        pageScroll.jumpTo(
+          (pageScroll.pixels + 300).clamp(0, pageScroll.maxScrollExtent),
+        );
+        await tester.pump();
+      }
+      await tester.ensureVisible(find.text('Legacy editor — existing API'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BirbCodeEditor), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant({TargetPlatform.linux}),
+  );
+
   test('preview environment parser rejects unsupported values', () {
     expect(
       () => CatalogThemePreview.fromEnvironment('drak'),

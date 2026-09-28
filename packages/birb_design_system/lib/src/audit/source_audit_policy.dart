@@ -69,6 +69,27 @@ List<DesignSystemViolation> _tokenViolations(
     return true;
   }
 
+  // Forwarding the existing code-style token does not author a typeface.
+  // Accept only a direct, unmodified helper property as a named argument;
+  // literals, arbitrary styles and transformed fallback lists remain forbidden.
+  final forwardedFontTokens = <int>{};
+  for (var index = 0; index + 10 < tokens.length; index += 1) {
+    final field = tokens[index].lexeme;
+    if (!{'fontFamily', 'fontFamilyFallback'}.contains(field)) continue;
+    if (sequence(index + 1, [
+          ':',
+          'BirbReviewStyle',
+          '.',
+          'codeTextStyle',
+          '(',
+        ]) &&
+        tokens[index + 6].kind == _TokenKind.identifier &&
+        sequence(index + 7, [')', '.', field]) &&
+        {',', ')'}.contains(tokens[index + 10].lexeme)) {
+      forwardedFontTokens.addAll([index, index + 9]);
+    }
+  }
+
   for (var index = 0; index < tokens.length; index += 1) {
     final token = tokens[index];
     if (token.kind != _TokenKind.identifier) continue;
@@ -119,6 +140,7 @@ List<DesignSystemViolation> _tokenViolations(
     // documented in DESIGN.md first.
     if ((token.lexeme == 'fontFamily' ||
             token.lexeme == 'fontFamilyFallback') &&
+        !forwardedFontTokens.contains(index) &&
         !_covers(_reviewStyleExemption, relativePath, standaloneDesignSystem)) {
       add(token, 'authored typeface outside the scoped code-style exception');
     }

@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-09-27T21:31:53.347662+00:00",
+  "foundation_base": "5a2a462464e4e8612dfa0e42478394f2afb12d53",
+  "foundation_state": "Synthetic performance fixture and runner working tree committed alongside this record",
+  "engine_ref": "44095948df411c1033e2f68f822e64ee9f07042d",
+  "hardware": {
+    "processor": "Apple M4 Max",
+    "memory_bytes": 68719476736
+  },
+  "flutter": "3.47.1",
+  "dart": "3.13.1",
+  "browser": "Chrome 153.0.8010.53",
+  "method": "20 warmup then 100 real ChromeDriver x key presses; browser keydown timestamp to rAF after the frame that updates exact recovery semantics. Cold timer begins after Flutter startup, immediately before opening the large editor. 20 wheel actions without replacing the source.",
+  "command": "python3 tool/editor_browser_driver.py --web-root examples/catalog/build/web --base-path /editor-check/ --chrome <actual Chrome executable> --performance --evidence <owned output>"
+}

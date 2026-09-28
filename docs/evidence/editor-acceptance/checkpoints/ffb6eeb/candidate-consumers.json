@@ -1,0 +1,42 @@
+[
+  {
+    "mode": "candidate",
+    "platform": "web",
+    "editor_only": true,
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "flutter": "3.47.1",
+    "dart": "3.13.1",
+    "editor_url": "file:///private/var/folders/3s/_jrxnd6s1tl_lhh2mqtxx1xc0000gn/T/birb-editor-consumers-wwap6p71/editor-only/candidate",
+    "editor_ref": "bc228b7e35548a6c9fd3599a4954fe6b85abd36a",
+    "candidate_original_ref": "ffb6eebb69203ad48372b415623046e6f379a3a7",
+    "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+    "result": "pass",
+    "checks": [
+      "resolve",
+      "analyze",
+      "widget-smoke",
+      "release-web-build"
+    ]
+  },
+  {
+    "mode": "candidate",
+    "platform": "web",
+    "editor_only": false,
+    "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "flutter": "3.47.1",
+    "dart": "3.13.1",
+    "editor_url": "file:///private/var/folders/3s/_jrxnd6s1tl_lhh2mqtxx1xc0000gn/T/birb-editor-consumers-wwap6p71/coexistence/candidate",
+    "editor_ref": "3c93a0c0e0009255fe80f8e58162a4277996dcd1",
+    "candidate_original_ref": "ffb6eebb69203ad48372b415623046e6f379a3a7",
+    "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+    "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+    "result": "pass",
+    "checks": [
+      "resolve",
+      "analyze",
+      "widget-smoke",
+      "release-web-build"
+    ]
+  }
+]

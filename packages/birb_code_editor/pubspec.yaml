@@ -1,0 +1,28 @@
+name: birb_code_editor
+description: Native Go source editor with exact-source recovery and host-provided language tools.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.13.1 <4.0.0'
+  flutter: '>=3.47.1'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  re_editor:
+    git:
+      url: https://github.com/mattsp1290/re-editor.git
+      ref: b07edbeb47ab7d9171dc8103cad32503978f4ff6
+  re_highlight: 0.0.3
+  birb_design_system:
+    git:
+      url: https://github.com/mattsp1290/flutter-foundation.git
+      ref: 3cccfc448de0306b036f93deb4409280266baa9f
+      path: packages/birb_design_system
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter

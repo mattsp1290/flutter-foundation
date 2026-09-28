@@ -5,6 +5,7 @@ environment:
   sdk: ^3.13.1
 
 workspace:
+  - packages/birb_code_editor
   - packages/birb_design_system
   - packages/birb_appearance
   - packages/ag_ui_view_state
@@ -15,6 +16,7 @@ workspace:
   - examples/benchy_contract
 
 dev_dependencies:
+  analyzer: 13.3.0
   cupertino_icons: ^1.0.8
   crypto: ^3.0.7
   flutter_lints: ^6.0.0

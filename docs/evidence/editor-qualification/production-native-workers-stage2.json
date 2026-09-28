@@ -1,0 +1,218 @@
+{
+  "observed_at": "2026-09-27T22:42:47.515415+00:00",
+  "platform": "macOS26.6.2",
+  "flutter": "3.47.1",
+  "dart": "3.13.1",
+  "engine_ref": "b07edbeb47ab7d9171dc8103cad32503978f4ff6",
+  "foundation_base": "d630362e2b7330a77f33a4b403538162afc74247",
+  "foundation_state": "Stage-two review fixes working tree; exact-engine factory and direct controller ownership committed alongside this record",
+  "command": "python3 tool/verify_editor_worker_lifecycle.py",
+  "result": "pass",
+  "samples": [
+    {
+      "phase": "baseline",
+      "cycle": null,
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "0",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "0",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "1",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "1",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "2",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "2",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "3",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "3",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "4",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "4",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "5",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "5",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "6",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "6",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "7",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "7",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "8",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "8",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "9",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "9",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "10",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "10",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "11",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "11",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "12",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "12",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "13",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "13",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "14",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "14",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "15",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "15",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "16",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "16",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "17",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "17",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "18",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "18",
+      "isolates": 1
+    },
+    {
+      "phase": "mounted",
+      "cycle": "19",
+      "isolates": 3
+    },
+    {
+      "phase": "detached",
+      "cycle": "19",
+      "isolates": 1
+    }
+  ]
+}

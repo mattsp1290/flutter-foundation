@@ -26,8 +26,73 @@ jobs:
           flutter-version: 3.47.1
           cache: true
       - name: Install browser integration dependencies
+        run: python3 tool/install_ci_browser.py --output "$RUNNER_TEMP/editor-browser"
+      - name: Verify workspace
+        env:
+          EDITOR_BROWSER_EVIDENCE: ${{ runner.temp }}/editor-browser-evidence
+        run: ./tool/verify.sh
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: editor-browser
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/editor-browser-evidence
+
+  editor-native:
+    name: Editor native (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+            python: python3
+          - os: ubuntu-latest
+            platform: linux
+            python: python3
+          - os: windows-latest
+            platform: windows
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - name: Check out committed candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install pinned Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.47.1
+          cache: true
+      - name: Install Linux desktop build dependencies
+        if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes chromium-chromedriver
-      - name: Verify workspace
-        run: ./tool/verify.sh
+          sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev xvfb
+      - name: Check desktop toolchain
+        run: flutter doctor -v
+      - name: Generate isolated consumer with exact dependency A
+        run: >-
+          ${{ matrix.python }} tool/create_editor_native_harness.py
+          --platform ${{ matrix.platform }}
+          --output "${{ runner.temp }}/birb-editor-native"
+          --candidate-root "${{ github.workspace }}"
+          --design-system-ref 3cccfc448de0306b036f93deb4409280266baa9f
+      - name: Build and run actual desktop suite
+        run: >-
+          ${{ matrix.python }} tool/run_editor_native_suite.py
+          --platform ${{ matrix.platform }}
+          --app "${{ runner.temp }}/birb-editor-native/app"
+      - name: Upload platform evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: editor-native-${{ matrix.platform }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/birb-editor-native/pin-map.json
+            ${{ runner.temp }}/birb-editor-native/result.json
+            ${{ runner.temp }}/birb-editor-native/*.log

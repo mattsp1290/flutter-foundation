@@ -1,0 +1,40 @@
+{
+  "head_ref": "3ba3755f6bf0b88b4db2d2a7ffe6976cde2a81ee",
+  "tested_pr_merge_ref": "51b75cf05d44eeeeb8c674f643e6114e223e9dea",
+  "verified_identical_git_tree": "651ad5933c9255b7916950266ace93d5ad7391db",
+  "run_url": "https://github.com/mattsp1290/flutter-foundation/actions/runs/36356469165",
+  "native_passes": [
+    {
+      "mode": "candidate",
+      "platform": "linux",
+      "editor_only": false,
+      "host": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+      "flutter": "3.47.1",
+      "dart": "3.13.1",
+      "editor_url": "file:///home/runner/work/_temp/birb-editor-native/candidate",
+      "editor_ref": "0829278fb6fe5168007c1c3189a6ca9ffcc8cb34",
+      "candidate_original_ref": "51b75cf05d44eeeeb8c674f643e6114e223e9dea",
+      "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+      "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+      "result": "pass",
+      "evidence": "native framework input, not physical OS input"
+    },
+    {
+      "mode": "candidate",
+      "platform": "macos",
+      "editor_only": false,
+      "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "flutter": "3.47.1",
+      "dart": "3.13.1",
+      "editor_url": "file:///Users/runner/work/_temp/birb-editor-native/candidate",
+      "editor_ref": "9db0f3e5774f1ea3266d3097f02e4ae886e5e9f9",
+      "candidate_original_ref": "51b75cf05d44eeeeb8c674f643e6114e223e9dea",
+      "design_system_url": "https://github.com/mattsp1290/flutter-foundation.git",
+      "design_system_ref": "3cccfc448de0306b036f93deb4409280266baa9f",
+      "result": "pass",
+      "evidence": "native framework input, not physical OS input"
+    }
+  ],
+  "windows": "Build passed; UTF-8 log replay into cp1252 console failed before native test execution. Correction and regression are committed alongside this record.",
+  "physical_os_evidence": false
+}

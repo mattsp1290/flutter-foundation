@@ -1,5 +1,11 @@
+import 'dart:convert';
+
+import 'package:birb_code_editor/birb_code_editor.dart';
 import 'package:birb_design_system/birb_design_system.dart';
 import 'package:flutter/material.dart';
+
+import 'editor_provider_fixture.dart';
+import 'editor_acceptance_fixture.dart';
 
 class CodeChatPage extends StatefulWidget {
   const CodeChatPage({super.key});
@@ -8,22 +14,77 @@ class CodeChatPage extends StatefulWidget {
 }
 
 class _CodeChatPageState extends State<CodeChatPage> {
+  static final _initialSource = editorAcceptanceSource(
+    'package main\r\n\r\n// Exact mixed separators.\rfunc main() {\n\tprintln("hello", 42)\r\n}\n',
+  );
+  final _editor = BirbEditorController(
+    documentId: 'catalog-main',
+    source: _initialSource,
+  );
+  final _secondEditor = BirbEditorController(
+    documentId: 'catalog-independent',
+    source: 'package example\n\nfunc Double(n int) int {\n\treturn n * 2\n}\n',
+  );
   final _code = BirbCodeController(
     text: 'package solution\n\n// Try a different editor theme.\nfunc Add(a, b int) int {\n\treturn a + b\n}\n',
   );
   final _draft = TextEditingController();
   BirbCodeTheme _theme = BirbCodeTheme.foundation;
   bool _readOnly = false;
+  double _acceptanceViewport = 0;
+  CatalogProviderMode _providerMode = CatalogProviderMode.local;
+  BirbEditorProvider? _provider = const CatalogEditorProvider(
+    CatalogProviderMode.local,
+  );
+  String _recovery = _initialSource;
   String _message = 'Shared chat stays readable in light and dark mode.';
   @override
+  void initState() {
+    super.initState();
+    _editor.addTextListener(_recover);
+  }
+
+  void _recover(BirbEditorSnapshot snapshot) =>
+      setState(() => _recovery = snapshot.source);
+
+  @override
   void dispose() {
+    _editor.removeTextListener(_recover);
+    _editor.dispose();
+    _secondEditor.dispose();
     _code.dispose();
     _draft.dispose();
     super.dispose();
   }
 
+  Widget _primaryEditor() {
+    final editor = BirbSourceEditor(
+      key: const ValueKey('catalog-production-editor'),
+      controller: _editor,
+      provider: _provider,
+      codeTheme: _theme,
+      label: 'Go source code',
+    );
+    if (!editorAcceptanceEnabled) return editor;
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // In the large fixture only the source viewport has this extent;
+        // bounded header/footer scroll notifications are excluded.
+        final metrics = notification.metrics;
+        if (metrics.axis == Axis.vertical &&
+            metrics.maxScrollExtent > 1000 &&
+            metrics.pixels != _acceptanceViewport) {
+          setState(() => _acceptanceViewport = metrics.pixels);
+        }
+        return false;
+      },
+      child: editor,
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListView(
+    key: const ValueKey('catalog-code-page'),
     padding: const EdgeInsets.all(16),
     children: [
       Wrap(
@@ -36,16 +97,77 @@ class _CodeChatPageState extends State<CodeChatPage> {
           FilterChip(
             label: const Text('Read only'),
             selected: _readOnly,
-            onSelected: (value) => setState(() => _readOnly = value),
+            onSelected: (value) {
+              _editor.setReadOnly(value);
+              setState(() => _readOnly = value);
+            },
+          ),
+          DropdownButton<CatalogProviderMode>(
+            value: _providerMode,
+            items: const [
+              DropdownMenuItem(
+                value: CatalogProviderMode.local,
+                child: Text('Local provider'),
+              ),
+              DropdownMenuItem(
+                value: CatalogProviderMode.delayed,
+                child: Text('Delayed provider'),
+              ),
+              DropdownMenuItem(
+                value: CatalogProviderMode.failing,
+                child: Text('Failing provider'),
+              ),
+              DropdownMenuItem(
+                value: CatalogProviderMode.unavailable,
+                child: Text('No provider'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _providerMode = value;
+                _provider = value == CatalogProviderMode.unavailable
+                    ? null
+                    : CatalogEditorProvider(value);
+              });
+            },
           ),
           TextButton(
-            onPressed: () => _code.clear(),
+            onPressed: () =>
+                _editor.replaceDocument(documentId: 'catalog-main', source: ''),
             child: const Text('Empty source'),
+          ),
+          TextButton(
+            onPressed: () => _editor.replaceDocument(
+              documentId: 'catalog-main',
+              source: _recovery,
+            ),
+            child: const Text('Reload recovered source'),
           ),
         ],
       ),
+      Semantics(
+        label: editorAcceptanceEnabled
+            ? 'Editor observation ${jsonEncode({'units': _recovery.length <= 1024 ? _recovery.codeUnits : null, 'length': _recovery.length, 'generation': _editor.snapshot.generation, 'viewport': _acceptanceViewport})}'
+            : null,
+        excludeSemantics: editorAcceptanceEnabled,
+        child: Text('Recovery: ${_recovery.length} UTF-16 units'),
+      ),
+      SizedBox(height: 520, child: _primaryEditor()),
+      const SizedBox(height: 24),
+      const Text('Independent editor'),
       SizedBox(
-        height: 320,
+        height: 400,
+        child: BirbSourceEditor(
+          controller: _secondEditor,
+          codeTheme: _theme,
+          label: 'Independent Go source',
+        ),
+      ),
+      const SizedBox(height: 24),
+      const Text('Legacy editor — existing API'),
+      SizedBox(
+        height: 200,
         child: BirbCodeEditor(
           controller: _code,
           theme: _theme,
